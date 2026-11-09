@@ -4,96 +4,44 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Forex AI Analyzer</title>
-
 <style>
 *{box-sizing:border-box}
-body{
-  margin:0;
-  background:#080e19;
-  color:#f1f5f9;
-  font-family:Arial,sans-serif;
-  padding:20px;
-}
-.container{max-width:650px;margin:auto}
-header{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin:10px 0 25px;
-}
-.logo{font-size:21px;font-weight:bold}
-.logo span{color:#22d3a5}
+body{margin:0;background:#080e19;color:#f1f5f9;font-family:Arial,sans-serif;padding:16px}
+.container{max-width:760px;margin:auto}
+header{display:flex;justify-content:space-between;align-items:center;margin:8px 0 22px}
+.logo{font-size:21px;font-weight:bold}.logo span{color:#22d3a5}
 .status{color:#22d3a5;font-size:12px}
-.card{
-  background:#111c2d;
-  border:1px solid #26364d;
-  border-radius:16px;
-  padding:20px;
-  margin-bottom:15px;
-}
+.card{background:#111c2d;border:1px solid #26364d;border-radius:16px;padding:18px;margin-bottom:14px}
 .label{color:#94a3b8;font-size:12px}
-.price{font-size:36px;font-weight:bold;margin:12px 0}
-.signal{
-  display:inline-block;
-  padding:9px 18px;
-  border-radius:9px;
-  font-weight:bold;
-  background:#123d35;
-  color:#36e0ad;
-}
+.price{font-size:34px;font-weight:bold;margin:10px 0}
+.signal{display:inline-block;padding:8px 16px;border-radius:9px;font-weight:bold;background:#44391c;color:#ffd166}
+.signal.BUY{background:#123d35;color:#36e0ad}
 .signal.SELL{background:#49232b;color:#ff7180}
-.signal.WAIT{background:#44391c;color:#ffd166}
-.grid{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:10px;
-}
-.tf{
-  background:#17263b;
-  padding:15px 8px;
-  border-radius:12px;
-  text-align:center;
-}
-.tf strong{display:block;margin-top:10px;font-size:19px}
-.BUY{color:#36e0ad}
-.SELL{color:#ff7180}
-.WAIT{color:#ffd166}
-.indicators{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:12px;
-}
-.indicator{
-  background:#17263b;
-  border-radius:12px;
-  padding:14px;
-}
-.indicator strong{
-  display:block;
-  margin-top:8px;
-  font-size:19px;
-}
-button{
-  width:100%;
-  padding:15px;
-  background:#19b98e;
-  border:0;
-  border-radius:12px;
-  color:#061711;
-  font-size:16px;
-  font-weight:bold;
-  cursor:pointer;
-}
-#message{color:#94a3b8;font-size:12px;margin-top:12px}
-footer{
-  text-align:center;
-  color:#64748b;
-  font-size:11px;
-  margin:25px 0;
-}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.tf{background:#17263b;padding:13px 7px;border-radius:12px;text-align:center}
+.tf strong{display:block;margin-top:8px;font-size:18px}
+.BUY{color:#36e0ad}.SELL{color:#ff7180}.WAIT{color:#ffd166}
+.indicators{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.indicator{background:#17263b;border-radius:12px;padding:13px}
+.indicator strong{display:block;margin-top:8px;font-size:18px}
+button,select{border:0;border-radius:10px;padding:12px;font-weight:bold}
+button{background:#19b98e;color:#061711;cursor:pointer}
+select{background:#17263b;color:#f1f5f9;border:1px solid #334155}
+.controls{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:12px}
+.controls button{padding:10px 14px}
+.chart-wrap{height:320px;background:#0b1422;border:1px solid #26364d;border-radius:12px;overflow:hidden}
+canvas{width:100%;height:100%;display:block}
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;color:#cbd5e1;font-size:11px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px}
+.explain{display:grid;gap:9px;margin-top:14px}
+.explain-item{background:#17263b;border-radius:11px;padding:12px}
+.explain-item b{display:block;margin-bottom:5px}
+.explain-item p{margin:0;color:#cbd5e1;font-size:13px;line-height:1.5}
+#message{color:#94a3b8;font-size:12px;margin-top:12px;line-height:1.5}
+footer{text-align:center;color:#64748b;font-size:11px;margin:22px 0}
+@media(max-width:430px){body{padding:11px}.card{padding:14px}.chart-wrap{height:290px}.price{font-size:30px}}
 </style>
 </head>
-
 <body>
 <div class="container">
 
@@ -103,140 +51,496 @@ footer{
 </header>
 
 <div class="card">
-  <div class="label">GOLD · XAUUSD</div>
+  <div class="label">GOLD · XAUUSD · XAUS DATA</div>
   <div class="price" id="price">Loading...</div>
-  <div class="label">OVERALL SIGNAL</div>
-  <br>
+  <div class="label">OVERALL SIGNAL</div><br>
   <span class="signal WAIT" id="overall">WAIT</span>
   <p class="label" id="reason">Анализ татаж байна...</p>
 </div>
 
 <div class="card">
-  <div class="label" style="margin-bottom:15px">
-    MULTI-TIMEFRAME ANALYSIS
-  </div>
+  <div class="label" style="margin-bottom:14px">MULTI-TIMEFRAME ANALYSIS</div>
   <div class="grid">
-    <div class="tf">
-      <span class="label">1 MIN</span>
-      <strong id="tf1" class="WAIT">--</strong>
+    <div class="tf"><span class="label">1 MIN</span><strong id="tf1" class="WAIT">--</strong></div>
+    <div class="tf"><span class="label">5 MIN</span><strong id="tf5" class="WAIT">--</strong></div>
+    <div class="tf"><span class="label">15 MIN</span><strong id="tf15" class="WAIT">--</strong></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="controls">
+    <div>
+      <div class="label">SMART MONEY CONCEPTS</div>
+      <b>GOLD PRICE CHART</b>
     </div>
-    <div class="tf">
-      <span class="label">5 MIN</span>
-      <strong id="tf5" class="WAIT">--</strong>
-    </div>
-    <div class="tf">
-      <span class="label">15 MIN</span>
-      <strong id="tf15" class="WAIT">--</strong>
+    <select id="timeframe">
+      <option value="1m">1 MIN</option>
+      <option value="5m" selected>5 MIN</option>
+      <option value="15m">15 MIN</option>
+    </select>
+    <button onclick="loadChart()">↻</button>
+  </div>
+
+  <div class="chart-wrap">
+    <canvas id="chart"></canvas>
+  </div>
+
+  <div class="legend">
+    <span><i class="dot" style="background:#16a085"></i>Bull candle</span>
+    <span><i class="dot" style="background:#e05d6f"></i>Bear candle</span>
+    <span><i class="dot" style="background:#2dd4bf"></i>Bullish OB</span>
+    <span><i class="dot" style="background:#fb7185"></i>Bearish OB</span>
+    <span><i class="dot" style="background:#60a5fa"></i>FVG</span>
+    <span><i class="dot" style="background:#fbbf24"></i>Liquidity</span>
+    <span><i class="dot" style="background:#c084fc"></i>CHoCH/BOS</span>
+  </div>
+
+  <div id="smc-explanations" class="explain">
+    <div class="explain-item">
+      <b>SMC analysis</b>
+      <p>Лааны мэдээлэл хүлээж байна...</p>
     </div>
   </div>
 </div>
 
 <div class="card">
-  <div class="label" style="margin-bottom:15px">
-    TECHNICAL INDICATORS · 5M
-  </div>
+  <div class="label" style="margin-bottom:14px">TECHNICAL INDICATORS · 5M</div>
   <div class="indicators">
-    <div class="indicator">
-      <span class="label">RSI 14</span>
-      <strong id="rsi">--</strong>
-    </div>
-    <div class="indicator">
-      <span class="label">EMA 20</span>
-      <strong id="ema20">--</strong>
-    </div>
-    <div class="indicator">
-      <span class="label">EMA 50</span>
-      <strong id="ema50">--</strong>
-    </div>
-    <div class="indicator">
-      <span class="label">MACD</span>
-      <strong id="macd">--</strong>
-    </div>
+    <div class="indicator"><span class="label">RSI 14</span><strong id="rsi">--</strong></div>
+    <div class="indicator"><span class="label">EMA 20</span><strong id="ema20">--</strong></div>
+    <div class="indicator"><span class="label">EMA 50</span><strong id="ema50">--</strong></div>
+    <div class="indicator"><span class="label">MACD</span><strong id="macd">--</strong></div>
   </div>
 </div>
 
-<button onclick="loadData()">↻ REFRESH ANALYSIS</button>
+<button style="width:100%;padding:15px" onclick="loadData()">↻ REFRESH ANALYSIS</button>
 <div id="message">Мэдээлэл хүлээж байна...</div>
 
 <footer>
-  Forex AI Analyzer · Indicator-based analysis<br>
-  Not financial advice · Data source: XAUS
+Forex AI Analyzer · SMC + Technical Analysis<br>
+Not financial advice · XAUS price is not the exact XM execution quote
 </footer>
-
 </div>
 
 <script>
-const API = "https://forex-ai-analyzer-3.onrender.com";
+const API="https://forex-ai-analyzer-3.onrender.com";
+let chartPoints=[];
 
-function setSignal(id, value){
-  const el = document.getElementById(id);
-  el.textContent = value || "--";
-  el.className = value || "WAIT";
+function setSignal(id,value){
+  const el=document.getElementById(id);
+  el.textContent=value||"--";
+  el.className=value||"WAIT";
+}
+
+function candle(p){
+  return {o:Number(p.o),h:Number(p.h),l:Number(p.l),c:Number(p.c)};
+}
+
+function analyzeSMC(raw){
+  const p=raw.map(candle).filter(x=>
+    [x.o,x.h,x.l,x.c].every(Number.isFinite)
+  );
+
+  const n=p.length;
+  const result={obs:[],fvgs:[],liquidity:[],structure:[]};
+
+  if(n<8)return result;
+
+  const atr=p.slice(-14).reduce((s,x)=>s+(x.h-x.l),0)/Math.min(14,n);
+  const tolerance=Math.max(atr*.18,.01);
+  const highs=[],lows=[];
+
+  // Swing highs and lows
+  for(let i=2;i<n-2;i++){
+    if(p[i].h>p[i-1].h&&p[i].h>p[i-2].h&&
+       p[i].h>=p[i+1].h&&p[i].h>=p[i+2].h)
+      highs.push({i,v:p[i].h});
+
+    if(p[i].l<p[i-1].l&&p[i].l<p[i-2].l&&
+       p[i].l<=p[i+1].l&&p[i].l<=p[i+2].l)
+      lows.push({i,v:p[i].l});
+  }
+
+  // Equal highs = possible buy-side liquidity
+  for(let a=0;a<highs.length;a++){
+    for(let b=a+1;b<highs.length;b++){
+      if(highs[b].i-highs[a].i>=2&&
+         Math.abs(highs[a].v-highs[b].v)<=tolerance){
+        result.liquidity.push({
+          kind:"BSL · Equal Highs",
+          price:(highs[a].v+highs[b].v)/2
+        });
+      }
+    }
+  }
+
+  // Equal lows = possible sell-side liquidity
+  for(let a=0;a<lows.length;a++){
+    for(let b=a+1;b<lows.length;b++){
+      if(lows[b].i-lows[a].i>=2&&
+         Math.abs(lows[a].v-lows[b].v)<=tolerance){
+        result.liquidity.push({
+          kind:"SSL · Equal Lows",
+          price:(lows[a].v+lows[b].v)/2
+        });
+      }
+    }
+  }
+
+  // Fair Value Gap
+  for(let i=2;i<n;i++){
+    if(p[i].l>p[i-2].h){
+      result.fvgs.push({
+        kind:"Bullish FVG",
+        low:p[i-2].h,
+        high:p[i].l,
+        from:i-2,
+        to:i
+      });
+    }
+
+    if(p[i].h<p[i-2].l){
+      result.fvgs.push({
+        kind:"Bearish FVG",
+        low:p[i].h,
+        high:p[i-2].l,
+        from:i-2,
+        to:i
+      });
+    }
+  }
+
+  // Approximate Order Block candidates
+  for(let i=3;i<n;i++){
+    if(Math.abs(p[i].c-p[i].o)<Math.max(atr*1.15,.01))continue;
+
+    const bullish=p[i].c>p[i].o;
+
+    for(let j=i-1;j>=Math.max(0,i-4);j--){
+      const opposite=bullish?
+        p[j].c<p[j].o:
+        p[j].c>p[j].o;
+
+      if(opposite){
+        result.obs.push({
+          kind:bullish?"Bullish OB":"Bearish OB",
+          low:p[j].l,
+          high:p[j].h,
+          from:j,
+          to:i
+        });
+        break;
+      }
+    }
+  }
+
+  // Structure break candidates
+  const last=p[n-1];
+  const ph=highs.filter(x=>x.i<n-2).slice(-1)[0];
+  const pl=lows.filter(x=>x.i<n-2).slice(-1)[0];
+
+  if(ph&&last.c>ph.v){
+    result.structure.push({
+      label:"Bullish BOS / CHoCH candidate",
+      price:ph.v
+    });
+  }
+
+  if(pl&&last.c<pl.v){
+    result.structure.push({
+      label:"Bearish BOS / CHoCH candidate",
+      price:pl.v
+    });
+  }
+
+  return result;
+}
+
+function drawChart(raw,smc){
+  const canvas=document.getElementById("chart");
+  const ctx=canvas.getContext("2d");
+  const rect=canvas.getBoundingClientRect();
+  const dpr=window.devicePixelRatio||1;
+
+  canvas.width=Math.max(1,Math.floor(rect.width*dpr));
+  canvas.height=Math.max(1,Math.floor(rect.height*dpr));
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+
+  const w=rect.width,h=rect.height;
+  const p=raw.map(candle).filter(x=>
+    [x.o,x.h,x.l,x.c].every(Number.isFinite)
+  );
+
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle="#0b1422";
+  ctx.fillRect(0,0,w,h);
+
+  if(!p.length){
+    ctx.fillStyle="#94a3b8";
+    ctx.fillText("Candle data unavailable",14,25);
+    return;
+  }
+
+  let min=Math.min(...p.map(x=>x.l));
+  let max=Math.max(...p.map(x=>x.h));
+
+  const zones=[...smc.obs,...smc.fvgs];
+  zones.forEach(z=>{
+    min=Math.min(min,z.low);
+    max=Math.max(max,z.high);
+  });
+
+  smc.liquidity.forEach(z=>{
+    min=Math.min(min,z.price);
+    max=Math.max(max,z.price);
+  });
+
+  const pad=(max-min)*.12||1;
+  min-=pad;
+  max+=pad;
+
+  const left=10,right=62,top=14,bottom=23;
+  const plotW=w-left-right,plotH=h-top-bottom;
+  const y=v=>top+(max-v)/(max-min)*plotH;
+  const x=i=>left+(i+.5)*plotW/p.length;
+
+  ctx.font="10px Arial";
+
+  for(let k=0;k<=4;k++){
+    const val=max-(max-min)*k/4;
+    const yy=y(val);
+
+    ctx.strokeStyle="#223149";
+    ctx.beginPath();
+    ctx.moveTo(left,yy);
+    ctx.lineTo(w-right,yy);
+    ctx.stroke();
+
+    ctx.fillStyle="#94a3b8";
+    ctx.fillText(val.toFixed(2),w-right+4,yy+3);
+  }
+
+  // Order Block and FVG zones
+  zones.slice(-7).forEach(z=>{
+    const xx=left+z.from*plotW/p.length;
+    const ww=Math.max(5,(z.to-z.from+1)*plotW/p.length);
+    const yy=y(z.high);
+    const hh=Math.max(2,y(z.low)-yy);
+    const bull=z.kind.includes("Bullish");
+
+    ctx.fillStyle=bull?
+      "rgba(45,212,191,.16)":
+      "rgba(251,113,133,.16)";
+    ctx.fillRect(xx,yy,ww,hh);
+
+    ctx.strokeStyle=bull?"#2dd4bf":"#fb7185";
+    ctx.strokeRect(xx,yy,ww,hh);
+
+    ctx.fillStyle=bull?"#5eead4":"#fda4af";
+    ctx.fillText(
+      z.kind.includes("OB")?"OB":"FVG",
+      Math.min(w-right-24,xx+2),
+      Math.max(10,yy-3)
+    );
+  });
+
+  // Liquidity levels
+  smc.liquidity.slice(-4).forEach(z=>{
+    const yy=y(z.price);
+
+    ctx.setLineDash([4,4]);
+    ctx.strokeStyle="#fbbf24";
+    ctx.beginPath();
+    ctx.moveTo(left,yy);
+    ctx.lineTo(w-right,yy);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle="#fbbf24";
+    ctx.fillText(
+      z.kind.startsWith("BSL")?"BSL":"SSL",
+      left+2,yy-4
+    );
+  });
+
+  // Candlesticks
+  const cw=Math.max(3,Math.min(10,plotW/p.length*.58));
+
+  p.forEach((c,i)=>{
+    const xx=x(i);
+    const bull=c.c>=c.o;
+    const color=bull?"#16a085":"#e05d6f";
+
+    ctx.strokeStyle=color;
+    ctx.lineWidth=1.2;
+    ctx.beginPath();
+    ctx.moveTo(xx,y(c.h));
+    ctx.lineTo(xx,y(c.l));
+    ctx.stroke();
+
+    ctx.fillStyle=color;
+    ctx.fillRect(
+      xx-cw/2,
+      Math.min(y(c.o),y(c.c)),
+      cw,
+      Math.max(2,Math.abs(y(c.o)-y(c.c)))
+    );
+  });
+
+  // BOS / CHoCH candidate
+  smc.structure.forEach(s=>{
+    const yy=y(s.price);
+
+    ctx.setLineDash([3,3]);
+    ctx.strokeStyle="#c084fc";
+    ctx.beginPath();
+    ctx.moveTo(left,yy);
+    ctx.lineTo(w-right,yy);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle="#d8b4fe";
+    ctx.fillText(s.label,left+3,Math.max(12,yy-5));
+  });
+
+  ctx.fillStyle="#94a3b8";
+  ctx.fillText("Older",left,h-6);
+  ctx.fillText("Latest",w-right-28,h-6);
+}
+
+function renderExplanations(smc){
+  const rows=[];
+
+  smc.obs.slice(-2).reverse().forEach(z=>{
+    rows.push([
+      z.kind,
+      `Бүс: ${z.low.toFixed(2)} – ${z.high.toFixed(2)}. Дисплейсмент хөдөлгөөний өмнөх эсрэг лаа.`
+    ]);
+  });
+
+  smc.fvgs.slice(-2).reverse().forEach(z=>{
+    rows.push([
+      z.kind,
+      `Завсар: ${z.low.toFixed(2)} – ${z.high.toFixed(2)}. Үнэ буцаж шалгаж болох ч entry баталгаа биш.`
+    ]);
+  });
+
+  smc.liquidity.slice(-2).reverse().forEach(z=>{
+    rows.push([
+      z.kind,
+      `Боломжит liquidity түвшин: ${z.price.toFixed(2)}. Sweep батлагдсан гэсэн үг биш.`
+    ]);
+  });
+
+  smc.structure.forEach(z=>{
+    rows.push([
+      z.label,
+      `Сүүлийн swing түвшин ${z.price.toFixed(2)} дээр лааны close-оор эвдэрсэн.`
+    ]);
+  });
+
+  if(!rows.length){
+    rows.push([
+      "SMC",
+      "Одоогийн лаануудад тодорхой тэмдэглэгээ олдсонгүй."
+    ]);
+  }
+
+  rows.push([
+    "Аргачлалын санамж",
+    "Эдгээр нь сүүлийн ирсэн лаанд суурилсан дүрэмт ойролцоо илрүүлэлт. Бодит арилжаанд ашиглахаас өмнө урт түүхээр шалгаж, backtest хийх шаардлагатай."
+  ]);
+
+  document.getElementById("smc-explanations").innerHTML=
+    rows.map(([title,desc])=>
+      `<div class="explain-item"><b>${title}</b><p>${desc}</p></div>`
+    ).join("");
+}
+
+async function loadChart(){
+  const tf=document.getElementById("timeframe").value;
+  const msg=document.getElementById("message");
+
+  try{
+    const response=await fetch(`${API}/candles?interval=${tf}`);
+
+    if(!response.ok)throw new Error("Candle API "+response.status);
+
+    const data=await response.json();
+    chartPoints=data.points||[];
+
+    const smc=analyzeSMC(chartPoints);
+    drawChart(chartPoints,smc);
+    renderExplanations(smc);
+
+    msg.textContent=
+      `Chart updated · ${tf} · ${chartPoints.length} candles.`;
+  }catch(error){
+    msg.textContent="Chart алдаа: "+error.message;
+  }
 }
 
 async function loadData(){
-  const status = document.getElementById("status");
-  const message = document.getElementById("message");
+  const status=document.getElementById("status");
+  const message=document.getElementById("message");
 
-  status.textContent = "● UPDATING";
+  status.textContent="● UPDATING";
 
   try{
-    const [priceResponse, analysisResponse] = await Promise.all([
-      fetch(API + "/price"),
-      fetch(API + "/analyze")
+    const [priceResponse,analysisResponse]=await Promise.all([
+      fetch(API+"/price"),
+      fetch(API+"/analyze")
     ]);
 
-    if(!priceResponse.ok || !analysisResponse.ok){
+    if(!priceResponse.ok||!analysisResponse.ok){
       throw new Error("API response error");
     }
 
-    const priceData = await priceResponse.json();
-    const data = await analysisResponse.json();
+    const priceData=await priceResponse.json();
+    const data=await analysisResponse.json();
 
-    document.getElementById("price").textContent =
+    document.getElementById("price").textContent=
       Number(priceData.price).toLocaleString("en-US",{
         minimumFractionDigits:2,
         maximumFractionDigits:2
       });
 
-    setSignal("overall", data.overall_signal);
-    document.getElementById("reason").textContent =
-      data.reason || "";
+    setSignal("overall",data.overall_signal);
+    document.getElementById("reason").textContent=data.reason||"";
 
-    const tf = data.timeframes || {};
+    const tf=data.timeframes||{};
+    setSignal("tf1",tf["1m"]?.signal);
+    setSignal("tf5",tf["5m"]?.signal);
+    setSignal("tf15",tf["15m"]?.signal);
 
-    setSignal("tf1", tf["1m"]?.signal);
-    setSignal("tf5", tf["5m"]?.signal);
-    setSignal("tf15", tf["15m"]?.signal);
+    const ind=tf["5m"]?.indicators||{};
+    document.getElementById("rsi").textContent=ind.RSI??"--";
+    document.getElementById("ema20").textContent=ind.EMA20??"--";
+    document.getElementById("ema50").textContent=ind.EMA50??"--";
+    document.getElementById("macd").textContent=ind.MACD??"--";
 
-    const indicators = tf["5m"]?.indicators || {};
+    status.textContent="● CONNECTED";
+    message.textContent="Last updated: "+new Date().toLocaleTimeString();
 
-    document.getElementById("rsi").textContent =
-      indicators.RSI ?? "--";
+    await loadChart();
 
-    document.getElementById("ema20").textContent =
-      indicators.EMA20 ?? "--";
-
-    document.getElementById("ema50").textContent =
-      indicators.EMA50 ?? "--";
-
-    document.getElementById("macd").textContent =
-      indicators.MACD ?? "--";
-
-    status.textContent = "● CONNECTED";
-    message.textContent =
-      "Last updated: " + new Date().toLocaleTimeString();
-
- }catch(error){
-    status.textContent = "● ERROR";
-    message.textContent = "Алдаа: " + error.message;
+  }catch(error){
+    status.textContent="● ERROR";
+    message.textContent="Алдаа: "+error.message;
     console.error(error);
+  }
 }
-}
+
+document.getElementById("timeframe").addEventListener("change",loadChart);
+
+window.addEventListener("resize",()=>{
+  if(chartPoints.length){
+    drawChart(chartPoints,analyzeSMC(chartPoints));
+  }
+});
 
 loadData();
-setInterval(loadData, 30000);
+setInterval(loadData,30000);
 </script>
-
 </body>
 </html>
