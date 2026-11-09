@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Forex AI Analyzer</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:#080e19;
+  color:#f1f5f9;
+  font-family:Arial,sans-serif;
+  padding:20px;
+}
+.container{max-width:650px;margin:auto}
+header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin:10px 0 25px;
+}
+.logo{font-size:21px;font-weight:bold}
+.logo span{color:#22d3a5}
+.status{color:#22d3a5;font-size:12px}
+.card{
+  background:#111c2d;
+  border:1px solid #26364d;
+  border-radius:16px;
+  padding:20px;
+  margin-bottom:15px;
+}
+.label{color:#94a3b8;font-size:12px}
+.price{font-size:36px;font-weight:bold;margin:12px 0}
+.signal{
+  display:inline-block;
+  padding:9px 18px;
+  border-radius:9px;
+  font-weight:bold;
+  background:#123d35;
+  color:#36e0ad;
+}
+.signal.SELL{background:#49232b;color:#ff7180}
+.signal.WAIT{background:#44391c;color:#ffd166}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+}
+.tf{
+  background:#17263b;
+  padding:15px 8px;
+  border-radius:12px;
+  text-align:center;
+}
+.tf strong{display:block;margin-top:10px;font-size:19px}
+.BUY{color:#36e0ad}
+.SELL{color:#ff7180}
+.WAIT{color:#ffd166}
+.indicators{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+.indicator{
+  background:#17263b;
+  border-radius:12px;
+  padding:14px;
+}
+.indicator strong{
+  display:block;
+  margin-top:8px;
+  font-size:19px;
+}
+button{
+  width:100%;
+  padding:15px;
+  background:#19b98e;
+  border:0;
+  border-radius:12px;
+  color:#061711;
+  font-size:16px;
+  font-weight:bold;
+  cursor:pointer;
+}
+#message{color:#94a3b8;font-size:12px;margin-top:12px}
+footer{
+  text-align:center;
+  color:#64748b;
+  font-size:11px;
+  margin:25px 0;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<header>
+  <div class="logo">FOREX <span>AI</span></div>
+  <div class="status" id="status">● CONNECTING</div>
+</header>
+
+<div class="card">
+  <div class="label">GOLD · XAUUSD</div>
+  <div class="price" id="price">Loading...</div>
+  <div class="label">OVERALL SIGNAL</div>
+  <br>
+  <span class="signal WAIT" id="overall">WAIT</span>
+  <p class="label" id="reason">Анализ татаж байна...</p>
+</div>
+
+<div class="card">
+  <div class="label" style="margin-bottom:15px">
+    MULTI-TIMEFRAME ANALYSIS
+  </div>
+  <div class="grid">
+    <div class="tf">
+      <span class="label">1 MIN</span>
+      <strong id="tf1" class="WAIT">--</strong>
+    </div>
+    <div class="tf">
+      <span class="label">5 MIN</span>
+      <strong id="tf5" class="WAIT">--</strong>
+    </div>
+    <div class="tf">
+      <span class="label">15 MIN</span>
+      <strong id="tf15" class="WAIT">--</strong>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="label" style="margin-bottom:15px">
+    TECHNICAL INDICATORS · 5M
+  </div>
+  <div class="indicators">
+    <div class="indicator">
+      <span class="label">RSI 14</span>
+      <strong id="rsi">--</strong>
+    </div>
+    <div class="indicator">
+      <span class="label">EMA 20</span>
+      <strong id="ema20">--</strong>
+    </div>
+    <div class="indicator">
+      <span class="label">EMA 50</span>
+      <strong id="ema50">--</strong>
+    </div>
+    <div class="indicator">
+      <span class="label">MACD</span>
+      <strong id="macd">--</strong>
+    </div>
+  </div>
+</div>
+
+<button onclick="loadData()">↻ REFRESH ANALYSIS</button>
+<div id="message">Мэдээлэл хүлээж байна...</div>
+
+<footer>
+  Forex AI Analyzer · Indicator-based analysis<br>
+  Not financial advice · Data source: XAUS
+</footer>
+
+</div>
+
+<script>
+const API = "https://forex-ai-analyzer-3.onrender.com";
+
+function setSignal(id, value){
+  const el = document.getElementById(id);
+  el.textContent = value || "--";
+  el.className = value || "WAIT";
+}
+
+async function loadData(){
+  const status = document.getElementById("status");
+  const message = document.getElementById("message");
+
+  status.textContent = "● UPDATING";
+
+  try{
+    const [priceResponse, analysisResponse] = await Promise.all([
+      fetch(API + "/price"),
+      fetch(API + "/analyze")
+    ]);
+
+    if(!priceResponse.ok || !analysisResponse.ok){
+      throw new Error("API response error");
+    }
+
+    const priceData = await priceResponse.json();
+    const data = await analysisResponse.json();
+
+    document.getElementById("price").textContent =
+      Number(priceData.price).toLocaleString("en-US",{
+        minimumFractionDigits:2,
+        maximumFractionDigits:2
+      });
+
+    setSignal("overall", data.overall_signal);
+    document.getElementById("reason").textContent =
+      data.reason || "";
+
+    const tf = data.timeframes || {};
+
+    setSignal("tf1", tf["1m"]?.signal);
+    setSignal("tf5", tf["5m"]?.signal);
+    setSignal("tf15", tf["15m"]?.signal);
+
+    const indicators = tf["5m"]?.indicators || {};
+
+    document.getElementById("rsi").textContent =
+      indicators.RSI ?? "--";
+
+    document.getElementById("ema20").textContent =
+      indicators.EMA20 ?? "--";
+
+    document.getElementById("ema50").textContent =
+      indicators.EMA50 ?? "--";
+
+    document.getElementById("macd").textContent =
+      indicators.MACD ?? "--";
+
+    status.textContent = "● CONNECTED";
+    message.textContent =
+      "Last updated: " + new Date().toLocaleTimeString();
+
+  }catch(error){
+    status.textContent = "● CONNECTION ERROR";
+    message.textContent =
+      "Холболтын алдаа. API эсвэл CORS тохиргоог шалгана уу.";
+  }
+}
+
+loadData();
+setInterval(loadData, 30000);
+</script>
+
+</body>
+</html>
