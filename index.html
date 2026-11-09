@@ -458,24 +458,7 @@ function drawChart(raw,smc){
     }
   }
 
-  // Live spot price line
-  if(Number.isFinite(livePrice)){
-    const yy=y(livePrice);
-
-    ctx.setLineDash([5,4]);
-    ctx.strokeStyle="#fbbf24";
-    ctx.lineWidth=1.5;
-    ctx.beginPath();
-    ctx.moveTo(left,yy);
-    ctx.lineTo(w-right,yy);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    ctx.fillStyle="#fbbf24";
-    ctx.fillText("LIVE "+livePrice.toFixed(2),left+4,yy-6);
-  }
-
-  smc.structure.forEach(s=>{
+  
     const yy=y(s.price);
 
     ctx.setLineDash([3,3]);
