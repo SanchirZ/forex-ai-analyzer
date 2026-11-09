@@ -4,8 +4,9 @@ from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI(title="Forex AI Analyzer")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
+    allow_origins=["https://sanchirz.github.io"],
+    allow_credentials=False,
+    allow_methods=["GET", "OPTIONS"],
     allow_headers=["*"],
 )
 CHART_URL = "https://xaus.com/api/v1/chart"
