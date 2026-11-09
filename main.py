@@ -7,15 +7,15 @@ CHART_URL = "https://xaus.com/api/v1/chart"
 PRICE_URL = "https://xaus.com/api/v1/spot?compact=1"
 
 
-def get_candles():
+def get_candles(interval="5m"):
     response = requests.get(
         CHART_URL,
         params={
             "symbol": "xau",
             "range": "5d",
-            "interval": "5m"
+            "interval": interval
         },
-        timeout=15
+        timeout=20
     )
     response.raise_for_status()
 
@@ -59,11 +59,66 @@ def rsi(values, period=14):
             avg_loss * (period - 1) + losses[i]
         ) / period
 
+    if avg_gain == 0 and avg_loss == 0:
+        return 50.0
+
     if avg_loss == 0:
         return 100.0
 
     rs = avg_gain / avg_loss
     return 100 - (100 / (1 + rs))
+
+
+def analyze_timeframe(interval):
+    points = get_candles(interval)
+    closes = [float(p["c"]) for p in points]
+
+    ema20 = ema(closes, 20)
+    ema50 = ema(closes, 50)
+
+    macd_line = [
+        fast - slow
+        for fast, slow in zip(
+            ema(closes, 12),
+            ema(closes, 26)
+        )
+    ]
+
+    signal_line = ema(macd_line, 9)
+
+    current_rsi = rsi(closes)
+    current_macd = macd_line[-1]
+    current_signal = signal_line[-1]
+
+    if (
+        ema20[-1] > ema50[-1]
+        and current_macd > current_signal
+        and 50 < current_rsi < 70
+    ):
+        signal = "BUY"
+
+    elif (
+        ema20[-1] < ema50[-1]
+        and current_macd < current_signal
+        and 30 < current_rsi < 50
+    ):
+        signal = "SELL"
+
+    else:
+        signal = "WAIT"
+
+    return {
+        "timeframe": interval,
+        "price": round(closes[-1], 2),
+        "signal": signal,
+        "indicators": {
+            "RSI": round(current_rsi, 2),
+            "EMA20": round(ema20[-1], 2),
+            "EMA50": round(ema50[-1], 2),
+            "MACD": round(current_macd, 4),
+            "MACD_signal": round(current_signal, 4)
+        }
+    }
 
 
 @app.get("/")
@@ -102,12 +157,18 @@ def gold_price():
 
 
 @app.get("/candles")
-def candles():
+def candles(interval: str = "5m"):
+    if interval not in ["1m", "5m", "15m"]:
+        raise HTTPException(
+            status_code=400,
+            detail="Use 1m, 5m or 15m"
+        )
+
     try:
         return {
             "symbol": "XAUUSD",
-            "timeframe": "5m",
-            "points": get_candles()[-20:]
+            "timeframe": interval,
+            "points": get_candles(interval)[-20:]
         }
     except Exception:
         raise HTTPException(
@@ -118,69 +179,44 @@ def candles():
 
 @app.get("/analyze")
 def analyze():
-    try:
-        points = get_candles()
-        closes = [float(point["c"]) for point in points]
+    results = {}
 
-        ema20 = ema(closes, 20)
-        ema50 = ema(closes, 50)
+    for interval in ["1m", "5m", "15m"]:
+        try:
+            results[interval] = analyze_timeframe(interval)
+        except Exception:
+            results[interval] = {
+                "signal": "UNAVAILABLE",
+                "error": "Data unavailable"
+            }
 
-        macd_line = [
-            fast - slow
-            for fast, slow in zip(
-                ema(closes, 12),
-                ema(closes, 26)
-            )
-        ]
+    signals = [
+        results[tf]["signal"]
+        for tf in ["1m", "5m", "15m"]
+        if "signal" in results[tf]
+    ]
 
-        signal_line = ema(macd_line, 9)
+    if len(signals) != 3:
+        overall = "WAIT"
+        reason = "Зарим timeframe-ийн мэдээлэл дутуу байна."
 
-        current_rsi = rsi(closes)
-        current_ema20 = ema20[-1]
-        current_ema50 = ema50[-1]
-        current_macd = macd_line[-1]
-        current_signal = signal_line[-1]
+    elif signals.count("BUY") >= 2 and "SELL" not in signals:
+        overall = "BUY"
+        reason = "Олон timeframe өсөх чиглэлийг дэмжиж байна."
 
-        if (
-            current_ema20 > current_ema50
-            and current_macd > current_signal
-            and 50 < current_rsi < 70
-        ):
-            signal = "BUY"
-            reason = "EMA болон MACD өсөлтийг зааж байна."
+    elif signals.count("SELL") >= 2 and "BUY" not in signals:
+        overall = "SELL"
+        reason = "Олон timeframe буурах чиглэлийг дэмжиж байна."
 
-        elif (
-            current_ema20 < current_ema50
-            and current_macd < current_signal
-            and 30 < current_rsi < 50
-        ):
-            signal = "SELL"
-            reason = "EMA болон MACD бууралтыг зааж байна."
+    else:
+        overall = "WAIT"
+        reason = "Timeframe-үүдийн дохио зөрүүтэй байна."
 
-        else:
-            signal = "WAIT"
-            reason = "Одоогоор тодорхой арилжааны нөхцөл алга."
-
-        return {
-            "symbol": "XAUUSD",
-            "timeframe": "5m",
-            "price": round(closes[-1], 2),
-            "signal": signal,
-            "confidence": None,
-            "indicators": {
-                "RSI": round(current_rsi, 2),
-                "EMA20": round(current_ema20, 2),
-                "EMA50": round(current_ema50, 2),
-                "MACD": round(current_macd, 4),
-                "MACD_signal": round(current_signal, 4)
-            },
-            "reason": reason,
-            "data_source": "XAUS"
-        }
-
-    except Exception:
-        raise HTTPException(
-            status_code=502,
-            detail="Analysis unavailable"
-        )
-    
+    return {
+        "symbol": "XAUUSD",
+        "overall_signal": overall,
+        "timeframes": results,
+        "reason": reason,
+        "data_source": "XAUS",
+        "confidence": None
+    }
