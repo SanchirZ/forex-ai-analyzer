@@ -1,8 +1,13 @@
 from fastapi import FastAPI, HTTPException
 import requests
-
+from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI(title="Forex AI Analyzer")
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 CHART_URL = "https://xaus.com/api/v1/chart"
 PRICE_URL = "https://xaus.com/api/v1/spot?compact=1"
 
