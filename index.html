@@ -125,7 +125,7 @@ Not financial advice · XAUS price is not the exact XM execution quote
 <script>
 const API="https://forex-ai-analyzer-3.onrender.com";
 let chartPoints=[];
-
+let livePrice = null;
 function setSignal(id,value){
   const el=document.getElementById(id);
   el.textContent=value||"--";
@@ -283,7 +283,10 @@ function drawChart(raw,smc){
 
   let min=Math.min(...p.map(x=>x.l));
   let max=Math.max(...p.map(x=>x.h));
-
+if (Number.isFinite(livePrice)) {
+  min = Math.min(min, livePrice);
+  max = Math.max(max, livePrice);
+}
   const zones=[...smc.obs,...smc.fvgs];
   zones.forEach(z=>{
     min=Math.min(min,z.low);
@@ -386,7 +389,22 @@ function drawChart(raw,smc){
       Math.max(2,Math.abs(y(c.o)-y(c.c)))
     );
   });
+// Live spot price line
+if (Number.isFinite(livePrice)) {
+  const yy = y(livePrice);
 
+  ctx.setLineDash([5, 4]);
+  ctx.strokeStyle = "#fbbf24";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(left, yy);
+  ctx.lineTo(w - right, yy);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = "#fbbf24";
+  ctx.fillText("LIVE " + livePrice.toFixed(2), left + 4, yy - 6);
+}
   // BOS / CHoCH candidate
   smc.structure.forEach(s=>{
     const yy=y(s.price);
@@ -497,6 +515,7 @@ async function loadData(){
     }
 
     const priceData=await priceResponse.json();
+    livePrice = Number(priceData.price);
     const data=await analysisResponse.json();
 
     document.getElementById("price").textContent=
