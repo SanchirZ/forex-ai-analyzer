@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="mn">
 <head>
@@ -73,15 +74,15 @@ footer{text-align:center;color:#64748b;font-size:11px;margin:22px 0}
       <div class="label">SMART MONEY CONCEPTS</div>
       <b>GOLD PRICE CHART</b>
     </div>
-   <select id="timeframe">
-  <option value="1m">1 MIN</option>
-  <option value="5m" selected>5 MIN</option>
-  <option value="15m">15 MIN</option>
-  <option value="30m">30 MIN</option>
-  <option value="1h">1 HOUR</option>
-  <option value="4h">4 HOURS</option>
-  <option value="1d">1 DAY</option>
-</select>
+    <select id="timeframe">
+      <option value="1m">1 MIN</option>
+      <option value="5m" selected>5 MIN</option>
+      <option value="15m">15 MIN</option>
+      <option value="30m">30 MIN</option>
+      <option value="1h">1 HOUR</option>
+      <option value="4h">4 HOURS</option>
+      <option value="1d">1 DAY</option>
+    </select>
     <button onclick="loadChart()">↻</button>
   </div>
 
@@ -129,7 +130,9 @@ Not financial advice · XAUS price is not the exact XM execution quote
 <script>
 const API="https://forex-ai-analyzer-3.onrender.com";
 let chartPoints=[];
-let livePrice = null;
+let livePrice=null;
+let overallSignal="WAIT";
+
 function setSignal(id,value){
   const el=document.getElementById(id);
   el.textContent=value||"--";
@@ -137,7 +140,13 @@ function setSignal(id,value){
 }
 
 function candle(p){
-  return {o:Number(p.o),h:Number(p.h),l:Number(p.l),c:Number(p.c)};
+  return {
+    t:Number(p.t),
+    o:Number(p.o),
+    h:Number(p.h),
+    l:Number(p.l),
+    c:Number(p.c)
+  };
 }
 
 function analyzeSMC(raw){
@@ -154,7 +163,6 @@ function analyzeSMC(raw){
   const tolerance=Math.max(atr*.18,.01);
   const highs=[],lows=[];
 
-  // Swing highs and lows
   for(let i=2;i<n-2;i++){
     if(p[i].h>p[i-1].h&&p[i].h>p[i-2].h&&
        p[i].h>=p[i+1].h&&p[i].h>=p[i+2].h)
@@ -165,7 +173,6 @@ function analyzeSMC(raw){
       lows.push({i,v:p[i].l});
   }
 
-  // Equal highs = possible buy-side liquidity
   for(let a=0;a<highs.length;a++){
     for(let b=a+1;b<highs.length;b++){
       if(highs[b].i-highs[a].i>=2&&
@@ -178,7 +185,6 @@ function analyzeSMC(raw){
     }
   }
 
-  // Equal lows = possible sell-side liquidity
   for(let a=0;a<lows.length;a++){
     for(let b=a+1;b<lows.length;b++){
       if(lows[b].i-lows[a].i>=2&&
@@ -191,7 +197,6 @@ function analyzeSMC(raw){
     }
   }
 
-  // Fair Value Gap
   for(let i=2;i<n;i++){
     if(p[i].l>p[i-2].h){
       result.fvgs.push({
@@ -214,7 +219,6 @@ function analyzeSMC(raw){
     }
   }
 
-  // Approximate Order Block candidates
   for(let i=3;i<n;i++){
     if(Math.abs(p[i].c-p[i].o)<Math.max(atr*1.15,.01))continue;
 
@@ -238,7 +242,6 @@ function analyzeSMC(raw){
     }
   }
 
-  // Structure break candidates
   const last=p[n-1];
   const ph=highs.filter(x=>x.i<n-2).slice(-1)[0];
   const pl=lows.filter(x=>x.i<n-2).slice(-1)[0];
@@ -287,11 +290,14 @@ function drawChart(raw,smc){
 
   let min=Math.min(...p.map(x=>x.l));
   let max=Math.max(...p.map(x=>x.h));
-if (Number.isFinite(livePrice)) {
-  min = Math.min(min, livePrice);
-  max = Math.max(max, livePrice);
-}
+
+  if(Number.isFinite(livePrice)){
+    min=Math.min(min,livePrice);
+    max=Math.max(max,livePrice);
+  }
+
   const zones=[...smc.obs,...smc.fvgs];
+
   zones.forEach(z=>{
     min=Math.min(min,z.low);
     max=Math.max(max,z.high);
@@ -327,7 +333,6 @@ if (Number.isFinite(livePrice)) {
     ctx.fillText(val.toFixed(2),w-right+4,yy+3);
   }
 
-  // Order Block and FVG zones
   zones.slice(-7).forEach(z=>{
     const xx=left+z.from*plotW/p.length;
     const ww=Math.max(5,(z.to-z.from+1)*plotW/p.length);
@@ -351,7 +356,6 @@ if (Number.isFinite(livePrice)) {
     );
   });
 
-  // Liquidity levels
   smc.liquidity.slice(-4).forEach(z=>{
     const yy=y(z.price);
 
@@ -393,23 +397,84 @@ if (Number.isFinite(livePrice)) {
       Math.max(2,Math.abs(y(c.o)-y(c.c)))
     );
   });
-// Live spot price line
-if (Number.isFinite(livePrice)) {
-  const yy = y(livePrice);
 
-  ctx.setLineDash([5, 4]);
-  ctx.strokeStyle = "#fbbf24";
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(left, yy);
-  ctx.lineTo(w - right, yy);
-  ctx.stroke();
-  ctx.setLineDash([]);
+  // FINAL BUY / SELL LABEL ON THE LATEST CLOSED 5M CANDLE
+  const chartTf=document.getElementById("timeframe").value;
 
-  ctx.fillStyle = "#fbbf24";
-  ctx.fillText("LIVE " + livePrice.toFixed(2), left + 4, yy - 6);
-}
-  // BOS / CHoCH candidate
+  if(
+    chartTf==="5m" &&
+    (overallSignal==="BUY"||overallSignal==="SELL")
+  ){
+    let closedIndex=-1;
+    const now=Date.now()/1000;
+
+    for(let i=0;i<p.length;i++){
+      if(Number.isFinite(p[i].t)&&p[i].t+300<=now){
+        closedIndex=i;
+      }
+    }
+
+    if(closedIndex>=0){
+      const c=p[closedIndex];
+      const xx=x(closedIndex);
+      const isSell=overallSignal==="SELL";
+      const color=isSell?"#ef4444":"#16a34a";
+      const labelW=48;
+      const labelH=20;
+
+      let yy=isSell?
+        y(c.h)-labelH-9:
+        y(c.l)+9;
+
+      yy=Math.max(
+        top+2,
+        Math.min(h-bottom-labelH-2,yy)
+      );
+
+      const lx=Math.max(
+        left,
+        Math.min(w-right-labelW,xx-labelW/2)
+      );
+
+      ctx.strokeStyle=color;
+      ctx.lineWidth=1.5;
+      ctx.beginPath();
+      ctx.moveTo(xx,isSell?y(c.h):y(c.l));
+      ctx.lineTo(xx,isSell?yy+labelH:yy);
+      ctx.stroke();
+
+      ctx.fillStyle=color;
+      ctx.fillRect(lx,yy,labelW,labelH);
+
+      ctx.fillStyle="#ffffff";
+      ctx.font="bold 11px Arial";
+      ctx.textAlign="center";
+      ctx.fillText(
+        overallSignal,
+        lx+labelW/2,
+        yy+14
+      );
+      ctx.textAlign="left";
+    }
+  }
+
+  // Live spot price line
+  if(Number.isFinite(livePrice)){
+    const yy=y(livePrice);
+
+    ctx.setLineDash([5,4]);
+    ctx.strokeStyle="#fbbf24";
+    ctx.lineWidth=1.5;
+    ctx.beginPath();
+    ctx.moveTo(left,yy);
+    ctx.lineTo(w-right,yy);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle="#fbbf24";
+    ctx.fillText("LIVE "+livePrice.toFixed(2),left+4,yy-6);
+  }
+
   smc.structure.forEach(s=>{
     const yy=y(s.price);
 
@@ -519,7 +584,7 @@ async function loadData(){
     }
 
     const priceData=await priceResponse.json();
-    livePrice = Number(priceData.price);
+    livePrice=Number(priceData.price);
     const data=await analysisResponse.json();
 
     document.getElementById("price").textContent=
@@ -528,7 +593,10 @@ async function loadData(){
         maximumFractionDigits:2
       });
 
-    setSignal("overall",data.overall_signal);
+    // Save final combined signal for chart label
+    overallSignal=data.overall_signal||"WAIT";
+    setSignal("overall",overallSignal);
+
     document.getElementById("reason").textContent=data.reason||"";
 
     const tf=data.timeframes||{};
