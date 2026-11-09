@@ -2,6 +2,8 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import requests
+import os
+import json
 app = FastAPI(title="Forex AI Analyzer")
 app.add_middleware(
     CORSMiddleware,
@@ -227,3 +229,198 @@ def analyze():
         "data_source": "XAUS",
         "confidence": None
     }
+def get_atr(points, period=14):
+    if len(points) < period + 1:
+        return None
+
+    ranges = []
+    for i in range(1, len(points)):
+        high = float(points[i]["h"])
+        low = float(points[i]["l"])
+        prev = float(points[i - 1]["c"])
+        ranges.append(max(high - low, abs(high - prev), abs(low - prev)))
+
+    return round(sum(ranges[-period:]) / period, 4)
+
+
+@app.get("/ai-analyze")
+def ai_analyze():
+    api_key = os.getenv("OPENAI_API_KEY")
+
+    if not api_key:
+        raise HTTPException(
+            status_code=503,
+            detail="AI API түлхүүр тохируулаагүй байна."
+        )
+
+    try:
+        market = {}
+
+        for interval in ["1m", "5m", "15m"]:
+            points = get_candles(interval)
+
+            market[interval] = {
+                "analysis": analyze_timeframe(interval),
+                "atr14": get_atr(points),
+                "recent_candles": [
+                    {
+                        "open": p["o"],
+                        "high": p["h"],
+                        "low": p["l"],
+                        "close": p["c"]
+                    }
+                    for p in points[-12:]
+                ]
+            }
+
+        price_response = requests.get(PRICE_URL, timeout=10)
+        price_response.raise_for_status()
+        price_data = price_response.json()
+
+        market_data = {
+            "symbol": "XAUUSD",
+            "price": price_data.get("spot_usd_oz"),
+            "price_as_of": price_data.get("price_as_of"),
+            "source": "XAUS",
+            "timeframes": market
+        }
+
+        schema = {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["BUY", "SELL", "WAIT"]
+                },
+                "confidence_percent": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100
+                },
+                "summary": {"type": "string"},
+                "reasons": {
+                    "type": "array",
+                    "items": {"type": "string"}
+                },
+                "entry_price": {
+                    "anyOf": [
+                        {"type": "number"},
+                        {"type": "null"}
+                    ]
+                },
+                "stop_loss": {
+                    "anyOf": [
+                        {"type": "number"},
+                        {"type": "null"}
+                    ]
+                },
+                "take_profit": {
+                    "anyOf": [
+                        {"type": "number"},
+                        {"type": "null"}
+                    ]
+                },
+                "risk_reward": {"type": "string"},
+                "risk_level": {
+                    "type": "string",
+                    "enum": ["LOW", "MEDIUM", "HIGH"]
+                },
+                "invalidation": {"type": "string"},
+                "caution": {"type": "string"}
+            },
+            "required": [
+                "action",
+                "confidence_percent",
+                "summary",
+                "reasons",
+                "entry_price",
+                "stop_loss",
+                "take_profit",
+                "risk_reward",
+                "risk_level",
+                "invalidation",
+                "caution"
+            ],
+            "additionalProperties": False
+        }
+
+        instructions = """
+You are a careful XAUUSD scalping analysis assistant.
+Analyze the supplied 1m, 5m and 15m candles and indicators.
+Respond in Mongolian.
+
+Compare all three timeframes. If signals conflict,
+data is incomplete, or the setup is unclear, choose WAIT.
+
+Never invent news, spread, commission or broker prices.
+Only provide entry, stop loss and take profit when a
+defensible setup exists. Otherwise return null for all three.
+
+For BUY: stop loss below entry and take profit above entry.
+For SELL: stop loss above entry and take profit below entry.
+
+Confidence is a qualitative AI estimate, NOT a proven
+win probability. Explain the reasons and risks.
+The XAUS price is not the exact XM execution quote.
+Never promise profit.
+"""
+
+        ai_response = requests.post(
+            "https://api.openai.com/v1/responses",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": os.getenv("OPENAI_MODEL", "gpt-5.5"),
+                "instructions": instructions,
+                "input": json.dumps(market_data, ensure_ascii=False),
+                "text": {
+                    "format": {
+                        "type": "json_schema",
+                        "name": "gold_scalping_analysis",
+                        "strict": True,
+                        "schema": schema
+                    }
+                },
+                "max_output_tokens": 900
+            },
+            timeout=45
+        )
+
+        ai_response.raise_for_status()
+        response_data = ai_response.json()
+
+        output_text = ""
+
+        for item in response_data.get("output", []):
+            if item.get("type") == "message":
+                for part in item.get("content", []):
+                    if part.get("type") == "output_text":
+                        output_text += part.get("text", "")
+
+        if not output_text:
+            raise ValueError("AI response is empty")
+
+        result = json.loads(output_text)
+
+        return {
+            "symbol": "XAUUSD",
+            "data_source": "XAUS",
+            "broker_quote": False,
+            "price_as_of": price_data.get("price_as_of"),
+            "analysis": result,
+            "disclaimer": "AI-ийн дүгнэлт баталгаатай арилжааны дохио биш."
+        }
+
+    except requests.HTTPError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="AI үйлчилгээний хүсэлт амжилтгүй боллоо."
+        )
+
+    except (requests.RequestException, ValueError, KeyError, TypeError):
+        raise HTTPException(
+            status_code=502,
+            detail="Зах зээлийн өгөгдөл эсвэл AI хариунд алдаа гарлаа."
+        )
