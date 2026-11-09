@@ -17,24 +17,67 @@ PRICE_URL = "https://xaus.com/api/v1/spot?compact=1"
 
 
 def get_candles(interval="5m"):
+    if interval not in ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]:
+        raise ValueError("Unsupported timeframe")
+
+    ranges = {
+        "1m": "5d",
+        "5m": "5d",
+        "15m": "5d",
+        "30m": "1mo",
+        "1h": "3mo",
+        "4h": "3mo",
+        "1d": "1y"
+    }
+
+    source_interval = "1h" if interval == "4h" else interval
+
     response = requests.get(
         CHART_URL,
         params={
             "symbol": "xau",
-            "range": "5d",
-            "interval": interval
+            "range": ranges[interval],
+            "interval": source_interval
         },
         timeout=20
     )
-    response.raise_for_status()
 
+    response.raise_for_status()
     points = response.json().get("points", [])
+
+    # Build 4-hour candles from hourly candles
+    if interval == "4h":
+        buckets = {}
+
+        for p in points:
+            timestamp = int(p["t"])
+            bucket_time = (timestamp // 14400) * 14400
+
+            if bucket_time not in buckets:
+                buckets[bucket_time] = []
+
+            buckets[bucket_time].append(p)
+
+        result = []
+
+        for timestamp, group in sorted(buckets.items()):
+            group.sort(key=lambda x: x["t"])
+
+            result.append({
+                "t": timestamp,
+                "o": float(group[0]["o"]),
+                "h": max(float(x["h"]) for x in group),
+                "l": min(float(x["l"]) for x in group),
+                "c": float(group[-1]["c"]),
+                "v": sum(float(x.get("v", 0)) for x in group)
+            })
+
+        points = result
 
     if len(points) < 50:
         raise ValueError("Not enough candle data")
 
     return points
-
 
 def ema(values, period):
     alpha = 2 / (period + 1)
@@ -167,17 +210,17 @@ def gold_price():
 
 @app.get("/candles")
 def candles(interval: str = "5m"):
-    if interval not in ["1m", "5m", "15m"]:
+    if interval not in ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]:
         raise HTTPException(
             status_code=400,
-            detail="Use 1m, 5m or 15m"
+            detail="Use 1m, 5m, 15m, 30m, 1h, 4h or 1d"
         )
 
     try:
         return {
             "symbol": "XAUUSD",
             "timeframe": interval,
-            "points": get_candles(interval)[-20:]
+            "points": get_candles(interval)[-200:]
         }
     except Exception:
         raise HTTPException(
