@@ -413,13 +413,25 @@ Never promise profit.
             "disclaimer": "AI-ийн дүгнэлт баталгаатай арилжааны дохио биш."
         }
 
+  
     except requests.HTTPError as exc:
+        status = exc.response.status_code if exc.response is not None else "unknown"
+        body = exc.response.text[:1000] if exc.response is not None else str(exc)
+        print(f"OpenAI HTTP error {status}: {body}", flush=True)
         raise HTTPException(
             status_code=502,
             detail="AI үйлчилгээний хүсэлт амжилтгүй боллоо."
         )
 
-    except (requests.RequestException, ValueError, KeyError, TypeError):
+    except requests.RequestException as exc:
+        print(f"AI/network error: {type(exc).__name__}: {str(exc)[:500]}", flush=True)
+        raise HTTPException(
+            status_code=502,
+            detail="Зах зээлийн өгөгдөл эсвэл AI хариунд алдаа гарлаа."
+        )
+
+    except (ValueError, KeyError, TypeError) as exc:
+        print(f"AI data error: {type(exc).__name__}: {str(exc)[:500]}", flush=True)
         raise HTTPException(
             status_code=502,
             detail="Зах зээлийн өгөгдөл эсвэл AI хариунд алдаа гарлаа."
