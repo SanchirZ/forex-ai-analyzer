@@ -227,11 +227,11 @@ async function loadData(){
     message.textContent =
       "Last updated: " + new Date().toLocaleTimeString();
 
-  }catch(error){
-    status.textContent = "● CONNECTION ERROR";
-    message.textContent =
-      "Холболтын алдаа. API эсвэл CORS тохиргоог шалгана уу.";
-  }
+ }catch(error){
+    status.textContent = "● ERROR";
+    message.textContent = "Алдаа: " + error.message;
+    console.error(error);
+}
 }
 
 loadData();
