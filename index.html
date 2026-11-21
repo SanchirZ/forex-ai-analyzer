@@ -256,7 +256,6 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
     <span><i class="sw" style="background:#F23645"></i>Буурах лаа</span>
     <span><i class="sw" style="border:1px solid #089981;background:rgba(8,153,129,.2)"></i>Order Block</span>
     <span><i class="sw" style="border:1px solid #5B8DEF;background:rgba(91,141,239,.2)"></i>FVG</span>
-    <span><i style="width:14px;border-top:2px dashed #E0A84A"></i>Liquidity</span>
     <span><i style="width:14px;border-top:2px dashed #B39DDB"></i>CHoCH/BOS</span>
     <span><i style="width:14px;border-top:2px dashed #D1D4DC"></i>Зорилт / SL</span>
     <span id="legend-range" style="display:none"><i class="sw" style="border:1px solid #E0A84A;background:rgba(224,168,74,.12)"></i>Азийн range (00–07 UTC)</span>
@@ -740,11 +739,6 @@ function draw(){
     ctx.fillRect(xx,yy,xe-xx,hh);
     ctx.strokeStyle=col;ctx.globalAlpha=.6;ctx.strokeRect(xx,yy,xe-xx,hh);ctx.globalAlpha=1;
     ctx.fillStyle=col;ctx.fillText(isOB?"OB":"FVG",Math.max(left+2,xx+3),yy-3);
-  });
-  smc.liquidity.slice(-4).forEach(z=>{
-    const yy=y(z.price);
-    ctx.setLineDash([5,4]);ctx.strokeStyle=C.liq;ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(left+plotW,yy);ctx.stroke();ctx.setLineDash([]);
-    ctx.fillStyle=C.liq;ctx.fillText(z.kind.startsWith("BSL")?"BSL":"SSL",left+4,yy-4);
   });
   smc.structure.forEach(s=>{
     const yy=y(s.price);
