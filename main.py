@@ -30,9 +30,12 @@ XAUS_HEADER_SETS = [
 ]
 CACHE_TTL = {"1m": 15, "5m": 30, "15m": 60, "30m": 60, "1h": 120, "4h": 300, "1d": 600}
 _candle_cache = {}
+_price_cache = {}
+_backoff = {}          # symbol -> time until which we do not call the source
 _cache_lock = threading.Lock()
+PRICE_TTL = {"xau": 5, "btc": 2}
 
-APP_VERSION = "2026.11.22-journal"
+APP_VERSION = "2026.11.22-ratelimit"
 INTERVALS = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
 # M1 was dropped: backtests showed spread costs turn its signals into losses
 ANALYZE_TFS = ["5m", "15m", "1h"]
@@ -157,11 +160,23 @@ def get_candles(interval="5m", symbol="xau", pages=1):
 
     # short cache: many visitors and the alert job ask for the same candles
     key = (symbol, interval, pages)
+    now = time.time()
     with _cache_lock:
         hit = _candle_cache.get(key)
-        if hit and time.time() - hit[0] < CACHE_TTL[interval]:
+        fresh = hit and now - hit[0] < CACHE_TTL[interval]
+        cooling = now < _backoff.get(symbol, 0)
+        if fresh or (hit and cooling):
             return [dict(p) for p in hit[1]]
-    points = _fetch_candles(interval, symbol, pages)
+    if cooling:
+        raise ValueError(f"{symbol} source is rate-limiting, retry shortly")
+    try:
+        points = _fetch_candles(interval, symbol, pages)
+    except Exception as exc:
+        if "429" in str(exc):
+            _backoff[symbol] = time.time() + 90      # the source asked us to slow down
+        if hit and now - hit[0] < 3600:              # serve the last good candles
+            return [dict(p) for p in hit[1]]
+        raise
     with _cache_lock:
         _candle_cache[key] = (time.time(), points)
     return [dict(p) for p in points]
@@ -176,13 +191,33 @@ def _fetch_candles(interval, symbol, pages):
 
 
 def get_price(symbol="xau"):
+    """Cached a few seconds; on errors the last price (up to 10 min old) is returned."""
+    now = time.time()
+    with _cache_lock:
+        hit = _price_cache.get(symbol)
+        if hit and (now - hit[0] < PRICE_TTL[symbol] or now < _backoff.get(symbol, 0)):
+            return dict(hit[1])
+    try:
+        data = _fetch_price(symbol)
+    except Exception as exc:
+        if "429" in str(exc):
+            _backoff[symbol] = time.time() + 90
+        if hit and now - hit[0] < 600:
+            return dict(hit[1])
+        raise
+    with _cache_lock:
+        _price_cache[symbol] = (time.time(), data)
+    return dict(data)
+
+
+def _fetch_price(symbol):
     if symbol == "btc":
         response = requests.get(f"{COINBASE_URL}/ticker", headers=HTTP_HEADERS, timeout=10)
         response.raise_for_status()
         data = response.json()
         return {"price": float(data["price"]), "price_as_of": data.get("time")}
 
-    response = requests.get(PRICE_URL, headers=HTTP_HEADERS, timeout=10)
+    response = requests.get(PRICE_URL, headers=XAUS_HEADER_SETS[0], timeout=10)
     response.raise_for_status()
     data = response.json()
     return {"price": data.get("spot_usd_oz"), "price_as_of": data.get("price_as_of")}
@@ -294,13 +329,13 @@ def home():
 
 
 NEWS_URL = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
-_news_cache = {"t": 0, "items": []}
+_news_cache = {"t": 0, "items": [], "fail_t": 0}
 
 
 def get_news():
     """High-impact USD events of this week (Forex Factory calendar), cached 30 min."""
     with _cache_lock:
-        if time.time() - _news_cache["t"] < 1800:
+        if time.time() - _news_cache["t"] < 3 * 3600 or time.time() - _news_cache["fail_t"] < 900:
             return list(_news_cache["items"])
     items = []
     try:
@@ -324,6 +359,7 @@ def get_news():
     except (requests.RequestException, ValueError) as exc:
         print("news unavailable:", type(exc).__name__, exc)
         with _cache_lock:
+            _news_cache["fail_t"] = time.time()      # wait 15 min before asking again
             if _news_cache["items"]:
                 return list(_news_cache["items"])
         return []
