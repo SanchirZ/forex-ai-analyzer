@@ -75,7 +75,9 @@ header{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:s
 .pills{display:flex;gap:2px;background:#1E222D;border-radius:10px;padding:3px;flex-wrap:wrap}
 .pills button,.zoom button{min-height:36px;min-width:40px;border:0;border-radius:8px;padding:0 9px;font:600 12px Inter,sans-serif;cursor:pointer;background:transparent;color:#B2B5BE}
 .pills button:hover,.zoom button:hover{background:#2A2E39;color:#fff}
-.pills button[aria-pressed="true"]{background:#2962FF;color:#fff}
+.pills button[aria-pressed="true"],#sig-toggle[aria-pressed="true"]{background:#2962FF;color:#fff}
+.sig-stats{font-size:12px;color:#B2B5BE;line-height:1.5}
+.sig-stats b{color:#fff}
 .zoom{display:flex;gap:2px;background:#1E222D;border-radius:10px;padding:3px}
 .chart-wrap{position:relative;height:480px;background:#131722;border:1px solid #2A2E39;border-radius:12px;overflow:hidden}
 #chart{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
@@ -228,6 +230,7 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
         <button type="button" id="zoom-out" aria-label="Жижигрүүлэх">−</button>
         <button type="button" id="zoom-reset" aria-label="Анхны байдал">⟲</button>
       </div>
+      <div class="zoom"><button type="button" id="sig-toggle" aria-pressed="true" style="padding:0 12px">BUY/SELL сигнал</button></div>
     </div>
   </div>
   <div class="chart-wrap">
@@ -243,7 +246,9 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
     <span><i style="width:14px;border-top:2px dashed #E0A84A"></i>Liquidity</span>
     <span><i style="width:14px;border-top:2px dashed #B39DDB"></i>CHoCH/BOS</span>
     <span><i style="width:14px;border-top:2px dashed #D1D4DC"></i>Зорилт / SL</span>
+    <span><b style="color:#26A69A">▲ BUY</b> / <b style="color:#EF5350">▼ SELL</b> сигнал</span>
   </div>
+  <div class="sig-stats" id="sig-stats"></div>
 </section>
 
 <div class="row">
@@ -367,7 +372,7 @@ const TICK_MS=3000;       // live price poll
 const ANIM_MS=900;        // smooth candle movement
 
 const S={tf:"5m",candles:[],smc:null,price:null,priceAsOf:null,overall:"WAIT",sigs:[],m5:[],ai:null,plan:null,
-  anim:null,lastShown:null};
+  anim:null,lastShown:null,sigEvents:[],showSig:true};
 const view={count:90,offset:0};
 let layout=null;
 
@@ -442,6 +447,72 @@ function analyzeSMC(p){
   if(ph&&last.c>ph.v)result.structure.push({label:"Bullish BOS / CHoCH candidate",price:ph.v});
   if(pl&&last.c<pl.v)result.structure.push({label:"Bearish BOS / CHoCH candidate",price:pl.v});
   return result;
+}
+
+/* ---------- BUY/SELL signals on every candle (same rules as the backend) ---------- */
+function emaArr(v,per){const a=2/(per+1);const r=[v[0]];for(let i=1;i<v.length;i++)r.push(a*v[i]+(1-a)*r[i-1]);return r;}
+function rsiArr(v,per=14){
+  const out=new Array(v.length).fill(null);
+  if(v.length<=per)return out;
+  let g=0,l=0;
+  for(let i=1;i<=per;i++){const d=v[i]-v[i-1];g+=Math.max(d,0);l+=Math.max(-d,0);}
+  g/=per;l/=per;
+  const val=()=>g===0&&l===0?50:l===0?100:100-100/(1+g/l);
+  out[per]=val();
+  for(let i=per+1;i<v.length;i++){const d=v[i]-v[i-1];g=(g*(per-1)+Math.max(d,0))/per;l=(l*(per-1)+Math.max(-d,0))/per;out[i]=val();}
+  return out;
+}
+function atrArr(p,per=14){
+  const tr=p.map((c,i)=>i?Math.max(c.h-c.l,Math.abs(c.h-p[i-1].c),Math.abs(c.l-p[i-1].c)):c.h-c.l);
+  const out=new Array(p.length).fill(null);let s=0;
+  for(let i=0;i<p.length;i++){s+=tr[i];if(i>=per)s-=tr[i-per];if(i>=per-1)out[i]=s/per;}
+  return out;
+}
+function computeSignals(p){
+  const n=p.length;
+  if(n<60)return [];
+  const cl=p.map(c=>c.c);
+  const e20=emaArr(cl,20),e50=emaArr(cl,50);
+  const e26=emaArr(cl,26);
+  const m=emaArr(cl,12).map((x,i)=>x-e26[i]);
+  const sg=emaArr(m,9),r=rsiArr(cl),at=atrArr(p);
+  const ev=[];let last=null,prev=null,busyUntil=-1;
+  for(let i=50;i<n-1;i++){          // closed candles only, so a signal never repaints
+    if(r[i]==null||at[i]==null){prev=null;continue;}
+    let side=null;
+    // trend (EMA20 vs EMA50) + momentum (MACD) agree, RSI not stretched
+    if(e20[i]>e50[i]&&m[i]>sg[i]&&r[i]>50&&r[i]<75)side="BUY";
+    else if(e20[i]<e50[i]&&m[i]<sg[i]&&r[i]<50&&r[i]>25)side="SELL";
+    const rising=side&&side!==prev;   // condition just switched on
+    prev=side;
+    if(!rising)continue;
+    if(side===last&&i<=busyUntil)continue;   // same direction only after the previous trade closed
+    last=side;
+    const dir=side==="BUY"?1:-1,entry=p[i].c,risk=Math.max(at[i]*1.5,0.3);
+    const sl=entry-dir*risk,tps=[1,2,3].map(k=>entry+dir*risk*k);
+    let result="open",hit=0,exit=n;
+    for(let j=i+1;j<n;j++){
+      const lossHit=dir>0?p[j].l<=sl:p[j].h>=sl;
+      while(hit<3&&(dir>0?p[j].h>=tps[hit]:p[j].l<=tps[hit]))hit++;
+      if(lossHit&&hit===0){result="SL";exit=j;break;}
+      if(hit===3){result="TP3";exit=j;break;}
+      if(lossHit){result="TP"+hit;exit=j;break;}
+    }
+    if(result==="open"&&hit>0)result="TP"+hit;
+    busyUntil=exit;
+    ev.push({i,side,dir,entry,sl,tps,result});
+  }
+  return ev;
+}
+function renderSigStats(){
+  const ev=S.sigEvents||[],el=$("sig-stats");
+  const done=ev.filter(e=>e.result!=="open");
+  if(!ev.length){el.textContent="Энэ timeframe-ийн лаанууд дээр сигнал гараагүй байна.";return;}
+  const win=done.filter(e=>e.result!=="SL").length;
+  const last=ev[ev.length-1];
+  el.innerHTML=`Энэ график дээрх ${done.length} дууссан сигналаас <b>${win}</b> нь TP1-д, <b>${done.length-win}</b> нь SL-д эхэлж хүрсэн`+
+    (done.length?` (${fmt(win/done.length*100,0)}%)`:"")+`. Сүүлийн сигнал: <b style="color:${last.side==="BUY"?"#26A69A":"#EF5350"}">${last.side}</b> @ ${fmt(last.entry)} · ${last.result==="open"?"идэвхтэй":last.result}. `+
+    `Цөөн лаан дээрх түүхэн тоо тул ирээдүйн үр дүнг баталгаажуулахгүй.`;
 }
 
 /* ---------- Trade plan (where price is expected to go) ---------- */
@@ -522,6 +593,8 @@ function draw(){
   if(Number.isFinite(live))extra.push(live);
   const pos=ACC.pos;
   if(S.plan&&futureVisible&&!pos)extra.push(S.plan.tp,S.plan.sl);
+  const lastSig=S.showSig&&S.sigEvents.length?S.sigEvents[S.sigEvents.length-1]:null;
+  if(lastSig&&lastSig.i<i1)extra.push(lastSig.sl,lastSig.tps[2]);
   if(pos){extra.push(pos.entry);if(pos.sl)extra.push(pos.sl);if(pos.tp)extra.push(pos.tp);}
   extra.forEach(v=>{if(Number.isFinite(v)){min=Math.min(min,v);max=Math.max(max,v);}});
   const pad=(max-min)*.08||1;min-=pad;max+=pad;
@@ -569,6 +642,40 @@ function draw(){
     ctx.fillStyle=col;
     const yt=Math.min(y(c.o),y(c.c)),bh=Math.max(1,Math.abs(y(c.o)-y(c.c)));
     ctx.fillRect(xx-cw/2,yt,cw,bh);
+  }
+
+  // BUY / SELL labels (SweetAlgo style) and levels of the latest signal
+  if(S.showSig&&S.sigEvents.length){
+    const ev=S.sigEvents,lastEv=ev[ev.length-1];
+    // levels of the latest signal
+    const xs=x(lastEv.i),xe=x(n-1)+barW*2;
+    const lv=[[lastEv.entry,"#B2B5BE","Entry"],[lastEv.sl,C.bear,"SL"],...lastEv.tps.map((v,k)=>[v,C.bull,"TP"+(k+1)])];
+    ctx.font="600 10px Inter, Arial";
+    lv.forEach(([v,col,lab])=>{
+      const yy=y(v);
+      ctx.strokeStyle=col;ctx.lineWidth=1;ctx.setLineDash(lab==="Entry"?[]:[4,3]);
+      ctx.beginPath();ctx.moveTo(xs,yy);ctx.lineTo(xe,yy);ctx.stroke();ctx.setLineDash([]);
+      const t=`${lab} ${fmt(v)}`;
+      ctx.fillStyle=col;ctx.fillText(t,Math.max(left+4,xs+6),yy-3);
+    });
+    // labels on candles
+    ev.forEach(e=>{
+      if(e.i<i0||e.i>=i1)return;
+      const c=p[e.i],xx=x(e.i),buy=e.side==="BUY",col=buy?"#26A69A":"#EF5350";
+      const lw=36,lh=17,gap=6;
+      const ty=buy?y(c.l)+gap:y(c.h)-gap;
+      ctx.fillStyle=col;
+      ctx.beginPath();
+      if(buy){ctx.moveTo(xx,ty);ctx.lineTo(xx-5,ty+6);ctx.lineTo(xx+5,ty+6);}
+      else{ctx.moveTo(xx,ty);ctx.lineTo(xx-5,ty-6);ctx.lineTo(xx+5,ty-6);}
+      ctx.closePath();ctx.fill();
+      const by=buy?ty+6:ty-6-lh;
+      ctx.beginPath();
+      if(ctx.roundRect)ctx.roundRect(xx-lw/2,by,lw,lh,4);else ctx.rect(xx-lw/2,by,lw,lh);
+      ctx.fill();
+      ctx.fillStyle="#fff";ctx.font="bold 10px Inter, Arial";ctx.textAlign="center";
+      ctx.fillText(e.side,xx,by+12);ctx.textAlign="left";
+    });
   }
 
   // forecast projection: arrow to target, profit (green) and risk (red) zones
@@ -719,6 +826,7 @@ function rollCandle(price){
   if(now>=last.t+sec&&now<last.t+2*sec&&price!==last.c){
     c.push({t:last.t+sec,o:last.c,h:last.c,l:last.c,c:last.c});
     if(view.offset>0)view.offset+=1;
+    S.sigEvents=computeSignals(c);renderSigStats();
   }
 }
 function showPrice(v,dir){
@@ -753,6 +861,8 @@ async function loadChart(){
     S.candles=clean(data.points||[]);
     if(tf==="5m")S.m5=S.candles.map(c=>({...c}));
     S.smc=analyzeSMC(S.candles);
+    S.sigEvents=computeSignals(S.candles);
+    renderSigStats();
     if(Number.isFinite(S.lastShown))updateLastCandle(S.lastShown);
     renderExplanations(S.smc);
     $("message").textContent=`Chart · ${tf} · ${S.candles.length} лаа · ${new Date().toLocaleTimeString()}`;
@@ -1057,6 +1167,7 @@ $("tf-pills").addEventListener("click",e=>{
   view.count=90;view.offset=0;draw();loadChart();
 });
 $("refresh-btn").addEventListener("click",loadData);
+$("sig-toggle").addEventListener("click",e=>{S.showSig=!S.showSig;e.currentTarget.setAttribute("aria-pressed",String(S.showSig));draw();});
 $("ai-btn").addEventListener("click",runAI);
 window.addEventListener("resize",requestDraw);
 
