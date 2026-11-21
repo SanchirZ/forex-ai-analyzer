@@ -17,6 +17,7 @@ PRICE_URL = "https://xaus.com/api/v1/spot?compact=1"
 COINBASE_URL = "https://api.exchange.coinbase.com/products/BTC-USD"
 HTTP_HEADERS = {"User-Agent": "forex-ai-analyzer/1.0", "Accept": "application/json"}
 
+APP_VERSION = "2026.11.21-btc"
 INTERVALS = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
 SYMBOLS = {
     "xau": {"name": "XAUUSD", "source": "XAUS"},
@@ -229,7 +230,9 @@ def analyze_timeframe(interval, points=None, symbol="xau"):
 def home():
     return {
         "app": "Forex AI Analyzer",
-        "status": "online"
+        "status": "online",
+        "version": APP_VERSION,
+        "symbols": [v["name"] for v in SYMBOLS.values()]
     }
 
 
