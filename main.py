@@ -121,8 +121,9 @@ def rsi(values, period=14):
     return 100 - (100 / (1 + rs))
 
 
-def analyze_timeframe(interval):
-    points = get_candles(interval)
+def analyze_timeframe(interval, points=None):
+    if points is None:
+        points = get_candles(interval)
     closes = [float(p["c"]) for p in points]
 
     ema20 = ema(closes, 20)
@@ -303,7 +304,7 @@ def ai_analyze():
             points = get_candles(interval)
 
             market[interval] = {
-                "analysis": analyze_timeframe(interval),
+                "analysis": analyze_timeframe(interval, points),
                 "atr14": get_atr(points),
                 "recent_candles": [
                     {

@@ -18,11 +18,13 @@
 html,body{margin:0;background:var(--bg)}
 body{color:var(--text);font-family:Inter,system-ui,sans-serif;padding:28px 20px 40px}
 .container{max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
-.row{display:flex;flex-wrap:wrap;gap:20px}
+.row{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start}
 .card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:22px;display:flex;flex-direction:column;gap:14px;min-width:0}
 .label{font-size:12px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
 .mono{font-family:var(--mono)}
 h2{font-family:var(--head);font-weight:700;font-size:17px;margin:0}
+.note{margin:0;font-size:11px;color:var(--muted);line-height:1.5}
+.BUY,.pos{color:var(--green)}.SELL,.neg{color:var(--sell)}.WAIT,.UNAVAILABLE{color:var(--wait)}
 
 header{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between}
 .brand{display:flex;align-items:center;gap:12px}
@@ -40,17 +42,18 @@ header{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:s
 .btn-ghost:hover{border-color:var(--green)}
 .btn-primary{border:0;background:var(--accent);color:#fff;font-weight:700;font-size:14px}
 .btn-primary:hover{background:var(--green)}
-.btn:disabled{opacity:.6;cursor:wait}
+.btn-danger{border:0;background:var(--sell);color:#fff;font-weight:700}
+.btn:disabled{opacity:.6;cursor:not-allowed}
 
 .price-card{flex:1 1 320px}
-.price{font-family:var(--mono);font-weight:700;font-size:44px;line-height:1}
+.price{font-family:var(--mono);font-weight:700;font-size:44px;line-height:1;transition:color .4s}
+.price.up{color:var(--green)}.price.down{color:var(--sell)}
 .meta-row{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:14px;font-size:12px;color:var(--muted)}
 .meta-row b{color:var(--text);font-family:var(--mono)}
-.note{margin:0;font-size:11px;color:var(--muted);line-height:1.5}
 
 .signal-card{flex:2 1 480px;background:linear-gradient(180deg,#EAF1EE 0%,#FFFFFF 70%);border-color:#C9DAD3}
 .signal-card.SELL{background:linear-gradient(180deg,#F6E8E3 0%,#FFFFFF 70%);border-color:#E6C7BD}
-.signal-card.WAIT,.signal-card.UNAVAILABLE{background:linear-gradient(180deg,#F5EEE2 0%,#FFFFFF 70%);border-color:#E5D6BD}
+.signal-card.WAIT{background:linear-gradient(180deg,#F5EEE2 0%,#FFFFFF 70%);border-color:#E5D6BD}
 .signal-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
 .big-signal{display:flex;align-items:center;gap:12px;font-family:var(--head);font-weight:700;font-size:48px;line-height:1}
 .reason{margin:0;font-size:14px;color:var(--text2);line-height:1.5;max-width:440px}
@@ -63,29 +66,62 @@ header{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:s
 .tf{background:var(--inner);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:6px;align-items:center}
 .tf span{font-size:11px;color:var(--muted)}
 .tf strong{font:700 18px var(--head)}
-.BUY{color:var(--green)}.SELL{color:var(--sell)}.WAIT,.UNAVAILABLE{color:var(--wait)}
 
-.chart-card{flex:999 1 640px}
+/* Chart: dark like XM */
+.chart-card{background:#131722;border-color:#2A2E39;color:#D1D4DC}
+.chart-card .label{color:#8A93A6}
 .chart-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
-.pills{display:flex;gap:4px;background:var(--inner);border-radius:12px;padding:4px;flex-wrap:wrap}
-.pills button{min-height:36px;min-width:44px;border:0;border-radius:9px;padding:0 10px;font:600 12px Inter,sans-serif;cursor:pointer;background:transparent;color:var(--text2)}
-.pills button[aria-pressed="true"]{background:var(--accent);color:#fff}
-.chart-wrap{height:340px;background:#FBF9F6;border:1px solid var(--border);border-radius:14px;overflow:hidden}
-canvas{width:100%;height:100%;display:block}
-.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--text2)}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.pills{display:flex;gap:2px;background:#1E222D;border-radius:10px;padding:3px;flex-wrap:wrap}
+.pills button,.zoom button{min-height:36px;min-width:40px;border:0;border-radius:8px;padding:0 9px;font:600 12px Inter,sans-serif;cursor:pointer;background:transparent;color:#B2B5BE}
+.pills button:hover,.zoom button:hover{background:#2A2E39;color:#fff}
+.pills button[aria-pressed="true"]{background:#2962FF;color:#fff}
+.zoom{display:flex;gap:2px;background:#1E222D;border-radius:10px;padding:3px}
+.chart-wrap{position:relative;height:480px;background:#131722;border:1px solid #2A2E39;border-radius:12px;overflow:hidden}
+#chart{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#chart.dragging{cursor:grabbing}
+.hint{position:absolute;left:10px;top:8px;font-size:11px;color:#6A7186;pointer-events:none}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:#B2B5BE}
 .legend span{display:flex;align-items:center;gap:6px}
 .sw{width:10px;height:10px;border-radius:3px}
+.forecast{display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:#1E222D;border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.5;color:#D1D4DC}
+.forecast b.BUY{color:#26A69A}.forecast b.SELL{color:#EF5350}.forecast b.WAIT{color:#E0A84A}
+.forecast .src{font-size:11px;color:#8A93A6;border:1px solid #363A45;border-radius:999px;padding:2px 8px}
 
-aside{flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:20px}
+/* Account */
+.acc-card,.pos-card{flex:1 1 440px}
+.form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field label{font-size:12px;color:var(--muted)}
+.field input,.field select{min-height:44px;border:1px solid var(--border);border-radius:10px;padding:0 12px;font:600 14px var(--mono);color:var(--text);background:#fff;width:100%}
+.field select{font-family:Inter,sans-serif}
+.field input:focus,.field select:focus{outline:2px solid var(--green);outline-offset:1px}
+.kv{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.kv div{background:var(--inner);border-radius:12px;padding:10px;min-width:0}
+.kv span{display:block;font-size:11px;color:var(--muted)}
+.kv b{display:block;font:700 15px var(--mono);margin-top:4px;overflow-wrap:anywhere}
+.instr{background:#EAF1EE;border:1px solid #C9DAD3;border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.55}
+.instr.SELL{background:#F6E8E3;border-color:#E6C7BD}
+.instr.WAIT{background:#F5EEE2;border-color:#E5D6BD}
+.warn{background:#F6E4DF;border:1px solid #E6C7BD;color:#8E3B28;border-radius:12px;padding:10px 14px;font-size:13px;line-height:1.5}
+.equity{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.equity .big{font:700 34px var(--mono);line-height:1.1}
+.pl{font:700 20px var(--mono)}
+details{border:1px solid var(--border);border-radius:12px;padding:10px 14px}
+summary{cursor:pointer;font-weight:600;font-size:13px;min-height:28px;display:flex;align-items:center}
+.history{display:flex;flex-direction:column;gap:6px;max-height:220px;overflow:auto}
+.h-item{display:flex;justify-content:space-between;gap:10px;font-size:12px;background:var(--inner);border-radius:10px;padding:8px 10px}
+.h-item b{font-family:var(--mono)}
+.progress{height:10px;border-radius:5px;background:var(--inner);overflow:hidden}
+.progress i{display:block;height:100%;background:var(--green);width:0;transition:width .4s}
+
+.side-col{flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:20px}
+.main-col{flex:2 1 560px;min-width:0;display:flex;flex-direction:column;gap:20px}
 .ai-head{display:flex;justify-content:space-between;align-items:center}
 .tag{font-size:11px;color:#fff;background:var(--accent);border-radius:999px;padding:4px 10px;font-weight:700}
 .ai-result{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .ai-result strong{font:700 26px var(--head)}
 .ai-result span{font-size:13px;color:var(--muted)}
-.levels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.levels div{background:var(--inner);border-radius:12px;padding:10px}
-.levels span{font-size:11px;color:var(--muted)}
-.levels b{display:block;font:700 14px var(--mono);margin-top:4px}
 .ai-text{margin:0;font-size:13px;color:var(--text2);line-height:1.55}
 .ai-text ul{margin:6px 0 0;padding-left:18px}
 
@@ -102,10 +138,14 @@ aside{flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:20px}
 .ind .h{font-size:12px;color:var(--muted)}
 .meter{position:relative;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--sell) 0 30%,#DDD3C6 30% 70%,var(--green) 70% 100%)}
 .meter i{position:absolute;top:-4px;width:4px;height:14px;border-radius:2px;background:var(--text);left:50%;transition:left .3s}
+.rules{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:14px;line-height:1.5}
 
 #message{font-size:12px;color:var(--muted);text-align:center}
 footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
-@media(max-width:480px){body{padding:16px 12px 32px}.card{padding:16px}.price{font-size:36px}.big-signal{font-size:40px}.chart-wrap{height:300px}}
+@media(max-width:560px){
+  body{padding:16px 12px 32px}.card{padding:16px}.price{font-size:36px}.big-signal{font-size:40px}
+  .chart-wrap{height:400px}.form,.kv{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
 </style>
 </head>
 <body>
@@ -123,7 +163,7 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
   </div>
   <div class="head-right">
     <div class="status busy" id="status"><i></i><span id="status-text">CONNECTING</span></div>
-    <button class="btn btn-ghost" id="refresh-btn" type="button" aria-label="Шинэчлэх">
+    <button class="btn btn-ghost" id="refresh-btn" type="button">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>Шинэчлэх
     </button>
   </div>
@@ -140,7 +180,7 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
     <div class="meta-row" style="border-top:0;padding-top:0">
       <span>Үнийн цаг <b id="price-time">--</b></span>
     </div>
-    <p class="note">XAUS-ын үнэ нь XM-ийн арилжааны яг үнэ биш.</p>
+    <p class="note">XAUS-ын үнэ нь XM-ийн арилжааны яг үнэ биш (spread-ийн зөрүүтэй).</p>
   </section>
 
   <section class="card signal-card WAIT" id="signal-card">
@@ -167,44 +207,120 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
   </section>
 </div>
 
-<div class="row" style="align-items:flex-start">
-  <section class="card chart-card">
-    <div class="chart-head">
-      <div>
-        <div class="label">Smart Money Concepts</div>
-        <h2 style="margin-top:4px">Алтны график</h2>
-      </div>
+<section class="card chart-card">
+  <div class="chart-head">
+    <div>
+      <div class="label">Smart Money Concepts</div>
+      <h2 style="margin-top:4px;color:#fff">XAUUSD график</h2>
+    </div>
+    <div class="tools">
       <div class="pills" role="group" aria-label="Timeframe" id="tf-pills">
-        <button type="button" data-tf="1m" aria-pressed="false">1M</button>
-        <button type="button" data-tf="5m" aria-pressed="true">5M</button>
-        <button type="button" data-tf="15m" aria-pressed="false">15M</button>
-        <button type="button" data-tf="30m" aria-pressed="false">30M</button>
-        <button type="button" data-tf="1h" aria-pressed="false">1H</button>
-        <button type="button" data-tf="4h" aria-pressed="false">4H</button>
-        <button type="button" data-tf="1d" aria-pressed="false">1D</button>
+        <button type="button" data-tf="1m" aria-pressed="false">M1</button>
+        <button type="button" data-tf="5m" aria-pressed="true">M5</button>
+        <button type="button" data-tf="15m" aria-pressed="false">M15</button>
+        <button type="button" data-tf="30m" aria-pressed="false">M30</button>
+        <button type="button" data-tf="1h" aria-pressed="false">H1</button>
+        <button type="button" data-tf="4h" aria-pressed="false">H4</button>
+        <button type="button" data-tf="1d" aria-pressed="false">D1</button>
+      </div>
+      <div class="zoom">
+        <button type="button" id="zoom-in" aria-label="Томруулах">+</button>
+        <button type="button" id="zoom-out" aria-label="Жижигрүүлэх">−</button>
+        <button type="button" id="zoom-reset" aria-label="Анхны байдал">⟲</button>
       </div>
     </div>
-    <div class="chart-wrap"><canvas id="chart"></canvas></div>
-    <div class="legend">
-      <span><i class="sw" style="background:#336557"></i>Өсөх лаа</span>
-      <span><i class="sw" style="background:#B5523B"></i>Буурах лаа</span>
-      <span><i class="sw" style="border:1px solid #336557;background:rgba(51,101,87,.16)"></i>Order Block</span>
-      <span><i class="sw" style="border:1px solid #5B7FA6;background:rgba(91,127,166,.16)"></i>FVG</span>
-      <span><i style="width:14px;border-top:2px dashed #A0722A"></i>Liquidity</span>
-      <span><i style="width:14px;border-top:2px dashed #1F4B3F"></i>CHoCH/BOS</span>
+  </div>
+  <div class="chart-wrap">
+    <canvas id="chart" aria-label="XAUUSD лааны график"></canvas>
+    <div class="hint" id="hint">Чирж хөдөлгөх · Хулганы дугуй / 2 хуруугаар томруулах</div>
+  </div>
+  <div class="forecast" id="forecast"><b class="WAIT">WAIT</b><span>Дохио хүлээж байна...</span></div>
+  <div class="legend">
+    <span><i class="sw" style="background:#26A69A"></i>Өсөх лаа</span>
+    <span><i class="sw" style="background:#EF5350"></i>Буурах лаа</span>
+    <span><i class="sw" style="border:1px solid #26A69A;background:rgba(38,166,154,.2)"></i>Order Block</span>
+    <span><i class="sw" style="border:1px solid #5B8DEF;background:rgba(91,141,239,.2)"></i>FVG</span>
+    <span><i style="width:14px;border-top:2px dashed #E0A84A"></i>Liquidity</span>
+    <span><i style="width:14px;border-top:2px dashed #B39DDB"></i>CHoCH/BOS</span>
+    <span><i style="width:14px;border-top:2px dashed #D1D4DC"></i>Зорилт / SL</span>
+  </div>
+</section>
+
+<div class="row">
+  <section class="card acc-card">
+    <h2>Данс ба лот тооцоолуур</h2>
+    <div class="form">
+      <div class="field"><label for="in-balance">Баланс ($)</label><input id="in-balance" type="number" min="0" step="0.01" inputmode="decimal" placeholder="жишээ 500"></div>
+      <div class="field"><label for="in-risk">Эрсдэл / арилжаа (%)</label><input id="in-risk" type="number" min="0.1" max="10" step="0.1" inputmode="decimal" value="1"></div>
+      <div class="field"><label for="in-type">XM дансны төрөл</label>
+        <select id="in-type"><option value="standard">Standard · 100 oz</option><option value="micro">Micro · 1 oz</option></select></div>
     </div>
+    <button class="btn btn-ghost" id="save-acc" type="button">Балансаа хадгалах</button>
+    <div id="calc-out"></div>
+    <p class="note">Лотын тооцоо: эрсдэлийн $ ÷ (SL хүртэлх зай × гэрээний хэмжээ). XM-ийн яг гэрээний хэмжээ, хамгийн бага лотыг өөрийн дансны тохиргооноос шалгаарай.</p>
   </section>
 
-  <aside>
+  <section class="card pos-card">
+    <h2>Баланс ба нээлттэй арилжаа</h2>
+    <div class="equity">
+      <div><div class="sub">Equity (одоогийн үнэ цэнэ)</div><div class="big" id="equity">--</div></div>
+      <div style="text-align:right"><div class="sub">Баланс</div><div class="pl" id="balance-view">--</div></div>
+    </div>
+    <div id="pos-out"><p class="note">Нээлттэй арилжаа алга.</p></div>
+    <details>
+      <summary>XM дээр нээсэн арилжаагаа гараар оруулах</summary>
+      <div class="form" style="margin-top:10px">
+        <div class="field"><label for="m-side">Чиглэл</label><select id="m-side"><option>BUY</option><option>SELL</option></select></div>
+        <div class="field"><label for="m-entry">Нээсэн үнэ</label><input id="m-entry" type="number" step="0.01" inputmode="decimal"></div>
+        <div class="field"><label for="m-lot">Лот</label><input id="m-lot" type="number" step="0.01" min="0.01" inputmode="decimal"></div>
+        <div class="field"><label for="m-sl">Stop loss</label><input id="m-sl" type="number" step="0.01" inputmode="decimal"></div>
+        <div class="field"><label for="m-tp">Take profit</label><input id="m-tp" type="number" step="0.01" inputmode="decimal"></div>
+        <div class="field" style="justify-content:flex-end"><button class="btn btn-primary" id="m-open" type="button">Нэмэх</button></div>
+      </div>
+    </details>
+    <div>
+      <div class="sub" style="margin-bottom:6px">Түүх</div>
+      <div class="history" id="history"><p class="note">Хаагдсан арилжаа алга.</p></div>
+    </div>
+    <p class="note">Энэ бол таны XM данстай шууд холбогдоогүй дадлагын/хяналтын данс. P&amp;L нь XAUS-ын үнээр тооцогдох тул XM-ээс spread-ийн хэмжээгээр бага зэрэг зөрнө.</p>
+  </section>
+</div>
+
+<div class="row">
+  <div class="main-col">
+    <section class="card">
+      <div class="ai-head"><h2>Сарын зорилго</h2></div>
+      <div class="form" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+        <div class="field"><label for="in-goal">Энэ сард олох зорилго ($)</label><input id="in-goal" type="number" min="0" step="1" inputmode="decimal" placeholder="жишээ 50"></div>
+        <div class="field" style="justify-content:flex-end"><button class="btn btn-ghost" id="save-goal" type="button">Зорилго хадгалах</button></div>
+      </div>
+      <div id="goal-out"><p class="note">Эхлээд баланс болон зорилгоо оруулна уу.</p></div>
+    </section>
+
+    <section class="card">
+      <h2>Манай сайтын арилжааны дүрэм</h2>
+      <ol class="rules">
+        <li>Зөвхөн нийт дохио <b>BUY</b> эсвэл <b>SELL</b>, дор хаяж 2/3 timeframe тохирсон үед орно. WAIT үед хүлээнэ.</li>
+        <li>Нэг арилжаанд балансынхаа <b>1–2%</b>-иас илүүг эрсдэлд бүү оруул. Лотыг дээрх тооцоолуураар тогтооно.</li>
+        <li>Stop loss-ийг <b>заавал</b> тавина, алдагдал руу хэзээ ч бүү зөөнө.</li>
+        <li>Take profit нь SL-ээс дор хаяж <b>2 дахин</b> хол (R:R ≥ 1:2) байх ёстой.</li>
+        <li>Өдөрт <b>3 удаа</b> алдсан эсвэл балансын <b>3%</b>-ийг алдсан бол тэр өдөртөө зогсоно.</li>
+        <li>Сарын зорилгод хүрэхийн тулд эрсдэлээ өсгөхгүй. Хоцорвол хугацааг уртасгана.</li>
+      </ol>
+      <p class="note">Эдгээр нь эрсдэлийг хянах дүрэм бөгөөд ашгийн баталгаа биш. Алтны үнэ маш хурдан хөдөлдөг.</p>
+    </section>
+  </div>
+
+  <aside class="side-col">
     <section class="card">
       <div class="ai-head"><h2>AI дүгнэлт</h2><span class="tag">AI</span></div>
       <div class="ai-result"><strong id="ai-action" class="WAIT">--</strong><span id="ai-meta">Шинжилгээ ажиллуулаагүй байна</span></div>
-      <div class="levels">
+      <div class="kv">
         <div><span>Entry</span><b id="ai-entry">--</b></div>
-        <div><span>Stop loss</span><b id="ai-sl" style="color:var(--sell)">--</b></div>
-        <div><span>Take profit</span><b id="ai-tp" style="color:var(--green)">--</b></div>
+        <div><span>Stop loss</span><b id="ai-sl" class="neg">--</b></div>
+        <div><span>Take profit</span><b id="ai-tp" class="pos">--</b></div>
       </div>
-      <div class="ai-text" id="ai-text">Доорх товчийг дарж 1M, 5M, 15M-ийн өгөгдөл дээр AI дүгнэлт гаргуулна.</div>
+      <div class="ai-text" id="ai-text">Товчийг дарж 1M, 5M, 15M-ийн өгөгдөл дээр AI дүгнэлт гаргуулна. AI-ийн түвшин нийт дохиотой таарвал график, лотын тооцоонд ашиглагдана.</div>
       <button class="btn btn-primary" id="ai-btn" type="button">AI шинжилгээ ажиллуулах</button>
     </section>
 
@@ -241,35 +357,32 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
 </div>
 
 <script>
+"use strict";
 const API="https://forex-ai-analyzer-3.onrender.com";
-const C={bg:"#FBF9F6",grid:"#EEE8DF",axis:"#6B6B6B",bull:"#336557",bear:"#B5523B",
-  obBull:"#336557",obBear:"#B5523B",fvg:"#5B7FA6",liq:"#A0722A",struct:"#1F4B3F",buyTag:"#1F4B3F",sellTag:"#B5523B"};
-let chartPoints=[];
-let livePrice=null;
-let overallSignal="WAIT";
-let currentTf="5m";
+const TF_SEC={"1m":60,"5m":300,"15m":900,"30m":1800,"1h":3600,"4h":14400,"1d":86400};
+const C={bg:"#131722",grid:"#1E2433",axis:"#8A93A6",text:"#D1D4DC",bull:"#26A69A",bear:"#EF5350",
+  fvg:"#5B8DEF",liq:"#E0A84A",struct:"#B39DDB",entry:"#D1D4DC"};
+const FUTURE=16;          // empty bars on the right for the forecast
+const TICK_MS=3000;       // live price poll
+const ANIM_MS=900;        // smooth candle movement
+
+const S={tf:"5m",candles:[],smc:null,price:null,priceAsOf:null,overall:"WAIT",sigs:[],m5:[],ai:null,plan:null,
+  anim:null,lastShown:null};
+const view={count:90,offset:0};
+let layout=null;
 
 const $=id=>document.getElementById(id);
-const fmt=v=>Number(v).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmt=(v,d=2)=>Number(v).toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
+const money=v=>(v<0?"-$":"$")+fmt(Math.abs(v));
+const sgnMoney=v=>(v>=0?"+$":"-$")+fmt(Math.abs(v));
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const num=v=>{const n=parseFloat(v);return Number.isFinite(n)?n:null;};
 
-function setStatus(kind,text){
-  $("status").className="status "+kind;
-  $("status-text").textContent=text;
-}
+function setStatus(kind,text){$("status").className="status "+kind;$("status-text").textContent=text;}
+function setSignal(id,value){const el=$(id);el.textContent=value||"--";el.className=value||"WAIT";}
 
-function setSignal(id,value){
-  const el=$(id);
-  el.textContent=value||"--";
-  el.className=value||"WAIT";
-}
-
-const ICONS={
-  BUY:'<path d="M12 19V5"/><path d="M5 12l7-7 7 7"/>',
-  SELL:'<path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/>',
-  WAIT:'<path d="M5 12h14"/>'
-};
-
+const ICONS={BUY:'<path d="M12 19V5"/><path d="M5 12l7-7 7 7"/>',SELL:'<path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/>',WAIT:'<path d="M5 12h14"/>'};
 function setOverall(sig,tfSignals){
   const s=["BUY","SELL"].includes(sig)?sig:"WAIT";
   $("overall-text").textContent=sig||"WAIT";
@@ -281,51 +394,48 @@ function setOverall(sig,tfSignals){
   [...$("agree-bars").children].forEach((b,i)=>b.classList.toggle("on",i<n));
 }
 
-function candle(p){
-  return {t:Number(p.t),o:Number(p.o),h:Number(p.h),l:Number(p.l),c:Number(p.c)};
+function candle(p){return {t:Number(p.t),o:Number(p.o),h:Number(p.h),l:Number(p.l),c:Number(p.c)};}
+function clean(raw){return raw.map(candle).filter(x=>[x.o,x.h,x.l,x.c].every(Number.isFinite));}
+
+function atr(p,period=14){
+  if(p.length<period+1)return null;
+  let s=0;
+  for(let i=p.length-period;i<p.length;i++){
+    const prev=p[i-1].c;
+    s+=Math.max(p[i].h-p[i].l,Math.abs(p[i].h-prev),Math.abs(p[i].l-prev));
+  }
+  return s/period;
 }
 
-function analyzeSMC(raw){
-  const p=raw.map(candle).filter(x=>[x.o,x.h,x.l,x.c].every(Number.isFinite));
+function analyzeSMC(p){
   const n=p.length;
   const result={obs:[],fvgs:[],liquidity:[],structure:[]};
   if(n<8)return result;
-
-  const atr=p.slice(-14).reduce((s,x)=>s+(x.h-x.l),0)/Math.min(14,n);
-  const tolerance=Math.max(atr*.18,.01);
+  const a=p.slice(-14).reduce((s,x)=>s+(x.h-x.l),0)/Math.min(14,n);
+  const tolerance=Math.max(a*.18,.01);
   const highs=[],lows=[];
-
   for(let i=2;i<n-2;i++){
     if(p[i].h>p[i-1].h&&p[i].h>p[i-2].h&&p[i].h>=p[i+1].h&&p[i].h>=p[i+2].h)highs.push({i,v:p[i].h});
     if(p[i].l<p[i-1].l&&p[i].l<p[i-2].l&&p[i].l<=p[i+1].l&&p[i].l<=p[i+2].l)lows.push({i,v:p[i].l});
   }
-
-  for(let a=0;a<highs.length;a++)for(let b=a+1;b<highs.length;b++){
-    if(highs[b].i-highs[a].i>=2&&Math.abs(highs[a].v-highs[b].v)<=tolerance)
-      result.liquidity.push({kind:"BSL · Equal Highs",price:(highs[a].v+highs[b].v)/2});
-  }
-  for(let a=0;a<lows.length;a++)for(let b=a+1;b<lows.length;b++){
-    if(lows[b].i-lows[a].i>=2&&Math.abs(lows[a].v-lows[b].v)<=tolerance)
-      result.liquidity.push({kind:"SSL · Equal Lows",price:(lows[a].v+lows[b].v)/2});
-  }
-
+  for(let x=0;x<highs.length;x++)for(let y=x+1;y<highs.length;y++)
+    if(highs[y].i-highs[x].i>=2&&Math.abs(highs[x].v-highs[y].v)<=tolerance)
+      result.liquidity.push({kind:"BSL · Equal Highs",price:(highs[x].v+highs[y].v)/2,i:highs[y].i});
+  for(let x=0;x<lows.length;x++)for(let y=x+1;y<lows.length;y++)
+    if(lows[y].i-lows[x].i>=2&&Math.abs(lows[x].v-lows[y].v)<=tolerance)
+      result.liquidity.push({kind:"SSL · Equal Lows",price:(lows[x].v+lows[y].v)/2,i:lows[y].i});
   for(let i=2;i<n;i++){
     if(p[i].l>p[i-2].h)result.fvgs.push({kind:"Bullish FVG",low:p[i-2].h,high:p[i].l,from:i-2,to:i});
     if(p[i].h<p[i-2].l)result.fvgs.push({kind:"Bearish FVG",low:p[i].h,high:p[i-2].l,from:i-2,to:i});
   }
-
   for(let i=3;i<n;i++){
-    if(Math.abs(p[i].c-p[i].o)<Math.max(atr*1.15,.01))continue;
+    if(Math.abs(p[i].c-p[i].o)<Math.max(a*1.15,.01))continue;
     const bullish=p[i].c>p[i].o;
     for(let j=i-1;j>=Math.max(0,i-4);j--){
       const opposite=bullish?p[j].c<p[j].o:p[j].c>p[j].o;
-      if(opposite){
-        result.obs.push({kind:bullish?"Bullish OB":"Bearish OB",low:p[j].l,high:p[j].h,from:j,to:i});
-        break;
-      }
+      if(opposite){result.obs.push({kind:bullish?"Bullish OB":"Bearish OB",low:p[j].l,high:p[j].h,from:j,to:i});break;}
     }
   }
-
   const last=p[n-1];
   const ph=highs.filter(x=>x.i<n-2).slice(-1)[0];
   const pl=lows.filter(x=>x.i<n-2).slice(-1)[0];
@@ -334,274 +444,629 @@ function analyzeSMC(raw){
   return result;
 }
 
-function drawChart(raw,smc){
-  const canvas=$("chart");
-  const ctx=canvas.getContext("2d");
-  const rect=canvas.getBoundingClientRect();
-  const dpr=window.devicePixelRatio||1;
-  canvas.width=Math.max(1,Math.floor(rect.width*dpr));
-  canvas.height=Math.max(1,Math.floor(rect.height*dpr));
-  ctx.setTransform(dpr,0,0,dpr,0,0);
+/* ---------- Trade plan (where price is expected to go) ---------- */
+function buildPlan(){
+  const sig=S.overall;
+  const pts=S.m5;
+  const price=S.lastShown??S.price;
+  if(!["BUY","SELL"].includes(sig)||pts.length<30||!Number.isFinite(price))return null;
+  const dir=sig==="BUY"?1:-1;
+  const ai=S.ai;
+  if(ai&&ai.action===sig&&[ai.entry_price,ai.stop_loss,ai.take_profit].every(v=>v!=null)){
+    const e=+ai.entry_price,sl=+ai.stop_loss,tp=+ai.take_profit;
+    if(dir*(tp-e)>0&&dir*(e-sl)>0)return {dir,side:sig,entry:e,sl,tp,src:"AI"};
+  }
+  const a=atr(pts)||1;
+  const slDist=Math.max(a*1.5,0.5);
+  const smc=analyzeSMC(pts);
+  const levels=[
+    ...smc.liquidity.map(l=>l.price),
+    ...smc.obs.filter(o=>dir>0?o.kind.includes("Bearish"):o.kind.includes("Bullish")).map(o=>dir>0?o.low:o.high)
+  ];
+  const cands=levels.filter(v=>dir*(v-price)>=slDist*2).sort((x,y)=>dir*(x-y));
+  const tp=cands.length?cands[0]:price+dir*slDist*2;
+  return {dir,side:sig,entry:price,sl:price-dir*slDist,tp,src:cands.length?"SMC түвшин":"ATR × 2"};
+}
 
-  const w=rect.width,h=rect.height;
-  const p=raw.map(candle).filter(x=>[x.o,x.h,x.l,x.c].every(Number.isFinite));
-
-  ctx.clearRect(0,0,w,h);
-  ctx.fillStyle=C.bg;
-  ctx.fillRect(0,0,w,h);
-  ctx.font="11px Inter, Arial";
-
-  if(!p.length){
-    ctx.fillStyle=C.axis;
-    ctx.fillText("Candle data unavailable",14,25);
+function renderForecast(){
+  const p=S.plan,el=$("forecast");
+  if(!p){
+    el.innerHTML=`<b class="WAIT">WAIT</b><span>Нийт дохио BUY/SELL биш тул манай дүрмээр одоо арилжаа нээхгүй. Дараагийн дохиог хүлээнэ үү.</span>`;
     return;
   }
+  const move=Math.abs(p.tp-p.entry),risk=Math.abs(p.entry-p.sl);
+  const verb=p.dir>0?"өсөх":"буурах";
+  el.innerHTML=`<b class="${p.side}">${p.side}</b>
+    <span>Үнэ <b class="mono">${fmt(p.tp)}</b> хүртэл ${verb} боломжтой (${fmt(move)}$ зай).
+    Тэр хүртэл ${p.side} барина. Stop loss: <b class="mono">${fmt(p.sl)}</b> (${fmt(risk)}$ зай) · R:R 1:${fmt(move/risk,1)}</span>
+    <span class="src">${esc(p.src)} · таамаг, баталгаа биш</span>`;
+}
 
-  let min=Math.min(...p.map(x=>x.l));
-  let max=Math.max(...p.map(x=>x.h));
-  $("range-low").textContent=fmt(min);
-  $("range-high").textContent=fmt(max);
-
-  if(Number.isFinite(livePrice)){min=Math.min(min,livePrice);max=Math.max(max,livePrice);}
-  const zones=[...smc.obs,...smc.fvgs];
-  zones.forEach(z=>{min=Math.min(min,z.low);max=Math.max(max,z.high);});
-  smc.liquidity.forEach(z=>{min=Math.min(min,z.price);max=Math.max(max,z.price);});
-
-  const pad=(max-min)*.1||1;
-  min-=pad;max+=pad;
-
-  const left=10,right=70,top=16,bottom=24;
-  const plotW=w-left-right,plotH=h-top-bottom;
-  const y=v=>top+(max-v)/(max-min)*plotH;
-  const x=i=>left+(i+.5)*plotW/p.length;
-
-  ctx.font="10px 'JetBrains Mono', monospace";
-  for(let k=0;k<=4;k++){
-    const val=max-(max-min)*k/4;
-    const yy=y(val);
-    ctx.strokeStyle=C.grid;ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(w-right,yy);ctx.stroke();
-    ctx.fillStyle=C.axis;
-    ctx.fillText(val.toFixed(2),w-right+6,yy+3);
+/* ---------- Chart ---------- */
+function draw(){
+  const cv=$("chart");
+  const ctx=cv.getContext("2d");
+  const rect=cv.getBoundingClientRect();
+  const dpr=window.devicePixelRatio||1;
+  if(cv.width!==Math.floor(rect.width*dpr)||cv.height!==Math.floor(rect.height*dpr)){
+    cv.width=Math.max(1,Math.floor(rect.width*dpr));
+    cv.height=Math.max(1,Math.floor(rect.height*dpr));
   }
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const w=rect.width,h=rect.height;
+  ctx.fillStyle=C.bg;ctx.fillRect(0,0,w,h);
 
+  const p=S.candles,n=p.length;
+  if(!n){ctx.fillStyle=C.axis;ctx.font="12px Inter, Arial";ctx.fillText("Лааны мэдээлэл ачаалж байна...",14,28);return;}
+
+  const total=n+FUTURE;
+  view.count=clamp(view.count,15,Math.max(15,total));
+  view.offset=clamp(view.offset,0,Math.max(0,total-view.count));
+  const endSlot=total-view.offset,startSlot=endSlot-view.count;
+
+  const left=8,right=74,top=14,bottom=26;
+  const plotW=w-left-right,plotH=h-top-bottom;
+  const barW=plotW/view.count;
+  const x=i=>left+(i-startSlot+.5)*barW;
+  layout={left,plotW,barW,startSlot,w,h};
+
+  const i0=Math.max(0,Math.floor(startSlot)),i1=Math.min(n,Math.ceil(endSlot));
+  const vis=p.slice(i0,i1);
+  if(!vis.length){ctx.fillStyle=C.axis;ctx.fillText("Энэ хэсэгт лаа алга",14,28);return;}
+
+  let min=Math.min(...vis.map(c=>c.l)),max=Math.max(...vis.map(c=>c.h));
+  $("range-low").textContent=fmt(min);$("range-high").textContent=fmt(max);
+  const live=S.lastShown;
+  const futureVisible=endSlot>n;
+  const extra=[];
+  if(Number.isFinite(live))extra.push(live);
+  const pos=ACC.pos;
+  if(S.plan&&futureVisible&&!pos)extra.push(S.plan.tp,S.plan.sl);
+  if(pos){extra.push(pos.entry);if(pos.sl)extra.push(pos.sl);if(pos.tp)extra.push(pos.tp);}
+  extra.forEach(v=>{if(Number.isFinite(v)){min=Math.min(min,v);max=Math.max(max,v);}});
+  const pad=(max-min)*.08||1;min-=pad;max+=pad;
+  const y=v=>top+(max-v)/(max-min)*plotH;
+
+  ctx.save();
+  ctx.beginPath();ctx.rect(left,top,plotW,plotH);ctx.clip();
+
+  // grid
+  ctx.strokeStyle=C.grid;ctx.lineWidth=1;
+  for(let k=0;k<=6;k++){const yy=Math.round(top+plotH*k/6)+.5;ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(left+plotW,yy);ctx.stroke();}
+  const step=Math.max(1,Math.round(110/barW));
+  for(let i=Math.ceil(startSlot/step)*step;i<endSlot;i+=step){const xx=Math.round(x(i))+.5;ctx.beginPath();ctx.moveTo(xx,top);ctx.lineTo(xx,top+plotH);ctx.stroke();}
+
+  // SMC zones (extend from origin candle to the latest candle)
+  const smc=S.smc||{obs:[],fvgs:[],liquidity:[],structure:[]};
   ctx.font="600 10px Inter, Arial";
-  zones.slice(-7).forEach(z=>{
-    const xx=left+z.from*plotW/p.length;
-    const ww=Math.max(5,(z.to-z.from+1)*plotW/p.length);
-    const yy=y(z.high);
-    const hh=Math.max(2,y(z.low)-yy);
-    const bull=z.kind.includes("Bullish");
-    const isOB=z.kind.includes("OB");
-    const col=isOB?(bull?C.obBull:C.obBear):C.fvg;
-    ctx.fillStyle=isOB?(bull?"rgba(51,101,87,.12)":"rgba(181,82,59,.12)"):"rgba(91,127,166,.12)";
-    ctx.fillRect(xx,yy,ww,hh);
-    ctx.strokeStyle=col;ctx.strokeRect(xx,yy,ww,hh);
-    ctx.fillStyle=col;
-    ctx.fillText(isOB?"OB":"FVG",Math.min(w-right-24,xx+2),Math.max(10,yy-3));
+  [...smc.obs.slice(-6),...smc.fvgs.slice(-6)].forEach(z=>{
+    const xx=x(z.from)-barW/2,xe=x(n-1)+barW/2;
+    const yy=y(z.high),hh=Math.max(2,y(z.low)-yy);
+    const isOB=z.kind.includes("OB"),bull=z.kind.includes("Bullish");
+    const col=isOB?(bull?C.bull:C.bear):C.fvg;
+    ctx.fillStyle=isOB?(bull?"rgba(38,166,154,.12)":"rgba(239,83,80,.12)"):"rgba(91,141,239,.12)";
+    ctx.fillRect(xx,yy,xe-xx,hh);
+    ctx.strokeStyle=col;ctx.globalAlpha=.6;ctx.strokeRect(xx,yy,xe-xx,hh);ctx.globalAlpha=1;
+    ctx.fillStyle=col;ctx.fillText(isOB?"OB":"FVG",Math.max(left+2,xx+3),yy-3);
   });
-
   smc.liquidity.slice(-4).forEach(z=>{
     const yy=y(z.price);
-    ctx.setLineDash([4,4]);ctx.strokeStyle=C.liq;
-    ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(w-right,yy);ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle=C.liq;
-    ctx.fillText(z.kind.startsWith("BSL")?"BSL":"SSL",left+2,yy-4);
+    ctx.setLineDash([5,4]);ctx.strokeStyle=C.liq;ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(left+plotW,yy);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle=C.liq;ctx.fillText(z.kind.startsWith("BSL")?"BSL":"SSL",left+4,yy-4);
   });
-
-  const cw=Math.max(3,Math.min(10,plotW/p.length*.6));
-  p.forEach((c,i)=>{
-    const xx=x(i);
-    const color=c.c>=c.o?C.bull:C.bear;
-    ctx.strokeStyle=color;ctx.lineWidth=1.2;
-    ctx.beginPath();ctx.moveTo(xx,y(c.h));ctx.lineTo(xx,y(c.l));ctx.stroke();
-    ctx.fillStyle=color;
-    ctx.fillRect(xx-cw/2,Math.min(y(c.o),y(c.c)),cw,Math.max(2,Math.abs(y(c.o)-y(c.c))));
-  });
-
-  // BUY / SELL label on the latest closed 5M candle
-  if(currentTf==="5m"&&(overallSignal==="BUY"||overallSignal==="SELL")){
-    let closedIndex=-1;
-    const now=Date.now()/1000;
-    for(let i=0;i<p.length;i++){
-      if(Number.isFinite(p[i].t)&&p[i].t+300<=now)closedIndex=i;
-    }
-    if(closedIndex>=0){
-      const c=p[closedIndex];
-      const xx=x(closedIndex);
-      const isSell=overallSignal==="SELL";
-      const color=isSell?C.sellTag:C.buyTag;
-      const labelW=48,labelH=20;
-      let yy=isSell?y(c.h)-labelH-9:y(c.l)+9;
-      yy=Math.max(top+2,Math.min(h-bottom-labelH-2,yy));
-      const lx=Math.max(left,Math.min(w-right-labelW,xx-labelW/2));
-      ctx.strokeStyle=color;ctx.lineWidth=1.5;
-      ctx.beginPath();ctx.moveTo(xx,isSell?y(c.h):y(c.l));ctx.lineTo(xx,isSell?yy+labelH:yy);ctx.stroke();
-      ctx.fillStyle=color;
-      ctx.beginPath();
-      if(ctx.roundRect)ctx.roundRect(lx,yy,labelW,labelH,5);else ctx.rect(lx,yy,labelW,labelH);
-      ctx.fill();
-      ctx.fillStyle="#ffffff";ctx.font="bold 11px Inter, Arial";ctx.textAlign="center";
-      ctx.fillText(overallSignal,lx+labelW/2,yy+14);
-      ctx.textAlign="left";
-    }
-  }
-
-  ctx.font="600 10px Inter, Arial";
   smc.structure.forEach(s=>{
     const yy=y(s.price);
-    ctx.setLineDash([3,3]);ctx.strokeStyle=C.struct;
-    ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(w-right,yy);ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle=C.struct;
-    ctx.fillText(s.label,left+3,Math.max(12,yy-5));
+    ctx.setLineDash([3,3]);ctx.strokeStyle=C.struct;ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(left+plotW,yy);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle=C.struct;ctx.fillText(s.label,left+40,yy-5);
   });
 
-  // Live price tag
-  if(Number.isFinite(livePrice)){
-    const yy=y(livePrice);
-    ctx.setLineDash([2,3]);ctx.strokeStyle=C.bull;
-    ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(w-right,yy);ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle=C.struct;
-    ctx.fillRect(w-right+2,yy-8,right-4,16);
-    ctx.fillStyle="#fff";ctx.font="bold 10px 'JetBrains Mono', monospace";
-    ctx.fillText(livePrice.toFixed(2),w-right+6,yy+4);
+  // candles
+  const cw=Math.max(1,Math.min(14,barW*.7));
+  for(let i=i0;i<i1;i++){
+    const c=p[i],xx=x(i),col=c.c>=c.o?C.bull:C.bear;
+    ctx.strokeStyle=col;ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(Math.round(xx)+.5,y(c.h));ctx.lineTo(Math.round(xx)+.5,y(c.l));ctx.stroke();
+    ctx.fillStyle=col;
+    const yt=Math.min(y(c.o),y(c.c)),bh=Math.max(1,Math.abs(y(c.o)-y(c.c)));
+    ctx.fillRect(xx-cw/2,yt,cw,bh);
   }
 
-  ctx.fillStyle=C.axis;ctx.font="10px Inter, Arial";
-  ctx.fillText("Older",left,h-7);
-  ctx.fillText("Latest",w-right-34,h-7);
+  // forecast projection: arrow to target, profit (green) and risk (red) zones
+  const plan=S.plan;
+  if(plan&&futureVisible&&!pos){
+    const x0=x(n-1)+barW*.8,x1=x(n-1+FUTURE-1);
+    const ye=y(plan.entry),yt=y(plan.tp),ys=y(plan.sl);
+    const good=plan.dir>0?"rgba(38,166,154,":"rgba(239,83,80,";
+    ctx.fillStyle="rgba(38,166,154,.16)";ctx.fillRect(x0,Math.min(ye,yt),x1-x0,Math.abs(yt-ye));
+    ctx.fillStyle="rgba(239,83,80,.14)";ctx.fillRect(x0,Math.min(ye,ys),x1-x0,Math.abs(ys-ye));
+    ctx.strokeStyle=good+".9)";ctx.lineWidth=2;ctx.setLineDash([6,4]);
+    ctx.beginPath();ctx.moveTo(x0,ye);ctx.lineTo(x1-8,yt);ctx.stroke();ctx.setLineDash([]);
+    const ang=Math.atan2(yt-ye,x1-8-x0);
+    ctx.fillStyle=good+"1)";ctx.beginPath();
+    ctx.moveTo(x1-8,yt);
+    ctx.lineTo(x1-8-10*Math.cos(ang-.45),yt-10*Math.sin(ang-.45));
+    ctx.lineTo(x1-8-10*Math.cos(ang+.45),yt-10*Math.sin(ang+.45));
+    ctx.closePath();ctx.fill();
+    ctx.font="bold 11px Inter, Arial";
+    ctx.fillStyle="#26A69A";ctx.fillText(`TP ${fmt(plan.tp)}`,x0+4,plan.dir>0?yt-6:yt+14);
+    ctx.fillStyle="#EF5350";ctx.fillText(`SL ${fmt(plan.sl)}`,x0+4,plan.dir>0?ys+14:ys-6);
+    ctx.fillStyle="#fff";ctx.fillText(`${plan.side} → ${fmt(plan.tp)}`,x0+4,ye+(plan.dir>0?14:-6));
+  }
+
+  // open position lines
+  if(pos){
+    const lines=[[pos.entry,C.entry,`${pos.side} ${pos.lot} @ ${fmt(pos.entry)}`],[pos.sl,C.bear,`SL ${fmt(pos.sl)}`],[pos.tp,C.bull,`TP ${fmt(pos.tp)}`]];
+    ctx.font="600 10px Inter, Arial";
+    lines.forEach(([v,col,label])=>{
+      if(!Number.isFinite(v))return;
+      const yy=y(v);
+      ctx.setLineDash([8,4]);ctx.strokeStyle=col;ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(left+plotW,yy);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle=col;ctx.fillText(label,left+plotW-ctx.measureText(label).width-6,yy-4);
+    });
+  }
+
+  // live price line
+  if(Number.isFinite(live)){
+    const yy=y(live),last=p[n-1];
+    ctx.setLineDash([2,3]);ctx.strokeStyle=last.c>=last.o?C.bull:C.bear;ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(left+plotW,yy);ctx.stroke();ctx.setLineDash([]);
+  }
+  ctx.restore();
+
+  // price axis
+  ctx.font="10px 'JetBrains Mono', monospace";ctx.fillStyle=C.axis;
+  for(let k=0;k<=6;k++){const val=max-(max-min)*k/6;ctx.fillText(val.toFixed(2),left+plotW+6,top+plotH*k/6+3);}
+  if(Number.isFinite(live)){
+    const yy=clamp(y(live),top+8,top+plotH-8),last=p[n-1];
+    ctx.fillStyle=last.c>=last.o?C.bull:C.bear;ctx.fillRect(left+plotW+1,yy-9,right-2,18);
+    ctx.fillStyle="#fff";ctx.font="bold 10px 'JetBrains Mono', monospace";ctx.fillText(live.toFixed(2),left+plotW+6,yy+4);
+  }
+  // time axis
+  ctx.font="10px Inter, Arial";ctx.fillStyle=C.axis;
+  const sec=TF_SEC[S.tf];
+  for(let i=Math.ceil(startSlot/step)*step;i<endSlot;i+=step){
+    if(i<0)continue;
+    const t=i<n?p[i].t:p[n-1].t+(i-n+1)*sec;
+    const d=new Date(t*1000);
+    const lab=S.tf==="1d"||S.tf==="4h"?`${d.getMonth()+1}/${d.getDate()}`:`${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+    ctx.fillText(lab,x(i)-14,h-8);
+  }
 }
 
-function renderExplanations(smc){
-  const rows=[];
-  const colorOf=k=>k.includes("OB")?(k.includes("Bullish")?C.obBull:C.obBear):k.includes("FVG")?C.fvg:k.includes("BOS")?C.struct:C.liq;
-  smc.obs.slice(-2).reverse().forEach(z=>rows.push([z.kind,`Бүс: ${z.low.toFixed(2)} – ${z.high.toFixed(2)}. Дисплейсмент хөдөлгөөний өмнөх эсрэг лаа.`]));
-  smc.fvgs.slice(-2).reverse().forEach(z=>rows.push([z.kind,`Завсар: ${z.low.toFixed(2)} – ${z.high.toFixed(2)}. Үнэ буцаж шалгаж болох ч entry баталгаа биш.`]));
-  smc.liquidity.slice(-2).reverse().forEach(z=>rows.push([z.kind,`Боломжит liquidity түвшин: ${z.price.toFixed(2)}. Sweep батлагдсан гэсэн үг биш.`]));
-  smc.structure.forEach(z=>rows.push([z.label,`Сүүлийн swing түвшин ${z.price.toFixed(2)} дээр лааны close-оор эвдэрсэн.`]));
-  if(!rows.length)rows.push(["SMC","Одоогийн лаануудад тодорхой тэмдэглэгээ олдсонгүй."]);
+let drawQueued=false;
+function requestDraw(){if(drawQueued)return;drawQueued=true;requestAnimationFrame(()=>{drawQueued=false;draw();});}
 
-  $("smc-explanations").innerHTML=rows.map(([title,desc])=>
-    `<div class="smc-item"><i style="background:${colorOf(title)}"></i><div><b>${esc(title)}</b><p>${esc(desc)}</p></div></div>`
-  ).join("");
+/* pan / zoom: mouse + touch */
+function zoomAt(factor,clientX){
+  if(!layout)return;
+  const rect=$("chart").getBoundingClientRect();
+  const px=clientX==null?layout.left+layout.plotW:clientX-rect.left;
+  const slot=layout.startSlot+(px-layout.left)/layout.barW;
+  const total=S.candles.length+FUTURE;
+  const newCount=clamp(view.count*factor,15,Math.max(15,total));
+  const newStart=slot-(px-layout.left)/layout.plotW*newCount;
+  view.count=newCount;
+  view.offset=total-(newStart+newCount);
+  requestDraw();
+}
+(function bindChart(){
+  const cv=$("chart");
+  const pts=new Map();
+  let drag=null,pinch=null;
+  cv.addEventListener("pointerdown",e=>{
+    cv.setPointerCapture(e.pointerId);
+    pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    $("hint").style.display="none";
+    if(pts.size===1){drag={x:e.clientX,offset:view.offset};cv.classList.add("dragging");}
+    if(pts.size===2){const [a,b]=[...pts.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y)||1,count:view.count,cx:(a.x+b.x)/2};drag=null;}
+  });
+  cv.addEventListener("pointermove",e=>{
+    if(!pts.has(e.pointerId))return;
+    pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(pinch&&pts.size>=2){
+      const [a,b]=[...pts.values()];
+      const d=Math.hypot(a.x-b.x,a.y-b.y)||1;
+      const target=pinch.count*pinch.d/d;
+      zoomAt(target/view.count,pinch.cx);
+    }else if(drag&&layout){
+      view.offset=drag.offset+(e.clientX-drag.x)/layout.barW;
+      requestDraw();
+    }
+  });
+  const end=e=>{
+    pts.delete(e.pointerId);
+    if(pts.size<2)pinch=null;
+    if(pts.size===1){const v=[...pts.values()][0];drag={x:v.x,offset:view.offset};}
+    if(pts.size===0){drag=null;cv.classList.remove("dragging");}
+  };
+  cv.addEventListener("pointerup",end);
+  cv.addEventListener("pointercancel",end);
+  cv.addEventListener("wheel",e=>{e.preventDefault();zoomAt(e.deltaY>0?1.12:1/1.12,e.clientX);},{passive:false});
+  cv.addEventListener("dblclick",()=>{view.count=90;view.offset=0;requestDraw();});
+  $("zoom-in").addEventListener("click",()=>zoomAt(1/1.3));
+  $("zoom-out").addEventListener("click",()=>zoomAt(1.3));
+  $("zoom-reset").addEventListener("click",()=>{view.count=90;view.offset=0;requestDraw();});
+})();
+
+/* ---------- Live price: smooth candle movement ---------- */
+function startAnim(to){
+  const from=Number.isFinite(S.lastShown)?S.lastShown:to;
+  S.anim={from,to,start:performance.now()};
+  requestAnimationFrame(animate);
+}
+function animate(now){
+  const a=S.anim;if(!a)return;
+  const t=clamp((now-a.start)/ANIM_MS,0,1);
+  const e=1-Math.pow(1-t,3);
+  const v=a.from+(a.to-a.from)*e;
+  S.lastShown=v;
+  updateLastCandle(v);
+  showPrice(v,a.to-a.from);
+  renderPosition();
+  draw();
+  if(t<1)requestAnimationFrame(animate);else S.anim=null;
+}
+function updateLastCandle(v){
+  const c=S.candles;if(!c.length)return;
+  const last=c[c.length-1];
+  last.c=v;last.h=Math.max(last.h,v);last.l=Math.min(last.l,v);
+}
+function rollCandle(price){
+  const c=S.candles;if(!c.length)return;
+  const sec=TF_SEC[S.tf],now=Date.now()/1000;
+  const last=c[c.length-1];
+  // open the next candle only when we are inside it; never invent candles over closed-market gaps
+  if(now>=last.t+sec&&now<last.t+2*sec&&price!==last.c){
+    c.push({t:last.t+sec,o:last.c,h:last.c,l:last.c,c:last.c});
+    if(view.offset>0)view.offset+=1;
+  }
+}
+function showPrice(v,dir){
+  const el=$("price");
+  el.textContent=fmt(v);
+  el.className="price"+(dir>0?" up":dir<0?" down":"");
 }
 
-async function loadChart(){
-  const tf=currentTf;
-  const msg=$("message");
+async function tick(){
   try{
-    const response=await fetch(`${API}/candles?interval=${tf}`);
-    if(!response.ok)throw new Error("Candle API "+response.status);
-    const data=await response.json();
-    if(tf!==currentTf)return;
-    chartPoints=data.points||[];
-    const smc=analyzeSMC(chartPoints);
-    drawChart(chartPoints,smc);
-    renderExplanations(smc);
-    msg.textContent=`Chart updated · ${tf} · ${chartPoints.length} candles · ${new Date().toLocaleTimeString()}`;
-  }catch(error){
-    msg.textContent="Chart алдаа: "+error.message;
-  }
+    const r=await fetch(API+"/price");
+    if(!r.ok)return;
+    const d=await r.json();
+    const p=Number(d.price);
+    if(!Number.isFinite(p))return;
+    S.price=p;S.priceAsOf=d.price_as_of;
+    $("price-time").textContent=d.price_as_of?new Date(d.price_as_of).toLocaleTimeString():"--";
+    rollCandle(p);
+    startAnim(p);
+    checkStops(p);
+  }catch(_){/* keep last value */}
+}
+
+/* ---------- Data loading ---------- */
+async function loadChart(){
+  const tf=S.tf;
+  try{
+    const r=await fetch(`${API}/candles?interval=${tf}`);
+    if(!r.ok)throw new Error("Candle API "+r.status);
+    const data=await r.json();
+    if(tf!==S.tf)return;
+    S.candles=clean(data.points||[]);
+    if(tf==="5m")S.m5=S.candles.map(c=>({...c}));
+    S.smc=analyzeSMC(S.candles);
+    if(Number.isFinite(S.lastShown))updateLastCandle(S.lastShown);
+    renderExplanations(S.smc);
+    $("message").textContent=`Chart · ${tf} · ${S.candles.length} лаа · ${new Date().toLocaleTimeString()}`;
+    draw();
+  }catch(err){$("message").textContent="Chart алдаа: "+err.message;}
 }
 
 async function loadData(){
   setStatus("busy","UPDATING");
   try{
-    const [priceResponse,analysisResponse]=await Promise.all([fetch(API+"/price"),fetch(API+"/analyze")]);
-    if(!priceResponse.ok||!analysisResponse.ok)throw new Error("API response error");
+    const reqs=[fetch(API+"/price"),fetch(API+"/analyze")];
+    if(S.tf!=="5m")reqs.push(fetch(API+"/candles?interval=5m"));
+    const [pr,ar,cr]=await Promise.all(reqs);
+    if(!pr.ok||!ar.ok)throw new Error("API response error");
+    const priceData=await pr.json();
+    const data=await ar.json();
+    if(cr&&cr.ok){const cd=await cr.json();S.m5=clean(cd.points||[]);}
 
-    const priceData=await priceResponse.json();
-    livePrice=Number(priceData.price);
-    const data=await analysisResponse.json();
+    S.price=Number(priceData.price);
+    $("price-time").textContent=priceData.price_as_of?new Date(priceData.price_as_of).toLocaleTimeString():"--";
 
-    $("price").textContent=Number.isFinite(livePrice)?fmt(livePrice):"--";
-    $("price-time").textContent=priceData.price_as_of
-      ?new Date(priceData.price_as_of).toLocaleTimeString():"--";
-
-    overallSignal=data.overall_signal||"WAIT";
+    S.overall=data.overall_signal||"WAIT";
     const tf=data.timeframes||{};
-    const sigs=["1m","5m","15m"].map(k=>tf[k]?.signal);
-    setOverall(overallSignal,sigs);
+    S.sigs=["1m","5m","15m"].map(k=>tf[k]?.signal);
+    setOverall(S.overall,S.sigs);
     $("reason").textContent=data.reason||"";
-    setSignal("tf1",sigs[0]);
-    setSignal("tf5",sigs[1]);
-    setSignal("tf15",sigs[2]);
+    setSignal("tf1",S.sigs[0]);setSignal("tf5",S.sigs[1]);setSignal("tf15",S.sigs[2]);
 
     const ind=tf["5m"]?.indicators||{};
     const rsi=Number(ind.RSI);
     $("rsi").textContent=ind.RSI??"--";
     if(Number.isFinite(rsi)){
-      $("rsi-mark").style.left=`calc(${Math.max(0,Math.min(100,rsi))}% - 2px)`;
+      $("rsi-mark").style.left=`calc(${clamp(rsi,0,100)}% - 2px)`;
       $("rsi-zone").textContent=rsi>=70?"Overbought":rsi<=30?"Oversold":"Төвийн бүс";
     }
     $("ema20").textContent=ind.EMA20!=null?fmt(ind.EMA20):"--";
     $("ema50").textContent=ind.EMA50!=null?fmt(ind.EMA50):"--";
-    $("ema-note").textContent=(ind.EMA20!=null&&ind.EMA50!=null)
-      ?(ind.EMA20>ind.EMA50?"EMA50-аас дээр ↑":"EMA50-аас доор ↓"):"--";
+    $("ema-note").textContent=(ind.EMA20!=null&&ind.EMA50!=null)?(ind.EMA20>ind.EMA50?"EMA50-аас дээр ↑":"EMA50-аас доор ↓"):"--";
     const macd=Number(ind.MACD);
     $("macd").textContent=ind.MACD!=null?(macd>0?"+":"")+ind.MACD:"--";
     $("macd").className="v "+(macd>0?"BUY":macd<0?"SELL":"");
     $("macd-signal").textContent="Signal: "+(ind.MACD_signal??"--");
 
-    setStatus("","CONNECTED · "+new Date().toLocaleTimeString());
+    setStatus("","LIVE · "+new Date().toLocaleTimeString());
     await loadChart();
-  }catch(error){
+    if(!Number.isFinite(S.lastShown)&&Number.isFinite(S.price)){S.lastShown=S.price;showPrice(S.price,0);updateLastCandle(S.price);}
+    refreshPlan();
+  }catch(err){
     setStatus("error","ERROR");
-    $("message").textContent="Алдаа: "+error.message+" (Render сервер сэрэхэд 30–60 сек болж магадгүй)";
-    console.error(error);
+    $("message").textContent="Алдаа: "+err.message+" (Render сервер сэрэхэд 30–60 сек болж магадгүй)";
   }
 }
 
+function refreshPlan(){
+  S.plan=buildPlan();
+  renderForecast();
+  renderCalc();
+  renderGoal();
+  draw();
+}
+
+function renderExplanations(smc){
+  const rows=[];
+  const colorOf=k=>k.includes("OB")?(k.includes("Bullish")?C.bull:C.bear):k.includes("FVG")?C.fvg:k.includes("BOS")?C.struct:C.liq;
+  smc.obs.slice(-2).reverse().forEach(z=>rows.push([z.kind,`Бүс: ${z.low.toFixed(2)} – ${z.high.toFixed(2)}. Дисплейсмент хөдөлгөөний өмнөх эсрэг лаа.`]));
+  smc.fvgs.slice(-2).reverse().forEach(z=>rows.push([z.kind,`Завсар: ${z.low.toFixed(2)} – ${z.high.toFixed(2)}. Үнэ буцаж шалгаж болох ч entry баталгаа биш.`]));
+  smc.liquidity.slice(-2).reverse().forEach(z=>rows.push([z.kind,`Боломжит liquidity түвшин: ${z.price.toFixed(2)}. Sweep батлагдсан гэсэн үг биш.`]));
+  smc.structure.forEach(z=>rows.push([z.label,`Сүүлийн swing түвшин ${z.price.toFixed(2)} дээр лааны close-оор эвдэрсэн.`]));
+  if(!rows.length)rows.push(["SMC","Одоогийн лаануудад тодорхой тэмдэглэгээ олдсонгүй."]);
+  $("smc-explanations").innerHTML=rows.map(([t,d])=>`<div class="smc-item"><i style="background:${colorOf(t)}"></i><div><b>${esc(t)}</b><p>${esc(d)}</p></div></div>`).join("");
+}
+
+/* ---------- Account, lot size, positions ---------- */
+const ACC_KEY="fxa_account_v1";
+function loadAcc(){
+  try{const a=JSON.parse(localStorage.getItem(ACC_KEY));if(a&&typeof a==="object")return a;}catch(_){}
+  return {balance:null,riskPct:1,type:"standard",goal:null,goalMonth:null,monthStart:null,pos:null,history:[]};
+}
+let ACC=loadAcc();
+ACC.history=Array.isArray(ACC.history)?ACC.history:[];
+function saveAcc(){try{localStorage.setItem(ACC_KEY,JSON.stringify(ACC));}catch(_){}}
+const contractOf=type=>type==="micro"?1:100;
+const pnlOf=(pos,price)=>(price-pos.entry)*pos.dir*pos.contract*pos.lot;
+const localDate=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const todayKey=()=>localDate(new Date());
+const monthKey=()=>todayKey().slice(0,7);
+const keyOf=iso=>iso?localDate(new Date(iso)):"";
+
+function todayStats(){
+  const t=todayKey();
+  const list=ACC.history.filter(h=>keyOf(h.time)===t);
+  return {losses:list.filter(h=>h.pnl<0).length,pnl:list.reduce((s,h)=>s+h.pnl,0)};
+}
+
+function lotFor(plan){
+  const bal=ACC.balance,risk=ACC.riskPct||1;
+  const contract=contractOf(ACC.type);
+  const slDist=Math.abs(plan.entry-plan.sl);
+  const perLot=slDist*contract;
+  const riskUsd=bal*risk/100;
+  let lot=Math.floor(riskUsd/perLot*100)/100;
+  let tooSmall=false;
+  if(lot<0.01){lot=0.01;tooSmall=true;}
+  const realRisk=lot*perLot;
+  const profit=Math.abs(plan.tp-plan.entry)*contract*lot;
+  return {lot,riskUsd,realRisk,profit,slDist,contract,tooSmall};
+}
+
+function renderCalc(){
+  const out=$("calc-out");
+  if(!(ACC.balance>0)){out.innerHTML=`<div class="instr WAIT">Эхлээд XM дээрх балансаа оруулаад <b>Балансаа хадгалах</b> дарна уу.</div>`;return;}
+  const ts=todayStats();
+  const stop=ts.losses>=3||ts.pnl<=-(ACC.balance*0.03);
+  const plan=S.plan;
+  let html="";
+  if(stop)html+=`<div class="warn"><b>Өнөөдөр зогсоно уу.</b> Өнөөдөр ${ts.losses} удаа алдсан, нийт ${sgnMoney(ts.pnl)}. Манай дүрмээр маргааш хүртэл шинэ арилжаа нээхгүй.</div>`;
+  if(!plan){out.innerHTML=html+`<div class="instr WAIT">Одоо нийт дохио <b>WAIT</b>. Манай дүрмээр арилжаа нээхгүй, хүлээнэ.</div>`;return;}
+  const L=lotFor(plan);
+  const rr=Math.abs(plan.tp-plan.entry)/L.slDist;
+  html+=`<div class="instr ${plan.side}">XM дээр: <b>${plan.side} ${fmt(L.lot)} лот</b>, Stop loss <b class="mono">${fmt(plan.sl)}</b>, Take profit <b class="mono">${fmt(plan.tp)}</b>.
+    <br>SL хүрвэл <b class="neg">${money(-L.realRisk)}</b> алдана, TP хүрвэл <b class="pos">+${money(L.profit)}</b> олно.</div>
+  <div class="kv">
+    <div><span>Entry (одоо)</span><b>${fmt(plan.entry)}</b></div>
+    <div><span>SL зай</span><b>${fmt(L.slDist)}$</b></div>
+    <div><span>R:R</span><b>1:${fmt(rr,1)}</b></div>
+    <div><span>Эрсдэл (${fmt(ACC.riskPct,1)}%)</span><b>${money(L.riskUsd)}</b></div>
+    <div><span>Лот</span><b>${fmt(L.lot)}</b></div>
+    <div><span>Бодит эрсдэл</span><b>${money(L.realRisk)}</b></div>
+  </div>`;
+  if(L.tooSmall)html+=`<div class="warn">Таны балансад ${fmt(ACC.riskPct,1)}% эрсдэл 0.01 лотоос бага гарч байна. 0.01 лотоор орвол бодит эрсдэл ${money(L.realRisk)} (${fmt(L.realRisk/ACC.balance*100,1)}%) болно. Micro данс ашиглах эсвэл энэ арилжааг алгасахыг бодоорой.</div>`;
+  if(rr<2)html+=`<div class="warn">R:R 1:2-оос бага байна. Манай дүрмээр ийм арилжаанд орохгүй.</div>`;
+  html+=`<button class="btn btn-primary" id="open-plan" type="button" ${ACC.pos||stop?"disabled":""}>Энэ төлөвлөгөөг дансандаа нээх</button>`;
+  out.innerHTML=html;
+  const b=$("open-plan");
+  if(b)b.addEventListener("click",()=>openPosition({side:plan.side,entry:S.price??plan.entry,lot:L.lot,sl:plan.sl,tp:plan.tp}));
+}
+
+function openPosition({side,entry,lot,sl,tp}){
+  if(ACC.pos){alert("Нэг удаад нэг арилжаа хянана. Эхлээд нээлттэй арилжаагаа хаана уу.");return;}
+  ACC.pos={side,dir:side==="BUY"?1:-1,entry,lot,sl,tp,contract:contractOf(ACC.type),time:new Date().toISOString()};
+  saveAcc();renderPosition();renderCalc();draw();
+}
+
+function closePosition(price,reason){
+  const pos=ACC.pos;if(!pos)return;
+  const pnl=pnlOf(pos,price);
+  ACC.balance=(ACC.balance||0)+pnl;
+  ACC.history.unshift({side:pos.side,lot:pos.lot,entry:pos.entry,exit:price,pnl,reason,time:new Date().toISOString()});
+  ACC.history=ACC.history.slice(0,200);
+  ACC.pos=null;
+  saveAcc();
+  $("in-balance").value=ACC.balance.toFixed(2);
+  renderPosition();renderHistory();renderCalc();renderGoal();draw();
+}
+
+function checkStops(price){
+  const pos=ACC.pos;if(!pos)return;
+  if(Number.isFinite(pos.sl)&&(pos.dir>0?price<=pos.sl:price>=pos.sl))closePosition(pos.sl,"SL");
+  else if(Number.isFinite(pos.tp)&&(pos.dir>0?price>=pos.tp:price<=pos.tp))closePosition(pos.tp,"TP");
+}
+
+function renderPosition(){
+  const bal=ACC.balance;
+  const price=S.lastShown??S.price;
+  const pos=ACC.pos;
+  const floating=pos&&Number.isFinite(price)?pnlOf(pos,price):0;
+  $("balance-view").textContent=bal>0?money(bal):"--";
+  const eq=$("equity");
+  eq.textContent=bal>0?money(bal+floating):"--";
+  eq.className="big "+(floating>0?"pos":floating<0?"neg":"");
+  const out=$("pos-out");
+  if(!pos){if(!out.dataset.empty){out.innerHTML=`<p class="note">Нээлттэй арилжаа алга.</p>`;out.dataset.empty="1";}return;}
+  if(out.dataset.empty||!$("pos-pl")){
+    delete out.dataset.empty;
+    out.innerHTML=`<div class="kv">
+      <div><span>Чиглэл / лот</span><b class="${pos.side}">${pos.side} ${fmt(pos.lot)}</b></div>
+      <div><span>Нээсэн үнэ</span><b>${fmt(pos.entry)}</b></div>
+      <div><span>Одоогийн P&amp;L</span><b id="pos-pl">--</b></div>
+      <div><span>Stop loss</span><b class="neg">${Number.isFinite(pos.sl)?fmt(pos.sl):"--"}</b></div>
+      <div><span>Take profit</span><b class="pos">${Number.isFinite(pos.tp)?fmt(pos.tp):"--"}</b></div>
+      <div><span>SL-д хүрвэл</span><b class="neg">${Number.isFinite(pos.sl)?sgnMoney(pnlOf(pos,pos.sl)):"--"}</b></div>
+    </div>
+    <button class="btn btn-danger" id="close-pos" type="button">Одоогийн үнээр хаах</button>`;
+    $("close-pos").addEventListener("click",()=>{const p=S.price??S.lastShown;if(Number.isFinite(p))closePosition(p,"Гараар");});
+  }
+  const pl=$("pos-pl");
+  pl.textContent=Number.isFinite(price)?sgnMoney(floating):"--";
+  pl.className=floating>0?"pos":floating<0?"neg":"";
+}
+
+function renderHistory(){
+  const el=$("history");
+  if(!ACC.history.length){el.innerHTML=`<p class="note">Хаагдсан арилжаа алга.</p>`;return;}
+  el.innerHTML=ACC.history.slice(0,20).map(h=>{
+    const d=new Date(h.time);
+    return `<div class="h-item"><span>${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")} · <b class="${esc(h.side)}">${esc(h.side)}</b> ${fmt(h.lot)} · ${fmt(h.entry)} → ${fmt(h.exit)} · ${esc(h.reason)}</span><b class="${h.pnl>=0?"pos":"neg"}">${sgnMoney(h.pnl)}</b></div>`;
+  }).join("");
+}
+
+function tradingDaysLeft(){
+  const d=new Date(),m=d.getMonth();let n=0;
+  for(const x=new Date(d);x.getMonth()===m;x.setDate(x.getDate()+1)){const wd=x.getDay();if(wd!==0&&wd!==6)n++;}
+  return n;
+}
+
+function renderGoal(){
+  const out=$("goal-out");
+  if(!(ACC.balance>0)||!(ACC.goal>0)){out.innerHTML=`<p class="note">Эхлээд баланс болон энэ сарын зорилгоо оруулна уу.</p>`;return;}
+  if(ACC.goalMonth!==monthKey()){ACC.goalMonth=monthKey();ACC.monthStart=ACC.balance;saveAcc();}
+  const mk=monthKey();
+  const earned=ACC.history.filter(h=>keyOf(h.time).slice(0,7)===mk).reduce((s,h)=>s+h.pnl,0);
+  const remaining=Math.max(0,ACC.goal-earned);
+  const pct=clamp(earned/ACC.goal*100,0,100);
+  const days=tradingDaysLeft();
+  const riskUsd=ACC.balance*(ACC.riskPct||1)/100;
+  const expPerTrade=0.5*riskUsd;   // assumption: 50% win rate with R:R 1:2 → +0.5R per trade on average
+  const trades=remaining>0?Math.ceil(remaining/expPerTrade):0;
+  const goalPct=ACC.goal/(ACC.monthStart||ACC.balance)*100;
+  let html=`<div class="equity"><div><div class="sub">Энэ сард олсон</div><div class="pl ${earned>=0?"pos":"neg"}">${sgnMoney(earned)}</div></div>
+    <div style="text-align:right"><div class="sub">Зорилго</div><div class="pl">${money(ACC.goal)} <span class="sub">(${fmt(goalPct,1)}%)</span></div></div></div>
+    <div class="progress"><i style="width:${pct}%"></i></div>
+    <div class="kv">
+      <div><span>Үлдсэн</span><b>${money(remaining)}</b></div>
+      <div><span>Үлдсэн ажлын өдөр</span><b>${days}</b></div>
+      <div><span>Өдөрт дундаж</span><b>${days?money(remaining/days):"--"}</b></div>
+    </div>`;
+  if(remaining>0)html+=`<div class="instr">Одоогийн эрсдэлээр (${money(riskUsd)}/арилжаа) ялалтын хувь 50%, R:R 1:2 гэж тооцвол ойролцоогоор <b>${trades} арилжаа</b> хэрэгтэй. Өдөрт ~${days?Math.ceil(trades/days):trades} арилжаа.</div>`;
+  else html+=`<div class="instr">Зорилгодоо хүрлээ. Энэ сард эрсдэлээ багасгаж, олсноо хамгаалаарай.</div>`;
+  if(goalPct>10)html+=`<div class="warn">Сард балансын ${fmt(goalPct,0)}% олох нь маш өндөр зорилго. Үүний тулд лотоо томруулбал данс хурдан шатах эрсдэлтэй. Зорилгоо багасгах эсвэл хугацааг уртасгахыг зөвлөж байна.</div>`;
+  if(days&&trades/days>3)html+=`<div class="warn">Өдөрт 3-аас олон арилжаа шаардлагатай байна. Манай дүрэм өдөрт 3 алдаанаас хэтрэхийг хориглодог тул зорилго бодитой бус байж магадгүй.</div>`;
+  out.innerHTML=html;
+}
+
+function initAccountUI(){
+  if(ACC.balance>0)$("in-balance").value=Number(ACC.balance).toFixed(2);
+  $("in-risk").value=ACC.riskPct||1;
+  $("in-type").value=ACC.type||"standard";
+  if(ACC.goal>0)$("in-goal").value=ACC.goal;
+  $("save-acc").addEventListener("click",()=>{
+    const b=num($("in-balance").value),r=num($("in-risk").value);
+    if(!(b>0)){alert("Балансаа зөв оруулна уу.");return;}
+    ACC.balance=b;ACC.riskPct=clamp(r||1,0.1,10);ACC.type=$("in-type").value;
+    if(ACC.goalMonth!==monthKey()){ACC.goalMonth=monthKey();ACC.monthStart=b;}
+    saveAcc();renderCalc();renderPosition();renderGoal();
+  });
+  ["in-risk","in-type"].forEach(id=>$(id).addEventListener("change",()=>{
+    ACC.riskPct=clamp(num($("in-risk").value)||1,0.1,10);ACC.type=$("in-type").value;saveAcc();renderCalc();renderGoal();
+  }));
+  $("save-goal").addEventListener("click",()=>{
+    const g=num($("in-goal").value);
+    if(!(g>0)){alert("Зорилгоо $-оор оруулна уу.");return;}
+    ACC.goal=g;if(ACC.goalMonth!==monthKey()){ACC.goalMonth=monthKey();ACC.monthStart=ACC.balance;}
+    saveAcc();renderGoal();
+  });
+  $("m-open").addEventListener("click",()=>{
+    const side=$("m-side").value,entry=num($("m-entry").value),lot=num($("m-lot").value),sl=num($("m-sl").value),tp=num($("m-tp").value);
+    if(!(ACC.balance>0)){alert("Эхлээд балансаа хадгална уу.");return;}
+    if(!(entry>0)||!(lot>0)){alert("Нээсэн үнэ болон лотоо оруулна уу.");return;}
+    const dir=side==="BUY"?1:-1;
+    if(sl!=null&&dir*(entry-sl)<=0){alert(side==="BUY"?"BUY үед SL нээсэн үнээс доор байх ёстой.":"SELL үед SL нээсэн үнээс дээр байх ёстой.");return;}
+    if(tp!=null&&dir*(tp-entry)<=0){alert(side==="BUY"?"BUY үед TP нээсэн үнээс дээр байх ёстой.":"SELL үед TP нээсэн үнээс доор байх ёстой.");return;}
+    openPosition({side,entry,lot,sl:sl??NaN,tp:tp??NaN});
+    $("m-side").closest("details").open=false;
+  });
+  renderPosition();renderHistory();renderCalc();renderGoal();
+}
+
+/* ---------- AI ---------- */
 async function runAI(){
   const btn=$("ai-btn");
-  btn.disabled=true;
-  btn.textContent="AI шинжилж байна...";
+  btn.disabled=true;btn.textContent="AI шинжилж байна...";
   $("ai-text").textContent="1M, 5M, 15M-ийн өгөгдлийг шинжилж байна. 10–40 секунд болно.";
   try{
     const res=await fetch(API+"/ai-analyze");
     const data=await res.json().catch(()=>({}));
     if(!res.ok)throw new Error(data.detail||("AI API "+res.status));
-
     const a=data.analysis||{};
+    S.ai=a;
     setSignal("ai-action",a.action);
     $("ai-meta").textContent=`итгэл ${a.confidence_percent??"--"}% · эрсдэл ${a.risk_level||"--"}${a.risk_reward?" · R:R "+a.risk_reward:""}`;
     $("ai-entry").textContent=a.entry_price!=null?fmt(a.entry_price):"--";
     $("ai-sl").textContent=a.stop_loss!=null?fmt(a.stop_loss):"--";
     $("ai-tp").textContent=a.take_profit!=null?fmt(a.take_profit):"--";
-
     const reasons=(a.reasons||[]).map(r=>`<li>${esc(r)}</li>`).join("");
-    $("ai-text").innerHTML=
-      `${esc(a.summary)}${reasons?`<ul>${reasons}</ul>`:""}`+
+    $("ai-text").innerHTML=`${esc(a.summary)}${reasons?`<ul>${reasons}</ul>`:""}`+
       (a.invalidation?`<p style="margin:8px 0 0"><b>Хүчингүй болох нөхцөл:</b> ${esc(a.invalidation)}</p>`:"")+
       (a.caution?`<p style="margin:8px 0 0;color:var(--muted)">${esc(a.caution)}</p>`:"")+
       `<p style="margin:8px 0 0;font-size:11px;color:var(--muted)">${esc(data.disclaimer||"")}</p>`;
-  }catch(error){
-    $("ai-text").textContent="Алдаа: "+error.message;
+    refreshPlan();
+  }catch(err){
+    $("ai-text").textContent="Алдаа: "+err.message;
   }finally{
-    btn.disabled=false;
-    btn.textContent="AI шинжилгээ дахин ажиллуулах";
+    btn.disabled=false;btn.textContent="AI шинжилгээ дахин ажиллуулах";
   }
 }
 
+/* ---------- Wiring ---------- */
 $("tf-pills").addEventListener("click",e=>{
-  const b=e.target.closest("button[data-tf]");
-  if(!b)return;
-  currentTf=b.dataset.tf;
+  const b=e.target.closest("button[data-tf]");if(!b)return;
+  S.tf=b.dataset.tf;S.candles=[];S.anim=null;
   [...$("tf-pills").children].forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
-  loadChart();
+  view.count=90;view.offset=0;draw();loadChart();
 });
 $("refresh-btn").addEventListener("click",loadData);
 $("ai-btn").addEventListener("click",runAI);
+window.addEventListener("resize",requestDraw);
 
-window.addEventListener("resize",()=>{
-  if(chartPoints.length)drawChart(chartPoints,analyzeSMC(chartPoints));
-});
-
+initAccountUI();
+draw();
 loadData();
 setInterval(loadData,30000);
+setInterval(tick,TICK_MS);
+setInterval(loadChart,60000);
+setInterval(()=>{if(S.overall!=="WAIT")refreshPlan();},TICK_MS*2);
 </script>
 </body>
 </html>
