@@ -78,7 +78,7 @@ header{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:s
 .pills{display:flex;gap:2px;background:#1E222D;border-radius:10px;padding:3px;flex-wrap:wrap}
 .pills button,.zoom button{min-height:36px;min-width:40px;border:0;border-radius:8px;padding:0 9px;font:600 12px Inter,sans-serif;cursor:pointer;background:transparent;color:#B2B5BE}
 .pills button:hover,.zoom button:hover{background:#2A2E39;color:#fff}
-.pills button[aria-pressed="true"],#sig-toggle[aria-pressed="true"],#htf-toggle[aria-pressed="true"],#notify-toggle[aria-pressed="true"]{background:#2962FF;color:#fff}
+.pills button[aria-pressed="true"],#sig-toggle[aria-pressed="true"],#htf-toggle[aria-pressed="true"],#notify-toggle[aria-pressed="true"],#active-toggle[aria-pressed="true"]{background:#2962FF;color:#fff}
 .sig-stats{font-size:12px;color:#B2B5BE;line-height:1.5}
 .sig-stats b{color:#fff}
 .zoom{display:flex;gap:2px;background:#1E222D;border-radius:10px;padding:3px}
@@ -243,7 +243,7 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
         <button type="button" data-strat="trend" aria-pressed="true" title="EMA/MACD/RSI + H1 чиглэл">Trend</button>
         <button type="button" data-strat="london" aria-pressed="false" title="Азийн range-ийн Лондоны breakout (зөвхөн алт)">London</button>
       </div>
-      <div class="zoom"><button type="button" id="sig-toggle" aria-pressed="true" style="padding:0 12px">BUY/SELL сигнал</button><button type="button" id="notify-toggle" aria-pressed="false" style="padding:0 12px" title="Шинэ сигнал гарахад мэдэгдэл, дуу">🔔 Мэдэгдэл</button><button type="button" id="htf-toggle" aria-pressed="true" style="padding:0 12px" title="M1–M30 сигналыг зөвхөн H1-ийн чиглэлээр гаргана">H1 шүүлтүүр</button></div>
+      <div class="zoom"><button type="button" id="sig-toggle" aria-pressed="true" style="padding:0 12px">BUY/SELL сигнал</button><button type="button" id="active-toggle" aria-pressed="true" style="padding:0 12px" title="Бүх шинэ сигналыг харуулна, M1-ийг асаана">⚡ Идэвхтэй</button><button type="button" id="notify-toggle" aria-pressed="false" style="padding:0 12px" title="Шинэ сигнал гарахад мэдэгдэл, дуу">🔔 Мэдэгдэл</button><button type="button" id="htf-toggle" aria-pressed="true" style="padding:0 12px" title="M1–M30 сигналыг зөвхөн H1-ийн чиглэлээр гаргана">H1 шүүлтүүр</button></div>
     </div>
   </div>
   <div class="chart-wrap">
@@ -396,7 +396,7 @@ const SYM={xau:{name:"XAUUSD",label:"Алтны үнэ · USD/oz",sub:"Алт ·
   btc:{name:"BTCUSD",label:"Bitcoin үнэ · USD",sub:"Bitcoin · BTCUSD · SMC + техник шинжилгээ",unit:"BTC",src:"Coinbase",def:1,cost:25}};
 const savedSym=(()=>{try{return localStorage.getItem("fxa_symbol");}catch(_){return null;}})();
 const S={symbol:SYM[savedSym]?savedSym:"xau",posPrice:null,tf:"5m",candles:[],smc:null,price:null,priceAsOf:null,overall:"WAIT",sigs:[],m5:[],ai:null,plan:null,
-  anim:null,lastShown:null,sigEvents:[],showSig:true,strategy:(()=>{try{return localStorage.getItem("fxa_strategy")==="london"?"london":"trend";}catch(_){return "trend";}})(),ranges:[],htfOn:true,h1:[],htf:null,h1At:0,planBlock:null};
+  anim:null,lastShown:null,sigEvents:[],showSig:true,active:(()=>{try{return localStorage.getItem("fxa_active")!=="0";}catch(_){return true;}})(),strategy:(()=>{try{return localStorage.getItem("fxa_strategy")==="london"?"london":"trend";}catch(_){return "trend";}})(),ranges:[],htfOn:true,h1:[],htf:null,h1At:0,planBlock:null};
 const view={count:90,offset:0,yAuto:true,yZoom:1,yShift:0};
 const hover={on:false,x:0,y:0};
 let layout=null;
@@ -506,7 +506,7 @@ function htfDirAt(t,H){
   return k<0?0:H.dir[k];
 }
 const HTF_TFS=["1m","5m","15m","30m"];
-function computeSignals(p,tf=S.tf,H=null){
+function computeSignals(p,tf=S.tf,H=null,active=false){
   const n=p.length;
   const useH=H&&HTF_TFS.includes(tf),sec=TF_SEC[tf];
   if(n<60)return [];
@@ -525,7 +525,7 @@ function computeSignals(p,tf=S.tf,H=null){
     const rising=side&&side!==prev;   // condition just switched on
     prev=side;
     if(!rising)continue;
-    if(side===last&&i<=busyUntil)continue;   // same direction only after the previous trade closed
+    if(!active&&side===last&&i<=busyUntil)continue;   // calm mode: same direction only after the previous trade closed
     const dir=side==="BUY"?1:-1;
     if(useH){const d=htfDirAt(p[i].t+sec,H);if(d!==0&&d!==dir)continue;}   // never against the H1 trend
     last=side;
@@ -597,11 +597,12 @@ function renderSigStats(){
   const ev=S.sigEvents||[],el=$("sig-stats");
   if(S.strategy==="london"&&S.symbol!=="xau"){el.textContent="London breakout зөвхөн алтанд зориулагдсан. BTC 24 цаг арилждаг тул энэ стратеги backtest-ээр алдагдалтай гарсан. Trend стратегийг ашиглана уу.";return;}
   if(S.strategy==="london"&&TF_SEC[S.tf]>3600){el.textContent="London breakout-ыг M5, M15, M30 эсвэл H1 дээр харна уу (H1 хамгийн сайн).";return;}
-  if(S.tf==="1m"){el.textContent="M1 дээр сигнал гаргахгүй: backtest-ээр spread-ийн зардал M1-ийн сигналуудыг алдагдалтай болгож байсан. M5 болон түүнээс дээш timeframe ашиглана уу.";return;}
+  if(S.tf==="1m"&&!S.active){el.textContent="M1 дээр сигнал гаргахгүй: backtest-ээр spread-ийн зардал M1-ийн сигналуудыг алдагдалтай болгож байсан. M5 болон түүнээс дээш timeframe ашиглана уу.";return;}
   if(!ev.length){el.textContent="Энэ timeframe-ийн лаанууд дээр сигнал гараагүй байна"+(S.htfOn&&HTF_TFS.includes(S.tf)?" (H1 шүүлтүүр асаалттай).":".");return;}
   const st=btStats(ev);
   const last=ev[ev.length-1];
-  el.innerHTML=`Энэ график дээрх ${st.n} дууссан сигналаас <b>${st.wins}</b> ✓ TP2 (+2R), <b>${st.n-st.wins}</b> ✗ SL (−1R), spread-тай`+
+  const warn1m=S.tf==="1m"?`<b style="color:#E0A84A">M1 анхааруулга:</b> spread их тул backtest-ээр BTC M1 алдагдалтай гарсан. Зөвхөн M5/M15-ийн чиглэлтэй таарсан үед, бага лотоор. `:"";
+  el.innerHTML=warn1m+`Энэ график дээрх ${st.n} дууссан сигналаас <b>${st.wins}</b> ✓ TP2 (+2R), <b>${st.n-st.wins}</b> ✗ SL (−1R), spread-тай`+
     (st.n?` · нийт <b>${st.total>=0?"+":""}${st.total}R</b>`:"")+`. Сүүлийн сигнал: <b style="color:${last.side==="BUY"?"#089981":"#F23645"}">${last.side}</b> @ ${fmt(last.entry)} · ${last.result==="open"?"идэвхтэй":last.result}. `+
     (S.strategy==="london"?`London: 16:00 UTC хүртэл TP2/SL-д хүрээгүй бол тэр үеийн үнээр хаасан гэж тооцно (✓/✗ нь ашиг/алдагдал).`:`Анхаар: энэ дүрмээр ойролцоогоор 10 сигналын 4 нь л ашигтай гардаг. Ашиг нь ялалт бүр алдагдлаас 2 дахин том байхаас ирдэг тул SL-д хүрсэн сигнал «худал» биш, хэвийн үзэгдэл.`);
 }
@@ -1161,12 +1162,12 @@ async function loadData(){
 
 function recomputeSignals(){
   S.ranges=[];
-  if(S.tf==="1m")S.sigEvents=[];
+  if(S.tf==="1m"&&!S.active)S.sigEvents=[];
   else if(S.strategy==="london"){
     if(S.symbol==="xau"){const L=londonSignals(S.candles,S.tf);S.sigEvents=L.ev;S.ranges=L.ranges;}
     else S.sigEvents=[];
   }
-  else S.sigEvents=computeSignals(S.candles,S.tf,S.htfOn?S.htf:null);
+  else S.sigEvents=computeSignals(S.candles,S.tf,S.htfOn?S.htf:null,S.active);
   renderSigStats();
   notifyNewSignal();
 }
@@ -1226,8 +1227,8 @@ async function runBacktest(){
     const cost=SYM[sym].cost;
     const london=S.strategy==="london";
     if(london&&sym!=="xau")throw new Error("London breakout зөвхөн XAUUSD дээр");
-    const withF=london?btStats(londonSignals(p,tf).ev,cost):btStats(computeSignals(p,tf,H),cost),
-          noF=london?withF:btStats(computeSignals(p,tf,null),cost);
+    const withF=london?btStats(londonSignals(p,tf).ev,cost):btStats(computeSignals(p,tf,H,S.active),cost),
+          noF=london?withF:btStats(computeSignals(p,tf,null,S.active),cost);
     const days=(p[p.length-1].t-p[0].t)/86400;
     const risk=ACC.riskPct||1;
     const col=(st,k)=>{
@@ -1237,7 +1238,7 @@ async function runBacktest(){
     };
     const rows=[["Дууссан сигнал","n"],["Ялалтын хувь (TP2)","rate"],["Нийт үр дүн","total"],["Дундаж / арилжаа","avg"],["Хамгийн их уналт","dd"],[`${fmt(risk,1)}% эрсдэлээр`,"pct"]];
     const useH=!london&&HTF_TFS.includes(tf);
-    let html=`<p class="note" style="font-size:12px">${london?"London breakout":"Trend"} · ${SYM[sym].name} · ${tf} · ${p.length} лаа ≈ ${fmt(days,1)} өдөр · spread ≈ ${cost}$ арилжаа бүрт тооцсон</p>
+    let html=`<p class="note" style="font-size:12px">${london?"London breakout":"Trend"+(S.active?" · идэвхтэй":"")} · ${SYM[sym].name} · ${tf} · ${p.length} лаа ≈ ${fmt(days,1)} өдөр · spread ≈ ${cost}$ арилжаа бүрт тооцсон</p>
       <table class="bt"><thead><tr><th></th>${useH?"<th>H1 шүүлтүүртэй</th>":""}<th>${london?"London breakout":"Шүүлтүүргүй"}</th></tr></thead><tbody>`+
       rows.map(([lab,k])=>`<tr><td>${lab}</td>${useH?col(withF,k):""}${col(noF,k)}</tr>`).join("")+`</tbody></table>`;
     const best=useH?withF:noF;
@@ -1538,6 +1539,13 @@ function setStratUI(){
   $("legend-range").style.display=S.strategy==="london"?"flex":"none";
   $("htf-toggle").style.display=S.strategy==="london"?"none":"";
 }
+function setActiveUI(){const b=$("active-toggle");b.setAttribute("aria-pressed",String(S.active));b.textContent=S.active?"⚡ Идэвхтэй":"⚡ Тайван";}
+$("active-toggle").addEventListener("click",()=>{
+  S.active=!S.active;
+  try{localStorage.setItem("fxa_active",S.active?"1":"0");}catch(_){}
+  NOTE.seen=null;setActiveUI();recomputeSignals();draw();$("bt-out").innerHTML="";
+});
+setActiveUI();
 $("strat-pills").addEventListener("click",e=>{
   const b=e.target.closest("button[data-strat]");if(!b)return;
   S.strategy=b.dataset.strat;
