@@ -238,7 +238,7 @@ def home():
 
 @app.get("/health")
 def health():
-    return {"status": "healthy", "version": "2026-11-21-btc"}
+    return {"status": "healthy", "version": APP_VERSION}
 
 
 @app.get("/price")
