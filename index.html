@@ -1,162 +1,294 @@
-
 <!DOCTYPE html>
 <html lang="mn">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Forex AI Analyzer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
 <style>
+:root{
+  --bg:#F1ECE6;--card:#FFFFFF;--inner:#F1ECE6;--border:#E3DBD1;
+  --text:#3D3D3D;--text2:#4F4F4F;--muted:#6B6B6B;
+  --accent:#1F4B3F;--green:#336557;--sell:#B5523B;--wait:#A0722A;
+  --mono:'JetBrains Mono',ui-monospace,monospace;--head:'Space Grotesk',Inter,sans-serif;
+}
 *{box-sizing:border-box}
-body{margin:0;background:#080e19;color:#f1f5f9;font-family:Arial,sans-serif;padding:16px}
-.container{max-width:760px;margin:auto}
-header{display:flex;justify-content:space-between;align-items:center;margin:8px 0 22px}
-.logo{font-size:21px;font-weight:bold}.logo span{color:#22d3a5}
-.status{color:#22d3a5;font-size:12px}
-.card{background:#111c2d;border:1px solid #26364d;border-radius:16px;padding:18px;margin-bottom:14px}
-.label{color:#94a3b8;font-size:12px}
-.price{font-size:34px;font-weight:bold;margin:10px 0}
-.signal{display:inline-block;padding:8px 16px;border-radius:9px;font-weight:bold;background:#44391c;color:#ffd166}
-.signal.BUY{background:#123d35;color:#36e0ad}
-.signal.SELL{background:#49232b;color:#ff7180}
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
-.tf{background:#17263b;padding:13px 7px;border-radius:12px;text-align:center}
-.tf strong{display:block;margin-top:8px;font-size:18px}
-.BUY{color:#36e0ad}.SELL{color:#ff7180}.WAIT{color:#ffd166}
-.indicators{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.indicator{background:#17263b;border-radius:12px;padding:13px}
-.indicator strong{display:block;margin-top:8px;font-size:18px}
-button,select{border:0;border-radius:10px;padding:12px;font-weight:bold}
-button{background:#19b98e;color:#061711;cursor:pointer}
-select{background:#17263b;color:#f1f5f9;border:1px solid #334155}
-.controls{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:12px}
-.controls button{padding:10px 14px}
-.chart-wrap{height:320px;background:#0b1422;border:1px solid #26364d;border-radius:12px;overflow:hidden}
+html,body{margin:0;background:var(--bg)}
+body{color:var(--text);font-family:Inter,system-ui,sans-serif;padding:28px 20px 40px}
+.container{max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+.row{display:flex;flex-wrap:wrap;gap:20px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:22px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.label{font-size:12px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+.mono{font-family:var(--mono)}
+h2{font-family:var(--head);font-weight:700;font-size:17px;margin:0}
+
+header{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:40px;height:40px;border-radius:12px;background:var(--accent);display:flex;align-items:center;justify-content:center}
+.title{font-family:var(--head);font-weight:700;font-size:20px;letter-spacing:.02em}
+.title span{color:var(--green)}
+.sub{font-size:12px;color:var(--muted)}
+.head-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.status{display:flex;align-items:center;gap:8px;background:#E4EEEA;color:var(--accent);border-radius:999px;padding:8px 14px;font-size:12px;font-weight:600}
+.status i{width:8px;height:8px;border-radius:50%;background:var(--green)}
+.status.error{background:#F6E4DF;color:#8E3B28}.status.error i{background:var(--sell)}
+.status.busy i{background:var(--wait)}
+.btn{min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;padding:0 16px;font:600 13px Inter,sans-serif;cursor:pointer}
+.btn-ghost{border:1px solid var(--border);background:var(--card);color:var(--text)}
+.btn-ghost:hover{border-color:var(--green)}
+.btn-primary{border:0;background:var(--accent);color:#fff;font-weight:700;font-size:14px}
+.btn-primary:hover{background:var(--green)}
+.btn:disabled{opacity:.6;cursor:wait}
+
+.price-card{flex:1 1 320px}
+.price{font-family:var(--mono);font-weight:700;font-size:44px;line-height:1}
+.meta-row{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:14px;font-size:12px;color:var(--muted)}
+.meta-row b{color:var(--text);font-family:var(--mono)}
+.note{margin:0;font-size:11px;color:var(--muted);line-height:1.5}
+
+.signal-card{flex:2 1 480px;background:linear-gradient(180deg,#EAF1EE 0%,#FFFFFF 70%);border-color:#C9DAD3}
+.signal-card.SELL{background:linear-gradient(180deg,#F6E8E3 0%,#FFFFFF 70%);border-color:#E6C7BD}
+.signal-card.WAIT,.signal-card.UNAVAILABLE{background:linear-gradient(180deg,#F5EEE2 0%,#FFFFFF 70%);border-color:#E5D6BD}
+.signal-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.big-signal{display:flex;align-items:center;gap:12px;font-family:var(--head);font-weight:700;font-size:48px;line-height:1}
+.reason{margin:0;font-size:14px;color:var(--text2);line-height:1.5;max-width:440px}
+.agree{display:flex;flex-direction:column;gap:6px;min-width:150px}
+.agree .n{font:700 22px var(--mono)}
+.bars{display:flex;gap:4px}.bars span{flex:1;height:6px;border-radius:3px;background:#DDD3C6}
+.bars span.on{background:var(--green)}
+.signal-card.SELL .bars span.on{background:var(--sell)}
+.tf-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.tf{background:var(--inner);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:6px;align-items:center}
+.tf span{font-size:11px;color:var(--muted)}
+.tf strong{font:700 18px var(--head)}
+.BUY{color:var(--green)}.SELL{color:var(--sell)}.WAIT,.UNAVAILABLE{color:var(--wait)}
+
+.chart-card{flex:999 1 640px}
+.chart-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.pills{display:flex;gap:4px;background:var(--inner);border-radius:12px;padding:4px;flex-wrap:wrap}
+.pills button{min-height:36px;min-width:44px;border:0;border-radius:9px;padding:0 10px;font:600 12px Inter,sans-serif;cursor:pointer;background:transparent;color:var(--text2)}
+.pills button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.chart-wrap{height:340px;background:#FBF9F6;border:1px solid var(--border);border-radius:14px;overflow:hidden}
 canvas{width:100%;height:100%;display:block}
-.legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;color:#cbd5e1;font-size:11px}
-.dot{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px}
-.explain{display:grid;gap:9px;margin-top:14px}
-.explain-item{background:#17263b;border-radius:11px;padding:12px}
-.explain-item b{display:block;margin-bottom:5px}
-.explain-item p{margin:0;color:#cbd5e1;font-size:13px;line-height:1.5}
-#message{color:#94a3b8;font-size:12px;margin-top:12px;line-height:1.5}
-footer{text-align:center;color:#64748b;font-size:11px;margin:22px 0}
-@media(max-width:430px){body{padding:11px}.card{padding:14px}.chart-wrap{height:290px}.price{font-size:30px}}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--text2)}
+.legend span{display:flex;align-items:center;gap:6px}
+.sw{width:10px;height:10px;border-radius:3px}
+
+aside{flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:20px}
+.ai-head{display:flex;justify-content:space-between;align-items:center}
+.tag{font-size:11px;color:#fff;background:var(--accent);border-radius:999px;padding:4px 10px;font-weight:700}
+.ai-result{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.ai-result strong{font:700 26px var(--head)}
+.ai-result span{font-size:13px;color:var(--muted)}
+.levels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.levels div{background:var(--inner);border-radius:12px;padding:10px}
+.levels span{font-size:11px;color:var(--muted)}
+.levels b{display:block;font:700 14px var(--mono);margin-top:4px}
+.ai-text{margin:0;font-size:13px;color:var(--text2);line-height:1.55}
+.ai-text ul{margin:6px 0 0;padding-left:18px}
+
+.smc-list{display:flex;flex-direction:column;gap:12px}
+.smc-item{display:flex;gap:12px;align-items:flex-start}
+.smc-item i{margin-top:5px;width:8px;height:8px;border-radius:2px;flex:none}
+.smc-item b{display:block;font-size:13px}
+.smc-item p{margin:2px 0 0;font-size:12px;color:var(--muted);line-height:1.45}
+
+.ind-grid{display:flex;flex-wrap:wrap;gap:12px}
+.ind{flex:1 1 200px;background:var(--inner);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.ind .k{font-size:12px;color:var(--muted)}
+.ind .v{font:700 24px var(--mono)}
+.ind .h{font-size:12px;color:var(--muted)}
+.meter{position:relative;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--sell) 0 30%,#DDD3C6 30% 70%,var(--green) 70% 100%)}
+.meter i{position:absolute;top:-4px;width:4px;height:14px;border-radius:2px;background:var(--text);left:50%;transition:left .3s}
+
+#message{font-size:12px;color:var(--muted);text-align:center}
+footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
+@media(max-width:480px){body{padding:16px 12px 32px}.card{padding:16px}.price{font-size:36px}.big-signal{font-size:40px}.chart-wrap{height:300px}}
 </style>
 </head>
 <body>
 <div class="container">
 
 <header>
-  <div class="logo">FOREX <span>AI</span></div>
-  <div class="status" id="status">● CONNECTING</div>
+  <div class="brand">
+    <div class="logo">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>
+    </div>
+    <div>
+      <div class="title">Forex <span>AI</span> Analyzer</div>
+      <div class="sub">Алт · XAUUSD · SMC + техник шинжилгээ</div>
+    </div>
+  </div>
+  <div class="head-right">
+    <div class="status busy" id="status"><i></i><span id="status-text">CONNECTING</span></div>
+    <button class="btn btn-ghost" id="refresh-btn" type="button" aria-label="Шинэчлэх">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>Шинэчлэх
+    </button>
+  </div>
 </header>
 
-<div class="card">
-  <div class="label">GOLD · XAUUSD · XAUS DATA</div>
-  <div class="price" id="price">Loading...</div>
-  <div class="label">OVERALL SIGNAL</div><br>
-  <span class="signal WAIT" id="overall">WAIT</span>
-  <p class="label" id="reason">Анализ татаж байна...</p>
-</div>
-
-<div class="card">
-  <div class="label" style="margin-bottom:14px">MULTI-TIMEFRAME ANALYSIS</div>
-  <div class="grid">
-    <div class="tf"><span class="label">1 MIN</span><strong id="tf1" class="WAIT">--</strong></div>
-    <div class="tf"><span class="label">5 MIN</span><strong id="tf5" class="WAIT">--</strong></div>
-    <div class="tf"><span class="label">15 MIN</span><strong id="tf15" class="WAIT">--</strong></div>
-  </div>
-</div>
-
-<div class="card">
-  <div class="controls">
-    <div>
-      <div class="label">SMART MONEY CONCEPTS</div>
-      <b>GOLD PRICE CHART</b>
+<div class="row">
+  <section class="card price-card">
+    <div class="label">Алтны үнэ · USD/oz</div>
+    <div class="price" id="price">Loading...</div>
+    <div class="meta-row">
+      <span>Графикийн доод <b id="range-low">--</b></span>
+      <span>Графикийн дээд <b id="range-high">--</b></span>
     </div>
-    <select id="timeframe">
-      <option value="1m">1 MIN</option>
-      <option value="5m" selected>5 MIN</option>
-      <option value="15m">15 MIN</option>
-      <option value="30m">30 MIN</option>
-      <option value="1h">1 HOUR</option>
-      <option value="4h">4 HOURS</option>
-      <option value="1d">1 DAY</option>
-    </select>
-    <button onclick="loadChart()">↻</button>
-  </div>
-
-  <div class="chart-wrap">
-    <canvas id="chart"></canvas>
-  </div>
-
-  <div class="legend">
-    <span><i class="dot" style="background:#16a085"></i>Bull candle</span>
-    <span><i class="dot" style="background:#e05d6f"></i>Bear candle</span>
-    <span><i class="dot" style="background:#2dd4bf"></i>Bullish OB</span>
-    <span><i class="dot" style="background:#fb7185"></i>Bearish OB</span>
-    <span><i class="dot" style="background:#60a5fa"></i>FVG</span>
-    <span><i class="dot" style="background:#fbbf24"></i>Liquidity</span>
-    <span><i class="dot" style="background:#c084fc"></i>CHoCH/BOS</span>
-  </div>
-
-  <div id="smc-explanations" class="explain">
-    <div class="explain-item">
-      <b>SMC analysis</b>
-      <p>Лааны мэдээлэл хүлээж байна...</p>
+    <div class="meta-row" style="border-top:0;padding-top:0">
+      <span>Үнийн цаг <b id="price-time">--</b></span>
     </div>
-  </div>
+    <p class="note">XAUS-ын үнэ нь XM-ийн арилжааны яг үнэ биш.</p>
+  </section>
+
+  <section class="card signal-card WAIT" id="signal-card">
+    <div class="signal-top">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="label">Нийт дохио</div>
+        <div class="big-signal WAIT" id="overall">
+          <span id="overall-text">WAIT</span>
+          <svg id="overall-icon" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/></svg>
+        </div>
+        <p class="reason" id="reason">Анализ татаж байна...</p>
+      </div>
+      <div class="agree">
+        <div class="sub">Тохирол</div>
+        <div class="n" id="agree-n">– / 3</div>
+        <div class="bars" id="agree-bars"><span></span><span></span><span></span></div>
+      </div>
+    </div>
+    <div class="tf-grid">
+      <div class="tf"><span>1 MIN</span><strong id="tf1" class="WAIT">--</strong></div>
+      <div class="tf"><span>5 MIN</span><strong id="tf5" class="WAIT">--</strong></div>
+      <div class="tf"><span>15 MIN</span><strong id="tf15" class="WAIT">--</strong></div>
+    </div>
+  </section>
 </div>
 
-<div class="card">
-  <div class="label" style="margin-bottom:14px">TECHNICAL INDICATORS · 5M</div>
-  <div class="indicators">
-    <div class="indicator"><span class="label">RSI 14</span><strong id="rsi">--</strong></div>
-    <div class="indicator"><span class="label">EMA 20</span><strong id="ema20">--</strong></div>
-    <div class="indicator"><span class="label">EMA 50</span><strong id="ema50">--</strong></div>
-    <div class="indicator"><span class="label">MACD</span><strong id="macd">--</strong></div>
-  </div>
+<div class="row" style="align-items:flex-start">
+  <section class="card chart-card">
+    <div class="chart-head">
+      <div>
+        <div class="label">Smart Money Concepts</div>
+        <h2 style="margin-top:4px">Алтны график</h2>
+      </div>
+      <div class="pills" role="group" aria-label="Timeframe" id="tf-pills">
+        <button type="button" data-tf="1m" aria-pressed="false">1M</button>
+        <button type="button" data-tf="5m" aria-pressed="true">5M</button>
+        <button type="button" data-tf="15m" aria-pressed="false">15M</button>
+        <button type="button" data-tf="30m" aria-pressed="false">30M</button>
+        <button type="button" data-tf="1h" aria-pressed="false">1H</button>
+        <button type="button" data-tf="4h" aria-pressed="false">4H</button>
+        <button type="button" data-tf="1d" aria-pressed="false">1D</button>
+      </div>
+    </div>
+    <div class="chart-wrap"><canvas id="chart"></canvas></div>
+    <div class="legend">
+      <span><i class="sw" style="background:#336557"></i>Өсөх лаа</span>
+      <span><i class="sw" style="background:#B5523B"></i>Буурах лаа</span>
+      <span><i class="sw" style="border:1px solid #336557;background:rgba(51,101,87,.16)"></i>Order Block</span>
+      <span><i class="sw" style="border:1px solid #5B7FA6;background:rgba(91,127,166,.16)"></i>FVG</span>
+      <span><i style="width:14px;border-top:2px dashed #A0722A"></i>Liquidity</span>
+      <span><i style="width:14px;border-top:2px dashed #1F4B3F"></i>CHoCH/BOS</span>
+    </div>
+  </section>
+
+  <aside>
+    <section class="card">
+      <div class="ai-head"><h2>AI дүгнэлт</h2><span class="tag">AI</span></div>
+      <div class="ai-result"><strong id="ai-action" class="WAIT">--</strong><span id="ai-meta">Шинжилгээ ажиллуулаагүй байна</span></div>
+      <div class="levels">
+        <div><span>Entry</span><b id="ai-entry">--</b></div>
+        <div><span>Stop loss</span><b id="ai-sl" style="color:var(--sell)">--</b></div>
+        <div><span>Take profit</span><b id="ai-tp" style="color:var(--green)">--</b></div>
+      </div>
+      <div class="ai-text" id="ai-text">Доорх товчийг дарж 1M, 5M, 15M-ийн өгөгдөл дээр AI дүгнэлт гаргуулна.</div>
+      <button class="btn btn-primary" id="ai-btn" type="button">AI шинжилгээ ажиллуулах</button>
+    </section>
+
+    <section class="card">
+      <h2>SMC илрүүлэлт</h2>
+      <div class="smc-list" id="smc-explanations">
+        <div class="smc-item"><i style="background:#DDD3C6"></i><div><b>SMC analysis</b><p>Лааны мэдээлэл хүлээж байна...</p></div></div>
+      </div>
+      <p class="note" style="border-top:1px solid var(--border);padding-top:10px">Дүрэмд суурилсан ойролцоо илрүүлэлт. Арилжаанд ашиглахаас өмнө backtest хийнэ үү.</p>
+    </section>
+  </aside>
 </div>
 
-<button style="width:100%;padding:15px" onclick="loadData()">↻ REFRESH ANALYSIS</button>
+<section class="card">
+  <div class="label">Техник индикатор · 5M</div>
+  <div class="ind-grid">
+    <div class="ind">
+      <div style="display:flex;justify-content:space-between"><span class="k">RSI 14</span><span class="h" id="rsi-zone">--</span></div>
+      <div class="v" id="rsi">--</div>
+      <div class="meter"><i id="rsi-mark"></i></div>
+    </div>
+    <div class="ind"><span class="k">EMA 20</span><div class="v" id="ema20">--</div><span class="h" id="ema-note">--</span></div>
+    <div class="ind"><span class="k">EMA 50</span><div class="v" id="ema50">--</div><span class="h">Дунд хугацааны чиг</span></div>
+    <div class="ind"><span class="k">MACD</span><div class="v" id="macd">--</div><span class="h" id="macd-signal">Signal: --</span></div>
+  </div>
+</section>
+
 <div id="message">Мэдээлэл хүлээж байна...</div>
 
 <footer>
-Forex AI Analyzer · SMC + Technical Analysis<br>
-Not financial advice · XAUS price is not the exact XM execution quote
+  Forex AI Analyzer · SMC + Technical Analysis<br>
+  Санхүүгийн зөвлөгөө биш · XAUS-ын үнэ нь XM-ийн арилжааны яг үнэ биш
 </footer>
 </div>
 
 <script>
 const API="https://forex-ai-analyzer-3.onrender.com";
+const C={bg:"#FBF9F6",grid:"#EEE8DF",axis:"#6B6B6B",bull:"#336557",bear:"#B5523B",
+  obBull:"#336557",obBear:"#B5523B",fvg:"#5B7FA6",liq:"#A0722A",struct:"#1F4B3F",buyTag:"#1F4B3F",sellTag:"#B5523B"};
 let chartPoints=[];
 let livePrice=null;
 let overallSignal="WAIT";
+let currentTf="5m";
+
+const $=id=>document.getElementById(id);
+const fmt=v=>Number(v).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function setStatus(kind,text){
+  $("status").className="status "+kind;
+  $("status-text").textContent=text;
+}
 
 function setSignal(id,value){
-  const el=document.getElementById(id);
+  const el=$(id);
   el.textContent=value||"--";
   el.className=value||"WAIT";
 }
 
+const ICONS={
+  BUY:'<path d="M12 19V5"/><path d="M5 12l7-7 7 7"/>',
+  SELL:'<path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/>',
+  WAIT:'<path d="M5 12h14"/>'
+};
+
+function setOverall(sig,tfSignals){
+  const s=["BUY","SELL"].includes(sig)?sig:"WAIT";
+  $("overall-text").textContent=sig||"WAIT";
+  $("overall").className="big-signal "+s;
+  $("overall-icon").innerHTML=ICONS[s];
+  $("signal-card").className="card signal-card "+s;
+  const n=s==="WAIT"?0:tfSignals.filter(x=>x===s).length;
+  $("agree-n").textContent=s==="WAIT"?"– / 3":`${n} / 3`;
+  [...$("agree-bars").children].forEach((b,i)=>b.classList.toggle("on",i<n));
+}
+
 function candle(p){
-  return {
-    t:Number(p.t),
-    o:Number(p.o),
-    h:Number(p.h),
-    l:Number(p.l),
-    c:Number(p.c)
-  };
+  return {t:Number(p.t),o:Number(p.o),h:Number(p.h),l:Number(p.l),c:Number(p.c)};
 }
 
 function analyzeSMC(raw){
-  const p=raw.map(candle).filter(x=>
-    [x.o,x.h,x.l,x.c].every(Number.isFinite)
-  );
-
+  const p=raw.map(candle).filter(x=>[x.o,x.h,x.l,x.c].every(Number.isFinite));
   const n=p.length;
   const result={obs:[],fvgs:[],liquidity:[],structure:[]};
-
   if(n<8)return result;
 
   const atr=p.slice(-14).reduce((s,x)=>s+(x.h-x.l),0)/Math.min(14,n);
@@ -164,79 +296,31 @@ function analyzeSMC(raw){
   const highs=[],lows=[];
 
   for(let i=2;i<n-2;i++){
-    if(p[i].h>p[i-1].h&&p[i].h>p[i-2].h&&
-       p[i].h>=p[i+1].h&&p[i].h>=p[i+2].h)
-      highs.push({i,v:p[i].h});
-
-    if(p[i].l<p[i-1].l&&p[i].l<p[i-2].l&&
-       p[i].l<=p[i+1].l&&p[i].l<=p[i+2].l)
-      lows.push({i,v:p[i].l});
+    if(p[i].h>p[i-1].h&&p[i].h>p[i-2].h&&p[i].h>=p[i+1].h&&p[i].h>=p[i+2].h)highs.push({i,v:p[i].h});
+    if(p[i].l<p[i-1].l&&p[i].l<p[i-2].l&&p[i].l<=p[i+1].l&&p[i].l<=p[i+2].l)lows.push({i,v:p[i].l});
   }
 
-  for(let a=0;a<highs.length;a++){
-    for(let b=a+1;b<highs.length;b++){
-      if(highs[b].i-highs[a].i>=2&&
-         Math.abs(highs[a].v-highs[b].v)<=tolerance){
-        result.liquidity.push({
-          kind:"BSL · Equal Highs",
-          price:(highs[a].v+highs[b].v)/2
-        });
-      }
-    }
+  for(let a=0;a<highs.length;a++)for(let b=a+1;b<highs.length;b++){
+    if(highs[b].i-highs[a].i>=2&&Math.abs(highs[a].v-highs[b].v)<=tolerance)
+      result.liquidity.push({kind:"BSL · Equal Highs",price:(highs[a].v+highs[b].v)/2});
   }
-
-  for(let a=0;a<lows.length;a++){
-    for(let b=a+1;b<lows.length;b++){
-      if(lows[b].i-lows[a].i>=2&&
-         Math.abs(lows[a].v-lows[b].v)<=tolerance){
-        result.liquidity.push({
-          kind:"SSL · Equal Lows",
-          price:(lows[a].v+lows[b].v)/2
-        });
-      }
-    }
+  for(let a=0;a<lows.length;a++)for(let b=a+1;b<lows.length;b++){
+    if(lows[b].i-lows[a].i>=2&&Math.abs(lows[a].v-lows[b].v)<=tolerance)
+      result.liquidity.push({kind:"SSL · Equal Lows",price:(lows[a].v+lows[b].v)/2});
   }
 
   for(let i=2;i<n;i++){
-    if(p[i].l>p[i-2].h){
-      result.fvgs.push({
-        kind:"Bullish FVG",
-        low:p[i-2].h,
-        high:p[i].l,
-        from:i-2,
-        to:i
-      });
-    }
-
-    if(p[i].h<p[i-2].l){
-      result.fvgs.push({
-        kind:"Bearish FVG",
-        low:p[i].h,
-        high:p[i-2].l,
-        from:i-2,
-        to:i
-      });
-    }
+    if(p[i].l>p[i-2].h)result.fvgs.push({kind:"Bullish FVG",low:p[i-2].h,high:p[i].l,from:i-2,to:i});
+    if(p[i].h<p[i-2].l)result.fvgs.push({kind:"Bearish FVG",low:p[i].h,high:p[i-2].l,from:i-2,to:i});
   }
 
   for(let i=3;i<n;i++){
     if(Math.abs(p[i].c-p[i].o)<Math.max(atr*1.15,.01))continue;
-
     const bullish=p[i].c>p[i].o;
-
     for(let j=i-1;j>=Math.max(0,i-4);j--){
-      const opposite=bullish?
-        p[j].c<p[j].o:
-        p[j].c>p[j].o;
-
+      const opposite=bullish?p[j].c<p[j].o:p[j].c>p[j].o;
       if(opposite){
-        result.obs.push({
-          kind:bullish?"Bullish OB":"Bearish OB",
-          low:p[j].l,
-          high:p[j].h,
-          from:j,
-          to:i
-        });
+        result.obs.push({kind:bullish?"Bullish OB":"Bearish OB",low:p[j].l,high:p[j].h,from:j,to:i});
         break;
       }
     }
@@ -245,372 +329,275 @@ function analyzeSMC(raw){
   const last=p[n-1];
   const ph=highs.filter(x=>x.i<n-2).slice(-1)[0];
   const pl=lows.filter(x=>x.i<n-2).slice(-1)[0];
-
-  if(ph&&last.c>ph.v){
-    result.structure.push({
-      label:"Bullish BOS / CHoCH candidate",
-      price:ph.v
-    });
-  }
-
-  if(pl&&last.c<pl.v){
-    result.structure.push({
-      label:"Bearish BOS / CHoCH candidate",
-      price:pl.v
-    });
-  }
-
+  if(ph&&last.c>ph.v)result.structure.push({label:"Bullish BOS / CHoCH candidate",price:ph.v});
+  if(pl&&last.c<pl.v)result.structure.push({label:"Bearish BOS / CHoCH candidate",price:pl.v});
   return result;
 }
 
 function drawChart(raw,smc){
-  const canvas=document.getElementById("chart");
+  const canvas=$("chart");
   const ctx=canvas.getContext("2d");
   const rect=canvas.getBoundingClientRect();
   const dpr=window.devicePixelRatio||1;
-
   canvas.width=Math.max(1,Math.floor(rect.width*dpr));
   canvas.height=Math.max(1,Math.floor(rect.height*dpr));
   ctx.setTransform(dpr,0,0,dpr,0,0);
 
   const w=rect.width,h=rect.height;
-  const p=raw.map(candle).filter(x=>
-    [x.o,x.h,x.l,x.c].every(Number.isFinite)
-  );
+  const p=raw.map(candle).filter(x=>[x.o,x.h,x.l,x.c].every(Number.isFinite));
 
   ctx.clearRect(0,0,w,h);
-  ctx.fillStyle="#0b1422";
+  ctx.fillStyle=C.bg;
   ctx.fillRect(0,0,w,h);
+  ctx.font="11px Inter, Arial";
 
   if(!p.length){
-    ctx.fillStyle="#94a3b8";
+    ctx.fillStyle=C.axis;
     ctx.fillText("Candle data unavailable",14,25);
     return;
   }
 
   let min=Math.min(...p.map(x=>x.l));
   let max=Math.max(...p.map(x=>x.h));
+  $("range-low").textContent=fmt(min);
+  $("range-high").textContent=fmt(max);
 
-  if(Number.isFinite(livePrice)){
-    min=Math.min(min,livePrice);
-    max=Math.max(max,livePrice);
-  }
-
+  if(Number.isFinite(livePrice)){min=Math.min(min,livePrice);max=Math.max(max,livePrice);}
   const zones=[...smc.obs,...smc.fvgs];
+  zones.forEach(z=>{min=Math.min(min,z.low);max=Math.max(max,z.high);});
+  smc.liquidity.forEach(z=>{min=Math.min(min,z.price);max=Math.max(max,z.price);});
 
-  zones.forEach(z=>{
-    min=Math.min(min,z.low);
-    max=Math.max(max,z.high);
-  });
+  const pad=(max-min)*.1||1;
+  min-=pad;max+=pad;
 
-  smc.liquidity.forEach(z=>{
-    min=Math.min(min,z.price);
-    max=Math.max(max,z.price);
-  });
-
-  const pad=(max-min)*.12||1;
-  min-=pad;
-  max+=pad;
-
-  const left=10,right=62,top=14,bottom=23;
+  const left=10,right=70,top=16,bottom=24;
   const plotW=w-left-right,plotH=h-top-bottom;
   const y=v=>top+(max-v)/(max-min)*plotH;
   const x=i=>left+(i+.5)*plotW/p.length;
 
-  ctx.font="10px Arial";
-
+  ctx.font="10px 'JetBrains Mono', monospace";
   for(let k=0;k<=4;k++){
     const val=max-(max-min)*k/4;
     const yy=y(val);
-
-    ctx.strokeStyle="#223149";
-    ctx.beginPath();
-    ctx.moveTo(left,yy);
-    ctx.lineTo(w-right,yy);
-    ctx.stroke();
-
-    ctx.fillStyle="#94a3b8";
-    ctx.fillText(val.toFixed(2),w-right+4,yy+3);
+    ctx.strokeStyle=C.grid;ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(w-right,yy);ctx.stroke();
+    ctx.fillStyle=C.axis;
+    ctx.fillText(val.toFixed(2),w-right+6,yy+3);
   }
 
+  ctx.font="600 10px Inter, Arial";
   zones.slice(-7).forEach(z=>{
     const xx=left+z.from*plotW/p.length;
     const ww=Math.max(5,(z.to-z.from+1)*plotW/p.length);
     const yy=y(z.high);
     const hh=Math.max(2,y(z.low)-yy);
     const bull=z.kind.includes("Bullish");
-
-    ctx.fillStyle=bull?
-      "rgba(45,212,191,.16)":
-      "rgba(251,113,133,.16)";
+    const isOB=z.kind.includes("OB");
+    const col=isOB?(bull?C.obBull:C.obBear):C.fvg;
+    ctx.fillStyle=isOB?(bull?"rgba(51,101,87,.12)":"rgba(181,82,59,.12)"):"rgba(91,127,166,.12)";
     ctx.fillRect(xx,yy,ww,hh);
-
-    ctx.strokeStyle=bull?"#2dd4bf":"#fb7185";
-    ctx.strokeRect(xx,yy,ww,hh);
-
-    ctx.fillStyle=bull?"#5eead4":"#fda4af";
-    ctx.fillText(
-      z.kind.includes("OB")?"OB":"FVG",
-      Math.min(w-right-24,xx+2),
-      Math.max(10,yy-3)
-    );
+    ctx.strokeStyle=col;ctx.strokeRect(xx,yy,ww,hh);
+    ctx.fillStyle=col;
+    ctx.fillText(isOB?"OB":"FVG",Math.min(w-right-24,xx+2),Math.max(10,yy-3));
   });
 
   smc.liquidity.slice(-4).forEach(z=>{
     const yy=y(z.price);
-
-    ctx.setLineDash([4,4]);
-    ctx.strokeStyle="#fbbf24";
-    ctx.beginPath();
-    ctx.moveTo(left,yy);
-    ctx.lineTo(w-right,yy);
-    ctx.stroke();
+    ctx.setLineDash([4,4]);ctx.strokeStyle=C.liq;
+    ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(w-right,yy);ctx.stroke();
     ctx.setLineDash([]);
-
-    ctx.fillStyle="#fbbf24";
-    ctx.fillText(
-      z.kind.startsWith("BSL")?"BSL":"SSL",
-      left+2,yy-4
-    );
+    ctx.fillStyle=C.liq;
+    ctx.fillText(z.kind.startsWith("BSL")?"BSL":"SSL",left+2,yy-4);
   });
 
-  // Candlesticks
-  const cw=Math.max(3,Math.min(10,plotW/p.length*.58));
-
+  const cw=Math.max(3,Math.min(10,plotW/p.length*.6));
   p.forEach((c,i)=>{
     const xx=x(i);
-    const bull=c.c>=c.o;
-    const color=bull?"#16a085":"#e05d6f";
-
-    ctx.strokeStyle=color;
-    ctx.lineWidth=1.2;
-    ctx.beginPath();
-    ctx.moveTo(xx,y(c.h));
-    ctx.lineTo(xx,y(c.l));
-    ctx.stroke();
-
+    const color=c.c>=c.o?C.bull:C.bear;
+    ctx.strokeStyle=color;ctx.lineWidth=1.2;
+    ctx.beginPath();ctx.moveTo(xx,y(c.h));ctx.lineTo(xx,y(c.l));ctx.stroke();
     ctx.fillStyle=color;
-    ctx.fillRect(
-      xx-cw/2,
-      Math.min(y(c.o),y(c.c)),
-      cw,
-      Math.max(2,Math.abs(y(c.o)-y(c.c)))
-    );
+    ctx.fillRect(xx-cw/2,Math.min(y(c.o),y(c.c)),cw,Math.max(2,Math.abs(y(c.o)-y(c.c))));
   });
 
-  // FINAL BUY / SELL LABEL ON THE LATEST CLOSED 5M CANDLE
-  const chartTf=document.getElementById("timeframe").value;
-
-  if(
-    chartTf==="5m" &&
-    (overallSignal==="BUY"||overallSignal==="SELL")
-  ){
+  // BUY / SELL label on the latest closed 5M candle
+  if(currentTf==="5m"&&(overallSignal==="BUY"||overallSignal==="SELL")){
     let closedIndex=-1;
     const now=Date.now()/1000;
-
     for(let i=0;i<p.length;i++){
-      if(Number.isFinite(p[i].t)&&p[i].t+300<=now){
-        closedIndex=i;
-      }
+      if(Number.isFinite(p[i].t)&&p[i].t+300<=now)closedIndex=i;
     }
-
     if(closedIndex>=0){
       const c=p[closedIndex];
       const xx=x(closedIndex);
       const isSell=overallSignal==="SELL";
-      const color=isSell?"#ef4444":"#16a34a";
-      const labelW=48;
-      const labelH=20;
-
-      let yy=isSell?
-        y(c.h)-labelH-9:
-        y(c.l)+9;
-
-      yy=Math.max(
-        top+2,
-        Math.min(h-bottom-labelH-2,yy)
-      );
-
-      const lx=Math.max(
-        left,
-        Math.min(w-right-labelW,xx-labelW/2)
-      );
-
-      ctx.strokeStyle=color;
-      ctx.lineWidth=1.5;
-      ctx.beginPath();
-      ctx.moveTo(xx,isSell?y(c.h):y(c.l));
-      ctx.lineTo(xx,isSell?yy+labelH:yy);
-      ctx.stroke();
-
+      const color=isSell?C.sellTag:C.buyTag;
+      const labelW=48,labelH=20;
+      let yy=isSell?y(c.h)-labelH-9:y(c.l)+9;
+      yy=Math.max(top+2,Math.min(h-bottom-labelH-2,yy));
+      const lx=Math.max(left,Math.min(w-right-labelW,xx-labelW/2));
+      ctx.strokeStyle=color;ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(xx,isSell?y(c.h):y(c.l));ctx.lineTo(xx,isSell?yy+labelH:yy);ctx.stroke();
       ctx.fillStyle=color;
-      ctx.fillRect(lx,yy,labelW,labelH);
-
-      ctx.fillStyle="#ffffff";
-      ctx.font="bold 11px Arial";
-      ctx.textAlign="center";
-      ctx.fillText(
-        overallSignal,
-        lx+labelW/2,
-        yy+14
-      );
+      ctx.beginPath();
+      if(ctx.roundRect)ctx.roundRect(lx,yy,labelW,labelH,5);else ctx.rect(lx,yy,labelW,labelH);
+      ctx.fill();
+      ctx.fillStyle="#ffffff";ctx.font="bold 11px Inter, Arial";ctx.textAlign="center";
+      ctx.fillText(overallSignal,lx+labelW/2,yy+14);
       ctx.textAlign="left";
     }
   }
 
+  ctx.font="600 10px Inter, Arial";
   smc.structure.forEach(s=>{
     const yy=y(s.price);
-
-    ctx.setLineDash([3,3]);
-    ctx.strokeStyle="#c084fc";
-    ctx.beginPath();
-    ctx.moveTo(left,yy);
-    ctx.lineTo(w-right,yy);
-    ctx.stroke();
+    ctx.setLineDash([3,3]);ctx.strokeStyle=C.struct;
+    ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(w-right,yy);ctx.stroke();
     ctx.setLineDash([]);
-
-    ctx.fillStyle="#d8b4fe";
+    ctx.fillStyle=C.struct;
     ctx.fillText(s.label,left+3,Math.max(12,yy-5));
   });
 
-  ctx.fillStyle="#94a3b8";
-  ctx.fillText("Older",left,h-6);
-  ctx.fillText("Latest",w-right-28,h-6);
+  // Live price tag
+  if(Number.isFinite(livePrice)){
+    const yy=y(livePrice);
+    ctx.setLineDash([2,3]);ctx.strokeStyle=C.bull;
+    ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(w-right,yy);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle=C.struct;
+    ctx.fillRect(w-right+2,yy-8,right-4,16);
+    ctx.fillStyle="#fff";ctx.font="bold 10px 'JetBrains Mono', monospace";
+    ctx.fillText(livePrice.toFixed(2),w-right+6,yy+4);
+  }
+
+  ctx.fillStyle=C.axis;ctx.font="10px Inter, Arial";
+  ctx.fillText("Older",left,h-7);
+  ctx.fillText("Latest",w-right-34,h-7);
 }
 
 function renderExplanations(smc){
   const rows=[];
+  const colorOf=k=>k.includes("OB")?(k.includes("Bullish")?C.obBull:C.obBear):k.includes("FVG")?C.fvg:k.includes("BOS")?C.struct:C.liq;
+  smc.obs.slice(-2).reverse().forEach(z=>rows.push([z.kind,`Бүс: ${z.low.toFixed(2)} – ${z.high.toFixed(2)}. Дисплейсмент хөдөлгөөний өмнөх эсрэг лаа.`]));
+  smc.fvgs.slice(-2).reverse().forEach(z=>rows.push([z.kind,`Завсар: ${z.low.toFixed(2)} – ${z.high.toFixed(2)}. Үнэ буцаж шалгаж болох ч entry баталгаа биш.`]));
+  smc.liquidity.slice(-2).reverse().forEach(z=>rows.push([z.kind,`Боломжит liquidity түвшин: ${z.price.toFixed(2)}. Sweep батлагдсан гэсэн үг биш.`]));
+  smc.structure.forEach(z=>rows.push([z.label,`Сүүлийн swing түвшин ${z.price.toFixed(2)} дээр лааны close-оор эвдэрсэн.`]));
+  if(!rows.length)rows.push(["SMC","Одоогийн лаануудад тодорхой тэмдэглэгээ олдсонгүй."]);
 
-  smc.obs.slice(-2).reverse().forEach(z=>{
-    rows.push([
-      z.kind,
-      `Бүс: ${z.low.toFixed(2)} – ${z.high.toFixed(2)}. Дисплейсмент хөдөлгөөний өмнөх эсрэг лаа.`
-    ]);
-  });
-
-  smc.fvgs.slice(-2).reverse().forEach(z=>{
-    rows.push([
-      z.kind,
-      `Завсар: ${z.low.toFixed(2)} – ${z.high.toFixed(2)}. Үнэ буцаж шалгаж болох ч entry баталгаа биш.`
-    ]);
-  });
-
-  smc.liquidity.slice(-2).reverse().forEach(z=>{
-    rows.push([
-      z.kind,
-      `Боломжит liquidity түвшин: ${z.price.toFixed(2)}. Sweep батлагдсан гэсэн үг биш.`
-    ]);
-  });
-
-  smc.structure.forEach(z=>{
-    rows.push([
-      z.label,
-      `Сүүлийн swing түвшин ${z.price.toFixed(2)} дээр лааны close-оор эвдэрсэн.`
-    ]);
-  });
-
-  if(!rows.length){
-    rows.push([
-      "SMC",
-      "Одоогийн лаануудад тодорхой тэмдэглэгээ олдсонгүй."
-    ]);
-  }
-
-  rows.push([
-    "Аргачлалын санамж",
-    "Эдгээр нь сүүлийн ирсэн лаанд суурилсан дүрэмт ойролцоо илрүүлэлт. Бодит арилжаанд ашиглахаас өмнө урт түүхээр шалгаж, backtest хийх шаардлагатай."
-  ]);
-
-  document.getElementById("smc-explanations").innerHTML=
-    rows.map(([title,desc])=>
-      `<div class="explain-item"><b>${title}</b><p>${desc}</p></div>`
-    ).join("");
+  $("smc-explanations").innerHTML=rows.map(([title,desc])=>
+    `<div class="smc-item"><i style="background:${colorOf(title)}"></i><div><b>${esc(title)}</b><p>${esc(desc)}</p></div></div>`
+  ).join("");
 }
 
 async function loadChart(){
-  const tf=document.getElementById("timeframe").value;
-  const msg=document.getElementById("message");
-
+  const tf=currentTf;
+  const msg=$("message");
   try{
     const response=await fetch(`${API}/candles?interval=${tf}`);
-
     if(!response.ok)throw new Error("Candle API "+response.status);
-
     const data=await response.json();
+    if(tf!==currentTf)return;
     chartPoints=data.points||[];
-
     const smc=analyzeSMC(chartPoints);
     drawChart(chartPoints,smc);
     renderExplanations(smc);
-
-    msg.textContent=
-      `Chart updated · ${tf} · ${chartPoints.length} candles.`;
+    msg.textContent=`Chart updated · ${tf} · ${chartPoints.length} candles · ${new Date().toLocaleTimeString()}`;
   }catch(error){
     msg.textContent="Chart алдаа: "+error.message;
   }
 }
 
 async function loadData(){
-  const status=document.getElementById("status");
-  const message=document.getElementById("message");
-
-  status.textContent="● UPDATING";
-
+  setStatus("busy","UPDATING");
   try{
-    const [priceResponse,analysisResponse]=await Promise.all([
-      fetch(API+"/price"),
-      fetch(API+"/analyze")
-    ]);
-
-    if(!priceResponse.ok||!analysisResponse.ok){
-      throw new Error("API response error");
-    }
+    const [priceResponse,analysisResponse]=await Promise.all([fetch(API+"/price"),fetch(API+"/analyze")]);
+    if(!priceResponse.ok||!analysisResponse.ok)throw new Error("API response error");
 
     const priceData=await priceResponse.json();
     livePrice=Number(priceData.price);
     const data=await analysisResponse.json();
 
-    document.getElementById("price").textContent=
-      Number(priceData.price).toLocaleString("en-US",{
-        minimumFractionDigits:2,
-        maximumFractionDigits:2
-      });
+    $("price").textContent=Number.isFinite(livePrice)?fmt(livePrice):"--";
+    $("price-time").textContent=priceData.price_as_of
+      ?new Date(priceData.price_as_of).toLocaleTimeString():"--";
 
-    // Save final combined signal for chart label
     overallSignal=data.overall_signal||"WAIT";
-    setSignal("overall",overallSignal);
-
-    document.getElementById("reason").textContent=data.reason||"";
-
     const tf=data.timeframes||{};
-    setSignal("tf1",tf["1m"]?.signal);
-    setSignal("tf5",tf["5m"]?.signal);
-    setSignal("tf15",tf["15m"]?.signal);
+    const sigs=["1m","5m","15m"].map(k=>tf[k]?.signal);
+    setOverall(overallSignal,sigs);
+    $("reason").textContent=data.reason||"";
+    setSignal("tf1",sigs[0]);
+    setSignal("tf5",sigs[1]);
+    setSignal("tf15",sigs[2]);
 
     const ind=tf["5m"]?.indicators||{};
-    document.getElementById("rsi").textContent=ind.RSI??"--";
-    document.getElementById("ema20").textContent=ind.EMA20??"--";
-    document.getElementById("ema50").textContent=ind.EMA50??"--";
-    document.getElementById("macd").textContent=ind.MACD??"--";
+    const rsi=Number(ind.RSI);
+    $("rsi").textContent=ind.RSI??"--";
+    if(Number.isFinite(rsi)){
+      $("rsi-mark").style.left=`calc(${Math.max(0,Math.min(100,rsi))}% - 2px)`;
+      $("rsi-zone").textContent=rsi>=70?"Overbought":rsi<=30?"Oversold":"Төвийн бүс";
+    }
+    $("ema20").textContent=ind.EMA20!=null?fmt(ind.EMA20):"--";
+    $("ema50").textContent=ind.EMA50!=null?fmt(ind.EMA50):"--";
+    $("ema-note").textContent=(ind.EMA20!=null&&ind.EMA50!=null)
+      ?(ind.EMA20>ind.EMA50?"EMA50-аас дээр ↑":"EMA50-аас доор ↓"):"--";
+    const macd=Number(ind.MACD);
+    $("macd").textContent=ind.MACD!=null?(macd>0?"+":"")+ind.MACD:"--";
+    $("macd").className="v "+(macd>0?"BUY":macd<0?"SELL":"");
+    $("macd-signal").textContent="Signal: "+(ind.MACD_signal??"--");
 
-    status.textContent="● CONNECTED";
-    message.textContent="Last updated: "+new Date().toLocaleTimeString();
-
+    setStatus("","CONNECTED · "+new Date().toLocaleTimeString());
     await loadChart();
-
   }catch(error){
-    status.textContent="● ERROR";
-    message.textContent="Алдаа: "+error.message;
+    setStatus("error","ERROR");
+    $("message").textContent="Алдаа: "+error.message+" (Render сервер сэрэхэд 30–60 сек болж магадгүй)";
     console.error(error);
   }
 }
 
-document.getElementById("timeframe").addEventListener("change",loadChart);
+async function runAI(){
+  const btn=$("ai-btn");
+  btn.disabled=true;
+  btn.textContent="AI шинжилж байна...";
+  $("ai-text").textContent="1M, 5M, 15M-ийн өгөгдлийг шинжилж байна. 10–40 секунд болно.";
+  try{
+    const res=await fetch(API+"/ai-analyze");
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok)throw new Error(data.detail||("AI API "+res.status));
+
+    const a=data.analysis||{};
+    setSignal("ai-action",a.action);
+    $("ai-meta").textContent=`итгэл ${a.confidence_percent??"--"}% · эрсдэл ${a.risk_level||"--"}${a.risk_reward?" · R:R "+a.risk_reward:""}`;
+    $("ai-entry").textContent=a.entry_price!=null?fmt(a.entry_price):"--";
+    $("ai-sl").textContent=a.stop_loss!=null?fmt(a.stop_loss):"--";
+    $("ai-tp").textContent=a.take_profit!=null?fmt(a.take_profit):"--";
+
+    const reasons=(a.reasons||[]).map(r=>`<li>${esc(r)}</li>`).join("");
+    $("ai-text").innerHTML=
+      `${esc(a.summary)}${reasons?`<ul>${reasons}</ul>`:""}`+
+      (a.invalidation?`<p style="margin:8px 0 0"><b>Хүчингүй болох нөхцөл:</b> ${esc(a.invalidation)}</p>`:"")+
+      (a.caution?`<p style="margin:8px 0 0;color:var(--muted)">${esc(a.caution)}</p>`:"")+
+      `<p style="margin:8px 0 0;font-size:11px;color:var(--muted)">${esc(data.disclaimer||"")}</p>`;
+  }catch(error){
+    $("ai-text").textContent="Алдаа: "+error.message;
+  }finally{
+    btn.disabled=false;
+    btn.textContent="AI шинжилгээ дахин ажиллуулах";
+  }
+}
+
+$("tf-pills").addEventListener("click",e=>{
+  const b=e.target.closest("button[data-tf]");
+  if(!b)return;
+  currentTf=b.dataset.tf;
+  [...$("tf-pills").children].forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
+  loadChart();
+});
+$("refresh-btn").addEventListener("click",loadData);
+$("ai-btn").addEventListener("click",runAI);
 
 window.addEventListener("resize",()=>{
-  if(chartPoints.length){
-    drawChart(chartPoints,analyzeSMC(chartPoints));
-  }
+  if(chartPoints.length)drawChart(chartPoints,analyzeSMC(chartPoints));
 });
 
 loadData();
