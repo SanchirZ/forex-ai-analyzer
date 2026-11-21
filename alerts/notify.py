@@ -37,6 +37,33 @@ ALERT_MAX_AGE = 30 * 60                      # do not alert signals older than t
 EXPIRE = 48 * 3600
 SITE = "https://sanchirz.github.io/forex-ai-analyzer/"
 JOURNAL = os.getenv("JOURNAL", "data/journal.json")
+NEWS_FILE = os.path.join(os.path.dirname(JOURNAL) or ".", "news.json")
+
+
+def load_news():
+    """High-impact USD events, refreshed at most once an hour into data/news.json."""
+    try:
+        with open(NEWS_FILE, encoding="utf-8") as f:
+            cached = json.load(f)
+        if time.time() - cached.get("updated", 0) < 3600 and cached.get("events"):
+            return cached["events"]
+    except (OSError, ValueError):
+        cached = {"events": []}
+    events = main.get_news()
+    if events:
+        os.makedirs(os.path.dirname(NEWS_FILE) or ".", exist_ok=True)
+        with open(NEWS_FILE, "w", encoding="utf-8") as f:
+            json.dump({"updated": int(time.time()), "source": "Forex Factory (High, USD)",
+                       "events": events}, f, ensure_ascii=False, indent=1)
+        return events
+    return cached.get("events", [])
+
+
+def news_near(events, ts, window_min=30):
+    for ev in events:
+        if abs(ev["time"] - ts) <= window_min * 60:
+            return ev
+    return None
 
 
 # ---------------------------------------------------------------- indicators
@@ -261,6 +288,12 @@ def save_journal(data):
 def run():
     journal = load_journal()
     known = {s["id"]: s for s in journal["signals"]}
+    try:
+        events = load_news()
+    except Exception as exc:
+        print("news failed:", exc)
+        events = []
+    print(f"news: {len(events)} high-impact USD events")
     h1_cache = {}
     added = alerted = 0
     now = time.time()
@@ -285,11 +318,7 @@ def run():
             sid = f"{symbol}-{tf}-{s['t']}"
             if sid in known:
                 continue
-            news = None
-            try:
-                news = main.news_near(s["close_t"])
-            except Exception as exc:
-                print("news check failed:", exc)
+            news = news_near(events, s["close_t"])
             entry = {
                 "id": sid, "sym": symbol, "name": main.SYMBOLS[symbol]["name"], "tf": tf,
                 "side": s["side"], "t": s["t"], "close_t": s["close_t"],

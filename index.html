@@ -1311,10 +1311,14 @@ async function runBacktest(){
 
 /* ---------- News (Forex Factory, High impact USD) ---------- */
 async function loadNews(){
-  try{
-    const r=await fetch(`${API}/news`);if(!r.ok)throw new Error(r.status);
-    S.news=((await r.json()).events||[]).sort((a,b)=>a.time-b.time);
-  }catch(_){/* keep the last list */}
+  // the alert job saves the calendar next to the journal; the backend is the fallback
+  for(const url of [`https://raw.githubusercontent.com/SanchirZ/forex-ai-analyzer/data/news.json?t=${Math.floor(Date.now()/600000)}`,`${API}/news`]){
+    try{
+      const r=await fetch(url);if(!r.ok)continue;
+      const ev=(await r.json()).events||[];
+      if(ev.length){S.news=ev.sort((a,b)=>a.time-b.time);break;}
+    }catch(_){/* try the next source */}
+  }
   renderNews();refreshPlan();
 }
 function renderNews(){
