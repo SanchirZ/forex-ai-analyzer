@@ -1,9 +1,13 @@
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 import requests
 import os
 import json
+import math
+import time
+import threading
+from datetime import datetime, timezone
 app = FastAPI(title="Forex AI Analyzer")
 app.add_middleware(
     CORSMiddleware,
@@ -17,12 +21,18 @@ PRICE_URL = "https://xaus.com/api/v1/spot?compact=1"
 COINBASE_URL = "https://api.exchange.coinbase.com/products/BTC-USD"
 HTTP_HEADERS = {"User-Agent": "forex-ai-analyzer/1.0", "Accept": "application/json"}
 
-APP_VERSION = "2026.11.21-btc"
+APP_VERSION = "2026.11.21-backtest"
 INTERVALS = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
 SYMBOLS = {
     "xau": {"name": "XAUUSD", "source": "XAUS"},
     "btc": {"name": "BTCUSD", "source": "Coinbase"},
 }
+
+
+def pages_needed(interval, limit):
+    """How many 300-candle Coinbase pages are needed for `limit` candles."""
+    factor = {"30m": 2, "4h": 4}.get(interval, 1)
+    return math.ceil(limit * factor / 300)
 
 
 def check_symbol(symbol):
@@ -74,21 +84,36 @@ def get_xau_candles(interval):
     return points
 
 
-def get_btc_candles(interval):
+def get_btc_candles(interval, pages=1):
     # Coinbase supports 60, 300, 900, 3600, 21600, 86400 seconds (max 300 candles)
     granularity = {
         "1m": 60, "5m": 300, "15m": 900, "30m": 900,
         "1h": 3600, "4h": 3600, "1d": 86400
     }[interval]
 
-    response = requests.get(
-        f"{COINBASE_URL}/candles",
-        params={"granularity": granularity},
-        headers=HTTP_HEADERS,
-        timeout=20
-    )
-    response.raise_for_status()
-    rows = response.json()
+    rows = []
+    end = int(time.time())
+    for _ in range(max(1, min(pages, 6))):
+        start = end - granularity * 300
+        params = {"granularity": granularity}
+        if pages > 1:
+            params["start"] = datetime.fromtimestamp(start, timezone.utc).isoformat()
+            params["end"] = datetime.fromtimestamp(end, timezone.utc).isoformat()
+        response = requests.get(
+            f"{COINBASE_URL}/candles",
+            params=params,
+            headers=HTTP_HEADERS,
+            timeout=20
+        )
+        response.raise_for_status()
+        batch = response.json()
+        if not batch:
+            break
+        rows.extend(batch)
+        end = start
+
+    # drop duplicates that can appear at page edges
+    rows = list({int(r[0]): r for r in rows}.values())
 
     # each row: [time, low, high, open, close, volume], newest first
     points = sorted(
@@ -107,11 +132,11 @@ def get_btc_candles(interval):
     return points
 
 
-def get_candles(interval="5m", symbol="xau"):
+def get_candles(interval="5m", symbol="xau", pages=1):
     if interval not in INTERVALS:
         raise ValueError("Unsupported timeframe")
 
-    points = get_btc_candles(interval) if symbol == "btc" else get_xau_candles(interval)
+    points = get_btc_candles(interval, pages) if symbol == "btc" else get_xau_candles(interval)
 
     if len(points) < 50:
         raise ValueError("Not enough candle data")
@@ -258,8 +283,9 @@ def price(symbol: str = "xau"):
 
 
 @app.get("/candles")
-def candles(interval: str = "5m", symbol: str = "xau"):
+def candles(interval: str = "5m", symbol: str = "xau", limit: int = 200):
     symbol = check_symbol(symbol)
+    limit = max(50, min(int(limit), 1500))
     if interval not in INTERVALS:
         raise HTTPException(
             status_code=400,
@@ -270,7 +296,7 @@ def candles(interval: str = "5m", symbol: str = "xau"):
         return {
             "symbol": SYMBOLS[symbol]["name"],
             "timeframe": interval,
-            "points": get_candles(interval, symbol)[-200:]
+            "points": get_candles(interval, symbol, pages_needed(interval, limit))[-limit:]
         }
     except Exception:
         raise HTTPException(
@@ -337,9 +363,56 @@ def get_atr(points, period=14):
     return round(sum(ranges[-period:]) / period, 4)
 
 
+AI_LOCK = threading.Lock()
+AI_CACHE = {}          # symbol -> (timestamp, response)
+AI_CALLS = {}          # client ip -> last call timestamp
+AI_HOURLY = []         # timestamps of real OpenAI calls
+AI_CACHE_SECONDS = 60
+AI_IP_COOLDOWN = 30
+AI_MAX_PER_HOUR = 40
+
+
+def client_ip(request):
+    forwarded = request.headers.get("x-forwarded-for", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
 @app.get("/ai-analyze")
-def ai_analyze(symbol: str = "xau"):
+def ai_analyze(request: Request, symbol: str = "xau"):
     symbol = check_symbol(symbol)
+    now = time.time()
+    ip = client_ip(request)
+
+    with AI_LOCK:
+        cached = AI_CACHE.get(symbol)
+        if cached and now - cached[0] < AI_CACHE_SECONDS:
+            return {**cached[1], "cached": True}
+
+        if now - AI_CALLS.get(ip, 0) < AI_IP_COOLDOWN:
+            raise HTTPException(
+                status_code=429,
+                detail="Хэт олон хүсэлт. 30 секундын дараа дахин оролдоно уу."
+            )
+
+        AI_HOURLY[:] = [t for t in AI_HOURLY if now - t < 3600]
+        if len(AI_HOURLY) >= AI_MAX_PER_HOUR:
+            raise HTTPException(
+                status_code=429,
+                detail="AI шинжилгээний цагийн хязгаар дууслаа. Дараа дахин оролдоно уу."
+            )
+
+        AI_CALLS[ip] = now
+        AI_HOURLY.append(now)
+
+    result = run_ai_analysis(symbol)
+    with AI_LOCK:
+        AI_CACHE[symbol] = (time.time(), result)
+    return result
+
+
+def run_ai_analysis(symbol):
     name = SYMBOLS[symbol]["name"]
     source = SYMBOLS[symbol]["source"]
     api_key = os.getenv("OPENAI_API_KEY")

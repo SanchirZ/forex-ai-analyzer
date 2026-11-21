@@ -78,7 +78,7 @@ header{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:s
 .pills{display:flex;gap:2px;background:#1E222D;border-radius:10px;padding:3px;flex-wrap:wrap}
 .pills button,.zoom button{min-height:36px;min-width:40px;border:0;border-radius:8px;padding:0 9px;font:600 12px Inter,sans-serif;cursor:pointer;background:transparent;color:#B2B5BE}
 .pills button:hover,.zoom button:hover{background:#2A2E39;color:#fff}
-.pills button[aria-pressed="true"],#sig-toggle[aria-pressed="true"]{background:#2962FF;color:#fff}
+.pills button[aria-pressed="true"],#sig-toggle[aria-pressed="true"],#htf-toggle[aria-pressed="true"]{background:#2962FF;color:#fff}
 .sig-stats{font-size:12px;color:#B2B5BE;line-height:1.5}
 .sig-stats b{color:#fff}
 .zoom{display:flex;gap:2px;background:#1E222D;border-radius:10px;padding:3px}
@@ -143,6 +143,7 @@ summary{cursor:pointer;font-weight:600;font-size:13px;min-height:28px;display:fl
 .ind .h{font-size:12px;color:var(--muted)}
 .meter{position:relative;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--sell) 0 30%,#DDD3C6 30% 70%,var(--green) 70% 100%)}
 .meter i{position:absolute;top:-4px;width:4px;height:14px;border-radius:2px;background:var(--text);left:50%;transition:left .3s}
+.bt{width:100%;border-collapse:collapse;font-size:13px}.bt th,.bt td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:right}.bt th:first-child,.bt td:first-child{text-align:left;color:var(--muted);font-weight:500}.bt td{font-family:var(--mono);font-weight:700}
 .rules{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:14px;line-height:1.5}
 
 #message{font-size:12px;color:var(--muted);text-align:center}
@@ -237,7 +238,7 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
         <button type="button" id="zoom-out" aria-label="Жижигрүүлэх">−</button>
         <button type="button" id="zoom-reset" aria-label="Анхны байдал">⟲</button>
       </div>
-      <div class="zoom"><button type="button" id="sig-toggle" aria-pressed="true" style="padding:0 12px">BUY/SELL сигнал</button></div>
+      <div class="zoom"><button type="button" id="sig-toggle" aria-pressed="true" style="padding:0 12px">BUY/SELL сигнал</button><button type="button" id="htf-toggle" aria-pressed="true" style="padding:0 12px" title="M1–M30 сигналыг зөвхөн H1-ийн чиглэлээр гаргана">H1 шүүлтүүр</button></div>
     </div>
   </div>
   <div class="chart-wrap">
@@ -309,9 +310,17 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
     </section>
 
     <section class="card">
+      <div class="ai-head"><h2>Backtest · сигналын түүхэн үр дүн</h2></div>
+      <p class="note" style="font-size:13px">Сонгосон хэрэгсэл, timeframe-ийн сүүлийн ~1500 лаан дээр график дээрх BUY/SELL сигналыг манай дүрмээр туршина: TP2 (2R) хүрвэл +2R, эхлээд SL хүрвэл −1R.</p>
+      <button class="btn btn-primary" id="bt-btn" type="button">Backtest ажиллуулах</button>
+      <div id="bt-out"></div>
+    </section>
+
+    <section class="card">
       <h2>Манай сайтын арилжааны дүрэм</h2>
       <ol class="rules">
         <li>Зөвхөн нийт дохио <b>BUY</b> эсвэл <b>SELL</b>, дор хаяж 2/3 timeframe тохирсон үед орно. WAIT үед хүлээнэ.</li>
+        <li>H1-ийн чиглэлийн <b>эсрэг</b> орохгүй (EMA20/EMA50 H1 дээр).</li>
         <li>Нэг арилжаанд балансынхаа <b>1–2%</b>-иас илүүг эрсдэлд бүү оруул. Лотыг дээрх тооцоолуураар тогтооно.</li>
         <li>Stop loss-ийг <b>заавал</b> тавина, алдагдал руу хэзээ ч бүү зөөнө.</li>
         <li>Take profit нь SL-ээс дор хаяж <b>2 дахин</b> хол (R:R ≥ 1:2) байх ёстой.</li>
@@ -381,7 +390,7 @@ const SYM={xau:{name:"XAUUSD",label:"Алтны үнэ · USD/oz",sub:"Алт ·
   btc:{name:"BTCUSD",label:"Bitcoin үнэ · USD",sub:"Bitcoin · BTCUSD · SMC + техник шинжилгээ",unit:"BTC",src:"Coinbase",def:1}};
 const savedSym=(()=>{try{return localStorage.getItem("fxa_symbol");}catch(_){return null;}})();
 const S={symbol:SYM[savedSym]?savedSym:"xau",posPrice:null,tf:"5m",candles:[],smc:null,price:null,priceAsOf:null,overall:"WAIT",sigs:[],m5:[],ai:null,plan:null,
-  anim:null,lastShown:null,sigEvents:[],showSig:true};
+  anim:null,lastShown:null,sigEvents:[],showSig:true,htfOn:true,h1:[],htf:null,h1At:0,planBlock:null};
 const view={count:90,offset:0};
 let layout=null;
 
@@ -478,8 +487,21 @@ function atrArr(p,per=14){
   for(let i=0;i<p.length;i++){s+=tr[i];if(i>=per)s-=tr[i-per];if(i>=per-1)out[i]=s/per;}
   return out;
 }
-function computeSignals(p){
+function buildHTF(h){
+  if(!h||h.length<60)return null;
+  const cl=h.map(c=>c.c),e20=emaArr(cl,20),e50=emaArr(cl,50);
+  return {t:h.map(c=>c.t),dir:h.map((c,i)=>i<50?0:(e20[i]>e50[i]?1:-1))};
+}
+function htfDirAt(t,H){
+  if(!H)return 0;
+  let lo=0,hi=H.t.length-1,k=-1;
+  while(lo<=hi){const m=(lo+hi)>>1;if(H.t[m]+3600<=t){k=m;lo=m+1;}else hi=m-1;}   // last H1 candle closed by time t
+  return k<0?0:H.dir[k];
+}
+const HTF_TFS=["1m","5m","15m","30m"];
+function computeSignals(p,tf=S.tf,H=null){
   const n=p.length;
+  const useH=H&&HTF_TFS.includes(tf),sec=TF_SEC[tf];
   if(n<60)return [];
   const cl=p.map(c=>c.c);
   const e20=emaArr(cl,20),e50=emaArr(cl,50);
@@ -497,16 +519,18 @@ function computeSignals(p){
     prev=side;
     if(!rising)continue;
     if(side===last&&i<=busyUntil)continue;   // same direction only after the previous trade closed
+    const dir=side==="BUY"?1:-1;
+    if(useH){const d=htfDirAt(p[i].t+sec,H);if(d!==0&&d!==dir)continue;}   // never against the H1 trend
     last=side;
-    const dir=side==="BUY"?1:-1,entry=p[i].c,risk=Math.max(at[i]*1.5,0.3);
+    const entry=p[i].c,risk=Math.max(at[i]*1.5,0.3);
     const sl=entry-dir*risk,tps=[1,2,3].map(k=>entry+dir*risk*k);
     let result="open",hit=0,exit=n;
     for(let j=i+1;j<n;j++){
       const lossHit=dir>0?p[j].l<=sl:p[j].h>=sl;
+      // conservative: if SL is touched in a candle, targets in that same candle do not count
+      if(lossHit){result=hit?"TP"+hit:"SL";exit=j;break;}
       while(hit<3&&(dir>0?p[j].h>=tps[hit]:p[j].l<=tps[hit]))hit++;
-      if(lossHit&&hit===0){result="SL";exit=j;break;}
       if(hit===3){result="TP3";exit=j;break;}
-      if(lossHit){result="TP"+hit;exit=j;break;}
     }
     if(result==="open"&&hit>0)result="TP"+hit;
     busyUntil=exit;
@@ -514,24 +538,32 @@ function computeSignals(p){
   }
   return ev;
 }
+function btStats(ev){
+  const done=ev.filter(e=>e.result!=="open");
+  let cum=0,peak=0,dd=0,wins=0;
+  done.forEach(e=>{const r=(e.result==="TP2"||e.result==="TP3")?2:-1;if(r>0)wins++;cum+=r;peak=Math.max(peak,cum);dd=Math.min(dd,cum-peak);});
+  return {n:done.length,wins,rate:done.length?wins/done.length*100:0,total:cum,dd,avg:done.length?cum/done.length:0};
+}
 function renderSigStats(){
   const ev=S.sigEvents||[],el=$("sig-stats");
-  const done=ev.filter(e=>e.result!=="open");
-  if(!ev.length){el.textContent="Энэ timeframe-ийн лаанууд дээр сигнал гараагүй байна.";return;}
-  const win=done.filter(e=>e.result!=="SL").length;
+  if(!ev.length){el.textContent="Энэ timeframe-ийн лаанууд дээр сигнал гараагүй байна"+(S.htfOn&&HTF_TFS.includes(S.tf)?" (H1 шүүлтүүр асаалттай).":".");return;}
+  const st=btStats(ev);
   const last=ev[ev.length-1];
-  el.innerHTML=`Энэ график дээрх ${done.length} дууссан сигналаас <b>${win}</b> нь TP1-д, <b>${done.length-win}</b> нь SL-д эхэлж хүрсэн`+
-    (done.length?` (${fmt(win/done.length*100,0)}%)`:"")+`. Сүүлийн сигнал: <b style="color:${last.side==="BUY"?"#26A69A":"#EF5350"}">${last.side}</b> @ ${fmt(last.entry)} · ${last.result==="open"?"идэвхтэй":last.result}. `+
-    `Цөөн лаан дээрх түүхэн тоо тул ирээдүйн үр дүнг баталгаажуулахгүй.`;
+  el.innerHTML=`Энэ график дээрх ${st.n} дууссан сигналаас <b>${st.wins}</b> нь TP2 (+2R)-д, <b>${st.n-st.wins}</b> нь SL (−1R)-д хүрсэн`+
+    (st.n?` · нийт <b>${st.total>=0?"+":""}${st.total}R</b>`:"")+`. Сүүлийн сигнал: <b style="color:${last.side==="BUY"?"#26A69A":"#EF5350"}">${last.side}</b> @ ${fmt(last.entry)} · ${last.result==="open"?"идэвхтэй":last.result}. `+
+    `Урт хугацааны дүнг доорх Backtest хэсгээс харна уу.`;
 }
 
 /* ---------- Trade plan (where price is expected to go) ---------- */
 function buildPlan(){
+  S.planBlock=null;
   const sig=S.overall;
   const pts=S.m5;
   const price=S.lastShown??S.price;
   if(!["BUY","SELL"].includes(sig)||pts.length<30||!Number.isFinite(price))return null;
   const dir=sig==="BUY"?1:-1;
+  const hd=S.htfOn?htfDirAt(Date.now()/1000,S.htf):0;
+  if(hd!==0&&hd!==dir){S.planBlock=`${sig} дохио гарсан ч H1-ийн чиглэл ${hd>0?"өсөх":"буурах"} байна. Манай дүрмээр эсрэг чиглэлд орохгүй.`;return null;}
   const ai=S.ai;
   if(ai&&ai.action===sig&&[ai.entry_price,ai.stop_loss,ai.take_profit].every(v=>v!=null)){
     const e=+ai.entry_price,sl=+ai.stop_loss,tp=+ai.take_profit;
@@ -551,6 +583,7 @@ function buildPlan(){
 
 function renderForecast(){
   const p=S.plan,el=$("forecast");
+  if(!p&&S.planBlock){el.innerHTML=`<b class="WAIT">WAIT</b><span>${esc(S.planBlock)}</span>`;return;}
   if(!p){
     el.innerHTML=`<b class="WAIT">WAIT</b><span>Нийт дохио BUY/SELL биш тул манай дүрмээр одоо арилжаа нээхгүй. Дараагийн дохиог хүлээнэ үү.</span>`;
     return;
@@ -622,7 +655,7 @@ function draw(){
   // SMC zones (extend from origin candle to the latest candle)
   const smc=S.smc||{obs:[],fvgs:[],liquidity:[],structure:[]};
   ctx.font="600 10px Inter, Arial";
-  [...smc.obs.slice(-6),...smc.fvgs.slice(-6)].forEach(z=>{
+  [...smc.obs.slice(-3),...smc.fvgs.slice(-3)].forEach(z=>{
     const xx=x(z.from)-barW/2,xe=x(n-1)+barW/2;
     const yy=y(z.high),hh=Math.max(2,y(z.low)-yy);
     const isOB=z.kind.includes("OB"),bull=z.kind.includes("Bullish");
@@ -837,7 +870,7 @@ function rollCandle(price){
   if(now>=last.t+sec&&now<last.t+2*sec&&price!==last.c){
     c.push({t:last.t+sec,o:last.c,h:last.c,l:last.c,c:last.c});
     if(view.offset>0)view.offset+=1;
-    S.sigEvents=computeSignals(c);renderSigStats();
+    recomputeSignals();
   }
 }
 function showPrice(v,dir){
@@ -924,8 +957,7 @@ async function loadChart(){
     S.candles=clean(data.points||[]);
     if(tf==="5m")S.m5=S.candles.map(c=>({...c}));
     S.smc=analyzeSMC(S.candles);
-    S.sigEvents=computeSignals(S.candles);
-    renderSigStats();
+    recomputeSignals();
     if(Number.isFinite(S.lastShown))updateLastCandle(S.lastShown);
     renderExplanations(S.smc);
     $("message").textContent=`Chart · ${tf} · ${S.candles.length} лаа · ${new Date().toLocaleTimeString()}`;
@@ -975,12 +1007,64 @@ async function loadData(){
 
     setStatus("",S.symbol==="btc"&&WS.alive?"LIVE · real-time":"LIVE · "+new Date().toLocaleTimeString());
     await loadChart();
+    loadHTF();
     if(!Number.isFinite(S.lastShown)&&Number.isFinite(S.price)){S.lastShown=S.price;showPrice(S.price,0);updateLastCandle(S.price);}
     refreshPlan();
   }catch(err){
     setStatus("error","ERROR");
     $("message").textContent="Алдаа: "+err.message+(err.message.includes("Backend")?"":" (Render сервер сэрэхэд 30–60 сек болж магадгүй)");
   }
+}
+
+function recomputeSignals(){
+  S.sigEvents=computeSignals(S.candles,S.tf,S.htfOn?S.htf:null);
+  renderSigStats();
+}
+async function loadHTF(force=false){
+  if(!force&&Date.now()-S.h1At<300000&&S.htf)return;
+  const sym=S.symbol;
+  try{
+    const r=await fetch(api("/candles",{interval:"1h",limit:500}));
+    if(!r.ok)return;
+    const d=await r.json();
+    if(sym!==S.symbol)return;
+    S.h1=clean(d.points||[]).slice(0,-1);    // closed H1 candles only
+    S.htf=buildHTF(S.h1);S.h1At=Date.now();
+    recomputeSignals();refreshPlan();
+  }catch(_){}
+}
+
+async function runBacktest(){
+  const btn=$("bt-btn"),out=$("bt-out");
+  const sym=S.symbol,tf=S.tf;
+  btn.disabled=true;btn.textContent="Тооцоолж байна...";
+  out.innerHTML=`<p class="note">${SYM[sym].name} · ${tf} · ~1500 лаа татаж байна...</p>`;
+  try{
+    const [cr,hr]=await Promise.all([fetch(api("/candles",{interval:tf,limit:1500})),fetch(api("/candles",{interval:"1h",limit:500}))]);
+    if(!cr.ok)throw new Error("Candle API "+cr.status);
+    const p=clean((await cr.json()).points||[]);
+    const H=hr.ok?buildHTF(clean((await hr.json()).points||[]).slice(0,-1)):null;
+    if(p.length<80)throw new Error("Хангалттай лаа алга");
+    const withF=btStats(computeSignals(p,tf,H)),noF=btStats(computeSignals(p,tf,null));
+    const days=(p[p.length-1].t-p[0].t)/86400;
+    const risk=ACC.riskPct||1;
+    const col=(st,k)=>{
+      const v={n:st.n,rate:fmt(st.rate,0)+"%",total:(st.total>=0?"+":"")+st.total+"R",avg:(st.avg>=0?"+":"")+fmt(st.avg,2)+"R",dd:st.dd+"R",pct:(st.total>=0?"+":"")+fmt(st.total*risk,1)+"%"}[k];
+      const cls=k==="total"||k==="pct"||k==="avg"?(st.total>=0?"pos":"neg"):k==="dd"?"neg":"";
+      return `<td class="${cls}">${v}</td>`;
+    };
+    const rows=[["Дууссан сигнал","n"],["Ялалтын хувь (TP2)","rate"],["Нийт үр дүн","total"],["Дундаж / арилжаа","avg"],["Хамгийн их уналт","dd"],[`${fmt(risk,1)}% эрсдэлээр`,"pct"]];
+    const useH=HTF_TFS.includes(tf);
+    let html=`<p class="note" style="font-size:12px">${SYM[sym].name} · ${tf} · ${p.length} лаа ≈ ${fmt(days,1)} өдөр</p>
+      <table class="bt"><thead><tr><th></th>${useH?"<th>H1 шүүлтүүртэй</th>":""}<th>Шүүлтүүргүй</th></tr></thead><tbody>`+
+      rows.map(([lab,k])=>`<tr><td>${lab}</td>${useH?col(withF,k):""}${col(noF,k)}</tr>`).join("")+`</tbody></table>`;
+    const best=useH?withF:noF;
+    if(best.n<20)html+=`<div class="warn">Ердөө ${best.n} сигнал. Энэ тоо дүгнэлт хийхэд хэт бага тул илүү урт хугацаанд ажиглаарай.</div>`;
+    else if(best.total<0)html+=`<div class="warn">Энэ хугацаанд сигналууд алдагдалтай байсан. Энэ timeframe дээр бодит мөнгөөр бүү ашигла.</div>`;
+    else html+=`<div class="instr">Энэ хугацаанд ашигтай гарсан ч өнгөрсөн үр дүн ирээдүйг баталгаажуулахгүй. Spread, шимтгэлийг тооцоогүй.</div>`;
+    out.innerHTML=html;
+  }catch(err){out.innerHTML=`<div class="warn">Backtest алдаа: ${esc(err.message)}</div>`;}
+  finally{btn.disabled=false;btn.textContent="Backtest ажиллуулах";}
 }
 
 function refreshPlan(){
@@ -1049,7 +1133,7 @@ function renderCalc(){
   const plan=S.plan;
   let html="";
   if(stop)html+=`<div class="warn"><b>Өнөөдөр зогсоно уу.</b> Өнөөдөр ${ts.losses} удаа алдсан, нийт ${sgnMoney(ts.pnl)}. Манай дүрмээр маргааш хүртэл шинэ арилжаа нээхгүй.</div>`;
-  if(!plan){out.innerHTML=html+`<div class="instr WAIT">Одоо нийт дохио <b>WAIT</b>. Манай дүрмээр арилжаа нээхгүй, хүлээнэ.</div>`;return;}
+  if(!plan){out.innerHTML=html+`<div class="instr WAIT">${S.planBlock?esc(S.planBlock):"Одоо нийт дохио <b>WAIT</b>. Манай дүрмээр арилжаа нээхгүй, хүлээнэ."}</div>`;return;}
   const L=lotFor(plan);
   const rr=Math.abs(plan.tp-plan.entry)/L.slDist;
   html+=`<div class="instr ${plan.side}">XM дээр: <b>${SYM[S.symbol].name} ${plan.side} ${fmt(L.lot)} лот</b>, Stop loss <b class="mono">${fmt(plan.sl)}</b>, Take profit <b class="mono">${fmt(plan.tp)}</b>.
@@ -1256,7 +1340,8 @@ $("sym-switch").addEventListener("click",e=>{
   const b=e.target.closest("button[data-sym]");if(!b||b.dataset.sym===S.symbol)return;
   S.symbol=b.dataset.sym;
   try{localStorage.setItem("fxa_symbol",S.symbol);}catch(_){}
-  Object.assign(S,{candles:[],m5:[],ai:null,plan:null,anim:null,lastShown:null,price:null,sigEvents:[],smc:null,overall:"WAIT",sigs:[]});
+  Object.assign(S,{candles:[],m5:[],ai:null,plan:null,anim:null,lastShown:null,price:null,sigEvents:[],smc:null,overall:"WAIT",sigs:[],h1:[],htf:null,h1At:0,planBlock:null});
+  $("bt-out").innerHTML="";
   view.count=90;view.offset=0;
   $("price").textContent="Loading...";
   setSignal("ai-action",null);$("ai-meta").textContent="Шинжилгээ ажиллуулаагүй байна";
@@ -1265,6 +1350,8 @@ $("sym-switch").addEventListener("click",e=>{
   if(S.symbol==="btc")wsStart();else wsStop();
 });
 $("refresh-btn").addEventListener("click",loadData);
+$("htf-toggle").addEventListener("click",e=>{S.htfOn=!S.htfOn;e.currentTarget.setAttribute("aria-pressed",String(S.htfOn));recomputeSignals();refreshPlan();});
+$("bt-btn").addEventListener("click",runBacktest);
 $("sig-toggle").addEventListener("click",e=>{S.showSig=!S.showSig;e.currentTarget.setAttribute("aria-pressed",String(S.showSig));draw();});
 $("ai-btn").addEventListener("click",runAI);
 window.addEventListener("resize",requestDraw);
