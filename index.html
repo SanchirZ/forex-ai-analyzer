@@ -458,7 +458,7 @@ function drawChart(raw,smc){
     }
   }
 
-  
+  smc.structure.forEach(s=>{
     const yy=y(s.price);
 
     ctx.setLineDash([3,3]);
