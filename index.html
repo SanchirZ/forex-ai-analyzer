@@ -806,14 +806,15 @@ function zoomAt(factor,clientX){
 })();
 
 /* ---------- Live price: smooth candle movement ---------- */
-function startAnim(to){
+function startAnim(to,ms=ANIM_MS){
   const from=Number.isFinite(S.lastShown)?S.lastShown:to;
-  S.anim={from,to,start:performance.now()};
-  requestAnimationFrame(animate);
+  const running=!!S.anim;
+  S.anim={from,to,start:performance.now(),ms};
+  if(!running)requestAnimationFrame(animate);
 }
 function animate(now){
   const a=S.anim;if(!a)return;
-  const t=clamp((now-a.start)/ANIM_MS,0,1);
+  const t=clamp((now-a.start)/(a.ms||ANIM_MS),0,1);
   const e=1-Math.pow(1-t,3);
   const v=a.from+(a.to-a.from)*e;
   S.lastShown=v;
@@ -845,7 +846,52 @@ function showPrice(v,dir){
   el.className="price"+(dir>0?" up":dir<0?" down":"");
 }
 
+/* Real-time BTC ticks straight from Coinbase (tick-by-tick, like a trading terminal) */
+const WS={sock:null,retry:0,last:0,timer:null,alive:false};
+function wsStart(){
+  wsStop();
+  if(S.symbol!=="btc")return;
+  let sock;
+  try{sock=new WebSocket("wss://ws-feed.exchange.coinbase.com");}catch(_){return;}
+  WS.sock=sock;
+  sock.onopen=()=>{WS.retry=0;sock.send(JSON.stringify({type:"subscribe",product_ids:["BTC-USD"],channels:["ticker"]}));};
+  sock.onmessage=ev=>{
+    let m;try{m=JSON.parse(ev.data);}catch(_){return;}
+    if(m.type!=="ticker"||S.symbol!=="btc")return;
+    const p=Number(m.price);if(!Number.isFinite(p))return;
+    WS.alive=true;S.price=p;
+    const now=performance.now();
+    if(now-WS.last<120)return;           // at most ~8 updates a second
+    WS.last=now;
+    if(m.time)$("price-time").textContent=new Date(m.time).toLocaleTimeString();
+    rollCandle(p);
+    startAnim(p,200);
+    const pos=ACC.pos;
+    if(pos&&posSym(pos)==="btc")checkStops(p);
+    if(S.candles.length)setStatus("","LIVE · real-time");
+  };
+  sock.onclose=()=>{
+    WS.alive=false;
+    if(WS.sock!==sock||S.symbol!=="btc")return;
+    WS.retry=Math.min(WS.retry+1,6);
+    WS.timer=setTimeout(wsStart,1000*2**WS.retry);
+  };
+  sock.onerror=()=>{try{sock.close();}catch(_){}};
+}
+function wsStop(){
+  clearTimeout(WS.timer);
+  const s0=WS.sock;WS.sock=null;WS.alive=false;
+  if(s0){try{s0.close();}catch(_){}}
+}
+
 async function tick(){
+  if(S.symbol==="btc"&&WS.alive){            // live feed is running; only keep the other symbol's position fresh
+    const pos=ACC.pos;
+    if(pos&&posSym(pos)!==S.symbol){
+      try{const r2=await fetch(`${API}/price?symbol=${posSym(pos)}`);if(r2.ok){const d2=await r2.json();const p2=Number(d2.price);if(Number.isFinite(p2)){S.posPrice=p2;checkStops(p2);renderPosition();}}}catch(_){}
+    }
+    return;
+  }
   try{
     const r=await fetch(api("/price"));
     if(!r.ok)return;
@@ -874,6 +920,7 @@ async function loadChart(){
     if(!r.ok)throw new Error("Candle API "+r.status);
     const data=await r.json();
     if(tf!==S.tf||sym!==S.symbol)return;
+    if(data.symbol&&data.symbol!==SYM[sym].name)throw new Error("backend хуучин хувилбар, Render deploy хэрэгтэй");
     S.candles=clean(data.points||[]);
     if(tf==="5m")S.m5=S.candles.map(c=>({...c}));
     S.smc=analyzeSMC(S.candles);
@@ -897,6 +944,8 @@ async function loadData(){
     const priceData=await pr.json();
     const data=await ar.json();
     if(sym!==S.symbol)return;
+    if(priceData.symbol&&priceData.symbol!==SYM[sym].name)
+      throw new Error(`Backend ${SYM[sym].name}-г дэмжихгүй байна (хуучин хувилбар). Render дээр шинэ commit-оо deploy хийнэ үү`);
     if(cr&&cr.ok){const cd=await cr.json();S.m5=clean(cd.points||[]);}
 
     S.price=Number(priceData.price);
@@ -924,13 +973,13 @@ async function loadData(){
     $("macd").className="v "+(macd>0?"BUY":macd<0?"SELL":"");
     $("macd-signal").textContent="Signal: "+(ind.MACD_signal??"--");
 
-    setStatus("","LIVE · "+new Date().toLocaleTimeString());
+    setStatus("",S.symbol==="btc"&&WS.alive?"LIVE · real-time":"LIVE · "+new Date().toLocaleTimeString());
     await loadChart();
     if(!Number.isFinite(S.lastShown)&&Number.isFinite(S.price)){S.lastShown=S.price;showPrice(S.price,0);updateLastCandle(S.price);}
     refreshPlan();
   }catch(err){
     setStatus("error","ERROR");
-    $("message").textContent="Алдаа: "+err.message+" (Render сервер сэрэхэд 30–60 сек болж магадгүй)";
+    $("message").textContent="Алдаа: "+err.message+(err.message.includes("Backend")?"":" (Render сервер сэрэхэд 30–60 сек болж магадгүй)");
   }
 }
 
@@ -1213,6 +1262,7 @@ $("sym-switch").addEventListener("click",e=>{
   setSignal("ai-action",null);$("ai-meta").textContent="Шинжилгээ ажиллуулаагүй байна";
   ["ai-entry","ai-sl","ai-tp"].forEach(id=>$(id).textContent="--");
   applySymbolUI();renderForecast();renderCalc();renderPosition();draw();loadData();
+  if(S.symbol==="btc")wsStart();else wsStop();
 });
 $("refresh-btn").addEventListener("click",loadData);
 $("sig-toggle").addEventListener("click",e=>{S.showSig=!S.showSig;e.currentTarget.setAttribute("aria-pressed",String(S.showSig));draw();});
@@ -1222,6 +1272,7 @@ window.addEventListener("resize",requestDraw);
 initAccountUI();
 applySymbolUI();
 draw();
+if(S.symbol==="btc")wsStart();
 loadData();
 setInterval(loadData,30000);
 setInterval(tick,TICK_MS);
