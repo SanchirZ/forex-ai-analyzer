@@ -43,7 +43,7 @@ jobs:
             git worktree add --detach data
             cd data
             git checkout --orphan data
-            git rm -rq . || true
+            git rm -rqf . || true
             git clean -fdq
             echo "Live signal journal written by .github/workflows/signals.yml" > README.md
             git add README.md
