@@ -20,8 +20,19 @@ CHART_URL = "https://xaus.com/api/v1/chart"
 PRICE_URL = "https://xaus.com/api/v1/spot?compact=1"
 COINBASE_URL = "https://api.exchange.coinbase.com/products/BTC-USD"
 HTTP_HEADERS = {"User-Agent": "forex-ai-analyzer/1.0", "Accept": "application/json"}
+# XAUS sometimes refuses unknown clients; fall back to a browser-like and a plain request
+XAUS_HEADER_SETS = [
+    {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                   "(KHTML, like Gecko) Chrome/130.0 Safari/537.36",
+     "Accept": "application/json,text/plain,*/*", "Referer": "https://xaus.com/"},
+    None,
+    HTTP_HEADERS,
+]
+CACHE_TTL = {"1m": 15, "5m": 30, "15m": 60, "30m": 60, "1h": 120, "4h": 300, "1d": 600}
+_candle_cache = {}
+_cache_lock = threading.Lock()
 
-APP_VERSION = "2026.11.21-signals2"
+APP_VERSION = "2026.11.22-xaufix"
 INTERVALS = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
 # M1 was dropped: backtests showed spread costs turn its signals into losses
 ANALYZE_TFS = ["5m", "15m", "1h"]
@@ -72,14 +83,20 @@ def get_xau_candles(interval):
     }
     source_interval = "1h" if interval == "4h" else interval
 
-    response = requests.get(
-        CHART_URL,
-        params={"symbol": "xau", "range": ranges[interval], "interval": source_interval},
-        headers=HTTP_HEADERS,
-        timeout=20
-    )
-    response.raise_for_status()
-    points = response.json().get("points", [])
+    params = {"symbol": "xau", "range": ranges[interval], "interval": source_interval}
+    last_error = None
+    points = None
+    for headers in XAUS_HEADER_SETS:
+        try:
+            response = requests.get(CHART_URL, params=params, headers=headers, timeout=20)
+            response.raise_for_status()
+            points = response.json().get("points", [])
+            if points:
+                break
+        except (requests.RequestException, ValueError) as exc:
+            last_error = exc
+    if not points:
+        raise ValueError(f"XAUS chart unavailable: {last_error}")
 
     if interval == "4h":
         points = aggregate(points, 14400)
@@ -138,6 +155,19 @@ def get_candles(interval="5m", symbol="xau", pages=1):
     if interval not in INTERVALS:
         raise ValueError("Unsupported timeframe")
 
+    # short cache: many visitors and the alert job ask for the same candles
+    key = (symbol, interval, pages)
+    with _cache_lock:
+        hit = _candle_cache.get(key)
+        if hit and time.time() - hit[0] < CACHE_TTL[interval]:
+            return [dict(p) for p in hit[1]]
+    points = _fetch_candles(interval, symbol, pages)
+    with _cache_lock:
+        _candle_cache[key] = (time.time(), points)
+    return [dict(p) for p in points]
+
+
+def _fetch_candles(interval, symbol, pages):
     points = get_btc_candles(interval, pages) if symbol == "btc" else get_xau_candles(interval)
 
     if len(points) < 50:
@@ -300,10 +330,11 @@ def candles(interval: str = "5m", symbol: str = "xau", limit: int = 200):
             "timeframe": interval,
             "points": get_candles(interval, symbol, pages_needed(interval, limit))[-limit:]
         }
-    except Exception:
+    except Exception as exc:
+        print(f"candles {symbol} {interval} failed: {type(exc).__name__}: {exc}")
         raise HTTPException(
             status_code=502,
-            detail="Candle data unavailable"
+            detail=f"Candle data unavailable ({type(exc).__name__})"
         )
 
 
