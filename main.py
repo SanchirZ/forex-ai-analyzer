@@ -21,8 +21,10 @@ PRICE_URL = "https://xaus.com/api/v1/spot?compact=1"
 COINBASE_URL = "https://api.exchange.coinbase.com/products/BTC-USD"
 HTTP_HEADERS = {"User-Agent": "forex-ai-analyzer/1.0", "Accept": "application/json"}
 
-APP_VERSION = "2026.11.21-backtest"
+APP_VERSION = "2026.11.21-signals2"
 INTERVALS = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
+# M1 was dropped: backtests showed spread costs turn its signals into losses
+ANALYZE_TFS = ["5m", "15m", "1h"]
 SYMBOLS = {
     "xau": {"name": "XAUUSD", "source": "XAUS"},
     "btc": {"name": "BTCUSD", "source": "Coinbase"},
@@ -310,7 +312,7 @@ def analyze(symbol: str = "xau"):
     symbol = check_symbol(symbol)
     results = {}
 
-    for interval in ["1m", "5m", "15m"]:
+    for interval in ANALYZE_TFS:
         try:
             results[interval] = analyze_timeframe(interval, symbol=symbol)
         except Exception:
@@ -321,7 +323,7 @@ def analyze(symbol: str = "xau"):
 
     signals = [
         results[tf]["signal"]
-        for tf in ["1m", "5m", "15m"]
+        for tf in ANALYZE_TFS
         if "signal" in results[tf]
     ]
 
@@ -426,7 +428,7 @@ def run_ai_analysis(symbol):
     try:
         market = {}
 
-        for interval in ["1m", "5m", "15m"]:
+        for interval in ANALYZE_TFS:
             points = get_candles(interval, symbol)
 
             market[interval] = {
@@ -514,7 +516,7 @@ def run_ai_analysis(symbol):
 
         instructions = f"""
 You are a careful {name} scalping analysis assistant.
-Analyze the supplied 1m, 5m and 15m candles and indicators.
+Analyze the supplied 5m, 15m and 1h candles and indicators.
 Respond in Mongolian.
 
 Compare all three timeframes. If signals conflict,

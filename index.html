@@ -210,9 +210,9 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
       </div>
     </div>
     <div class="tf-grid">
-      <div class="tf"><span>1 MIN</span><strong id="tf1" class="WAIT">--</strong></div>
-      <div class="tf"><span>5 MIN</span><strong id="tf5" class="WAIT">--</strong></div>
-      <div class="tf"><span>15 MIN</span><strong id="tf15" class="WAIT">--</strong></div>
+      <div class="tf"><span>5 MIN</span><strong id="tf1" class="WAIT">--</strong></div>
+      <div class="tf"><span>15 MIN</span><strong id="tf5" class="WAIT">--</strong></div>
+      <div class="tf"><span>1 HOUR</span><strong id="tf15" class="WAIT">--</strong></div>
     </div>
   </section>
 </div>
@@ -254,7 +254,7 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
     <span><i style="width:14px;border-top:2px dashed #E0A84A"></i>Liquidity</span>
     <span><i style="width:14px;border-top:2px dashed #B39DDB"></i>CHoCH/BOS</span>
     <span><i style="width:14px;border-top:2px dashed #D1D4DC"></i>Зорилт / SL</span>
-    <span><b style="color:#26A69A">▲ BUY</b> / <b style="color:#EF5350">▼ SELL</b> сигнал</span>
+    <span><b style="color:#26A69A">▲ BUY</b> / <b style="color:#EF5350">▼ SELL</b> сигнал · <b style="color:#26A69A">✓</b> TP2 хүрсэн · <b style="color:#EF5350">✗</b> SL хүрсэн</span>
   </div>
   <div class="sig-stats" id="sig-stats"></div>
 </section>
@@ -311,7 +311,7 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
 
     <section class="card">
       <div class="ai-head"><h2>Backtest · сигналын түүхэн үр дүн</h2></div>
-      <p class="note" style="font-size:13px">Сонгосон хэрэгсэл, timeframe-ийн сүүлийн ~1500 лаан дээр график дээрх BUY/SELL сигналыг манай дүрмээр туршина: TP2 (2R) хүрвэл +2R, эхлээд SL хүрвэл −1R.</p>
+      <p class="note" style="font-size:13px">Сонгосон хэрэгсэл, timeframe-ийн сүүлийн ~1500 лаан дээр график дээрх BUY/SELL сигналыг манай дүрмээр туршина: TP2 (2R) хүрвэл +2R, эхлээд SL хүрвэл −1R, арилжаа бүрээс spread хасна. H1 дээр алтны ~3 сар, BTC-ийн ~2 сарын түүх хамгийн найдвартай.</p>
       <button class="btn btn-primary" id="bt-btn" type="button">Backtest ажиллуулах</button>
       <div id="bt-out"></div>
     </section>
@@ -321,6 +321,7 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
       <ol class="rules">
         <li>Зөвхөн нийт дохио <b>BUY</b> эсвэл <b>SELL</b>, дор хаяж 2/3 timeframe тохирсон үед орно. WAIT үед хүлээнэ.</li>
         <li>H1-ийн чиглэлийн <b>эсрэг</b> орохгүй (EMA20/EMA50 H1 дээр).</li>
+        <li><b>M1</b> дээр арилжаа хийхгүй: spread-ийн зардал хэт их. M5, M15, H1 ашиглана.</li>
         <li>Нэг арилжаанд балансынхаа <b>1–2%</b>-иас илүүг эрсдэлд бүү оруул. Лотыг дээрх тооцоолуураар тогтооно.</li>
         <li>Stop loss-ийг <b>заавал</b> тавина, алдагдал руу хэзээ ч бүү зөөнө.</li>
         <li>Take profit нь SL-ээс дор хаяж <b>2 дахин</b> хол (R:R ≥ 1:2) байх ёстой.</li>
@@ -340,7 +341,7 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
         <div><span>Stop loss</span><b id="ai-sl" class="neg">--</b></div>
         <div><span>Take profit</span><b id="ai-tp" class="pos">--</b></div>
       </div>
-      <div class="ai-text" id="ai-text">Товчийг дарж 1M, 5M, 15M-ийн өгөгдөл дээр AI дүгнэлт гаргуулна. AI-ийн түвшин нийт дохиотой таарвал график, лотын тооцоонд ашиглагдана.</div>
+      <div class="ai-text" id="ai-text">Товчийг дарж 5M, 15M, H1-ийн өгөгдөл дээр AI дүгнэлт гаргуулна. AI-ийн түвшин нийт дохиотой таарвал график, лотын тооцоонд ашиглагдана.</div>
       <button class="btn btn-primary" id="ai-btn" type="button">AI шинжилгээ ажиллуулах</button>
     </section>
 
@@ -386,8 +387,8 @@ const FUTURE=16;          // empty bars on the right for the forecast
 const TICK_MS=3000;       // live price poll
 const ANIM_MS=900;        // smooth candle movement
 
-const SYM={xau:{name:"XAUUSD",label:"Алтны үнэ · USD/oz",sub:"Алт · XAUUSD · SMC + техник шинжилгээ",unit:"oz",src:"XAUS",def:100},
-  btc:{name:"BTCUSD",label:"Bitcoin үнэ · USD",sub:"Bitcoin · BTCUSD · SMC + техник шинжилгээ",unit:"BTC",src:"Coinbase",def:1}};
+const SYM={xau:{name:"XAUUSD",label:"Алтны үнэ · USD/oz",sub:"Алт · XAUUSD · SMC + техник шинжилгээ",unit:"oz",src:"XAUS",def:100,cost:0.35},
+  btc:{name:"BTCUSD",label:"Bitcoin үнэ · USD",sub:"Bitcoin · BTCUSD · SMC + техник шинжилгээ",unit:"BTC",src:"Coinbase",def:1,cost:25}};
 const savedSym=(()=>{try{return localStorage.getItem("fxa_symbol");}catch(_){return null;}})();
 const S={symbol:SYM[savedSym]?savedSym:"xau",posPrice:null,tf:"5m",candles:[],smc:null,price:null,priceAsOf:null,overall:"WAIT",sigs:[],m5:[],ai:null,plan:null,
   anim:null,lastShown:null,sigEvents:[],showSig:true,htfOn:true,h1:[],htf:null,h1At:0,planBlock:null};
@@ -538,20 +539,26 @@ function computeSignals(p,tf=S.tf,H=null){
   }
   return ev;
 }
-function btStats(ev){
+function btStats(ev,cost=SYM[S.symbol].cost){
   const done=ev.filter(e=>e.result!=="open");
   let cum=0,peak=0,dd=0,wins=0;
-  done.forEach(e=>{const r=(e.result==="TP2"||e.result==="TP3")?2:-1;if(r>0)wins++;cum+=r;peak=Math.max(peak,cum);dd=Math.min(dd,cum-peak);});
-  return {n:done.length,wins,rate:done.length?wins/done.length*100:0,total:cum,dd,avg:done.length?cum/done.length:0};
+  done.forEach(e=>{
+    const risk=Math.abs(e.entry-e.sl)||1;
+    const r=((e.result==="TP2"||e.result==="TP3")?2:-1)-cost/risk;   // spread is paid on every trade
+    if(r>0)wins++;cum+=r;peak=Math.max(peak,cum);dd=Math.min(dd,cum-peak);
+  });
+  const rd=v=>Math.round(v*10)/10;
+  return {n:done.length,wins,rate:done.length?wins/done.length*100:0,total:rd(cum),dd:rd(dd),avg:done.length?cum/done.length:0};
 }
 function renderSigStats(){
   const ev=S.sigEvents||[],el=$("sig-stats");
+  if(S.tf==="1m"){el.textContent="M1 дээр сигнал гаргахгүй: backtest-ээр spread-ийн зардал M1-ийн сигналуудыг алдагдалтай болгож байсан. M5 болон түүнээс дээш timeframe ашиглана уу.";return;}
   if(!ev.length){el.textContent="Энэ timeframe-ийн лаанууд дээр сигнал гараагүй байна"+(S.htfOn&&HTF_TFS.includes(S.tf)?" (H1 шүүлтүүр асаалттай).":".");return;}
   const st=btStats(ev);
   const last=ev[ev.length-1];
-  el.innerHTML=`Энэ график дээрх ${st.n} дууссан сигналаас <b>${st.wins}</b> нь TP2 (+2R)-д, <b>${st.n-st.wins}</b> нь SL (−1R)-д хүрсэн`+
+  el.innerHTML=`Энэ график дээрх ${st.n} дууссан сигналаас <b>${st.wins}</b> ✓ TP2 (+2R), <b>${st.n-st.wins}</b> ✗ SL (−1R), spread-тай`+
     (st.n?` · нийт <b>${st.total>=0?"+":""}${st.total}R</b>`:"")+`. Сүүлийн сигнал: <b style="color:${last.side==="BUY"?"#26A69A":"#EF5350"}">${last.side}</b> @ ${fmt(last.entry)} · ${last.result==="open"?"идэвхтэй":last.result}. `+
-    `Урт хугацааны дүнг доорх Backtest хэсгээс харна уу.`;
+    `Анхаар: энэ дүрмээр ойролцоогоор 10 сигналын 4 нь л ашигтай гардаг. Ашиг нь ялалт бүр алдагдлаас 2 дахин том байхаас ирдэг тул SL-д хүрсэн сигнал «худал» биш, хэвийн үзэгдэл.`;
 }
 
 /* ---------- Trade plan (where price is expected to go) ---------- */
@@ -717,7 +724,14 @@ function draw(){
       if(ctx.roundRect)ctx.roundRect(xx-lw/2,by,lw,lh,4);else ctx.rect(xx-lw/2,by,lw,lh);
       ctx.fill();
       ctx.fillStyle="#fff";ctx.font="bold 10px Inter, Arial";ctx.textAlign="center";
-      ctx.fillText(e.side,xx,by+12);ctx.textAlign="left";
+      ctx.fillText(e.side,xx,by+12);
+      // outcome of the past signal: ✓ reached TP2, ✗ hit SL first
+      if(e.result!=="open"){
+        const ok=e.result==="TP2"||e.result==="TP3";
+        ctx.font="bold 11px Inter, Arial";ctx.fillStyle=ok?"#26A69A":"#EF5350";
+        ctx.fillText(ok?"✓":"✗",xx,buy?by+lh+12:by-4);
+      }
+      ctx.textAlign="left";
     });
   }
 
@@ -985,7 +999,7 @@ async function loadData(){
 
     S.overall=data.overall_signal||"WAIT";
     const tf=data.timeframes||{};
-    S.sigs=["1m","5m","15m"].map(k=>tf[k]?.signal);
+    S.sigs=["5m","15m","1h"].map(k=>tf[k]?.signal);
     setOverall(S.overall,S.sigs);
     $("reason").textContent=data.reason||"";
     setSignal("tf1",S.sigs[0]);setSignal("tf5",S.sigs[1]);setSignal("tf15",S.sigs[2]);
@@ -1017,7 +1031,7 @@ async function loadData(){
 }
 
 function recomputeSignals(){
-  S.sigEvents=computeSignals(S.candles,S.tf,S.htfOn?S.htf:null);
+  S.sigEvents=S.tf==="1m"?[]:computeSignals(S.candles,S.tf,S.htfOn?S.htf:null);
   renderSigStats();
 }
 async function loadHTF(force=false){
@@ -1045,7 +1059,8 @@ async function runBacktest(){
     const p=clean((await cr.json()).points||[]);
     const H=hr.ok?buildHTF(clean((await hr.json()).points||[]).slice(0,-1)):null;
     if(p.length<80)throw new Error("Хангалттай лаа алга");
-    const withF=btStats(computeSignals(p,tf,H)),noF=btStats(computeSignals(p,tf,null));
+    const cost=SYM[sym].cost;
+    const withF=btStats(computeSignals(p,tf,H),cost),noF=btStats(computeSignals(p,tf,null),cost);
     const days=(p[p.length-1].t-p[0].t)/86400;
     const risk=ACC.riskPct||1;
     const col=(st,k)=>{
@@ -1055,13 +1070,13 @@ async function runBacktest(){
     };
     const rows=[["Дууссан сигнал","n"],["Ялалтын хувь (TP2)","rate"],["Нийт үр дүн","total"],["Дундаж / арилжаа","avg"],["Хамгийн их уналт","dd"],[`${fmt(risk,1)}% эрсдэлээр`,"pct"]];
     const useH=HTF_TFS.includes(tf);
-    let html=`<p class="note" style="font-size:12px">${SYM[sym].name} · ${tf} · ${p.length} лаа ≈ ${fmt(days,1)} өдөр</p>
+    let html=`<p class="note" style="font-size:12px">${SYM[sym].name} · ${tf} · ${p.length} лаа ≈ ${fmt(days,1)} өдөр · spread ≈ ${cost}$ арилжаа бүрт тооцсон</p>
       <table class="bt"><thead><tr><th></th>${useH?"<th>H1 шүүлтүүртэй</th>":""}<th>Шүүлтүүргүй</th></tr></thead><tbody>`+
       rows.map(([lab,k])=>`<tr><td>${lab}</td>${useH?col(withF,k):""}${col(noF,k)}</tr>`).join("")+`</tbody></table>`;
     const best=useH?withF:noF;
     if(best.n<20)html+=`<div class="warn">Ердөө ${best.n} сигнал. Энэ тоо дүгнэлт хийхэд хэт бага тул илүү урт хугацаанд ажиглаарай.</div>`;
     else if(best.total<0)html+=`<div class="warn">Энэ хугацаанд сигналууд алдагдалтай байсан. Энэ timeframe дээр бодит мөнгөөр бүү ашигла.</div>`;
-    else html+=`<div class="instr">Энэ хугацаанд ашигтай гарсан ч өнгөрсөн үр дүн ирээдүйг баталгаажуулахгүй. Spread, шимтгэлийг тооцоогүй.</div>`;
+    else html+=`<div class="instr">Энэ хугацаанд ашигтай гарсан ч өнгөрсөн үр дүн ирээдүйг баталгаажуулахгүй. Spread-ийг ойролцоогоор тооцсон, swap/шимтгэлийг тооцоогүй.</div>`;
     out.innerHTML=html;
   }catch(err){out.innerHTML=`<div class="warn">Backtest алдаа: ${esc(err.message)}</div>`;}
   finally{btn.disabled=false;btn.textContent="Backtest ажиллуулах";}
@@ -1291,7 +1306,7 @@ function initAccountUI(){
 async function runAI(){
   const btn=$("ai-btn");
   btn.disabled=true;btn.textContent="AI шинжилж байна...";
-  $("ai-text").textContent="1M, 5M, 15M-ийн өгөгдлийг шинжилж байна. 10–40 секунд болно.";
+  $("ai-text").textContent="5M, 15M, H1-ийн өгөгдлийг шинжилж байна. 10–40 секунд болно.";
   try{
     const sym=S.symbol;
     const res=await fetch(api("/ai-analyze"));
