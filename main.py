@@ -14,70 +14,121 @@ app.add_middleware(
 )
 CHART_URL = "https://xaus.com/api/v1/chart"
 PRICE_URL = "https://xaus.com/api/v1/spot?compact=1"
+COINBASE_URL = "https://api.exchange.coinbase.com/products/BTC-USD"
+HTTP_HEADERS = {"User-Agent": "forex-ai-analyzer/1.0", "Accept": "application/json"}
+
+INTERVALS = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
+SYMBOLS = {
+    "xau": {"name": "XAUUSD", "source": "XAUS"},
+    "btc": {"name": "BTCUSD", "source": "Coinbase"},
+}
 
 
-def get_candles(interval="5m"):
-    if interval not in ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]:
-        raise ValueError("Unsupported timeframe")
+def check_symbol(symbol):
+    symbol = (symbol or "xau").lower()
+    if symbol not in SYMBOLS:
+        raise HTTPException(status_code=400, detail="Use symbol=xau or symbol=btc")
+    return symbol
 
+
+def aggregate(points, seconds):
+    """Merge smaller candles into bigger ones (e.g. 1h -> 4h)."""
+    buckets = {}
+    for p in points:
+        bucket_time = (int(p["t"]) // seconds) * seconds
+        buckets.setdefault(bucket_time, []).append(p)
+
+    result = []
+    for timestamp, group in sorted(buckets.items()):
+        group.sort(key=lambda x: x["t"])
+        result.append({
+            "t": timestamp,
+            "o": float(group[0]["o"]),
+            "h": max(float(x["h"]) for x in group),
+            "l": min(float(x["l"]) for x in group),
+            "c": float(group[-1]["c"]),
+            "v": sum(float(x.get("v", 0) or 0) for x in group)
+        })
+    return result
+
+
+def get_xau_candles(interval):
     ranges = {
-        "1m": "5d",
-        "5m": "5d",
-        "15m": "5d",
-        "30m": "1mo",
-        "1h": "3mo",
-        "4h": "3mo",
-        "1d": "1y"
+        "1m": "5d", "5m": "5d", "15m": "5d", "30m": "1mo",
+        "1h": "3mo", "4h": "3mo", "1d": "1y"
     }
-
     source_interval = "1h" if interval == "4h" else interval
 
     response = requests.get(
         CHART_URL,
-        params={
-            "symbol": "xau",
-            "range": ranges[interval],
-            "interval": source_interval
-        },
+        params={"symbol": "xau", "range": ranges[interval], "interval": source_interval},
+        headers=HTTP_HEADERS,
         timeout=20
     )
-
     response.raise_for_status()
     points = response.json().get("points", [])
 
-    # Build 4-hour candles from hourly candles
     if interval == "4h":
-        buckets = {}
+        points = aggregate(points, 14400)
+    return points
 
-        for p in points:
-            timestamp = int(p["t"])
-            bucket_time = (timestamp // 14400) * 14400
 
-            if bucket_time not in buckets:
-                buckets[bucket_time] = []
+def get_btc_candles(interval):
+    # Coinbase supports 60, 300, 900, 3600, 21600, 86400 seconds (max 300 candles)
+    granularity = {
+        "1m": 60, "5m": 300, "15m": 900, "30m": 900,
+        "1h": 3600, "4h": 3600, "1d": 86400
+    }[interval]
 
-            buckets[bucket_time].append(p)
+    response = requests.get(
+        f"{COINBASE_URL}/candles",
+        params={"granularity": granularity},
+        headers=HTTP_HEADERS,
+        timeout=20
+    )
+    response.raise_for_status()
+    rows = response.json()
 
-        result = []
+    # each row: [time, low, high, open, close, volume], newest first
+    points = sorted(
+        [
+            {"t": int(r[0]), "l": float(r[1]), "h": float(r[2]),
+             "o": float(r[3]), "c": float(r[4]), "v": float(r[5])}
+            for r in rows
+        ],
+        key=lambda x: x["t"]
+    )
 
-        for timestamp, group in sorted(buckets.items()):
-            group.sort(key=lambda x: x["t"])
+    if interval == "30m":
+        points = aggregate(points, 1800)
+    elif interval == "4h":
+        points = aggregate(points, 14400)
+    return points
 
-            result.append({
-                "t": timestamp,
-                "o": float(group[0]["o"]),
-                "h": max(float(x["h"]) for x in group),
-                "l": min(float(x["l"]) for x in group),
-                "c": float(group[-1]["c"]),
-                "v": sum(float(x.get("v", 0)) for x in group)
-            })
 
-        points = result
+def get_candles(interval="5m", symbol="xau"):
+    if interval not in INTERVALS:
+        raise ValueError("Unsupported timeframe")
+
+    points = get_btc_candles(interval) if symbol == "btc" else get_xau_candles(interval)
 
     if len(points) < 50:
         raise ValueError("Not enough candle data")
-
     return points
+
+
+def get_price(symbol="xau"):
+    if symbol == "btc":
+        response = requests.get(f"{COINBASE_URL}/ticker", headers=HTTP_HEADERS, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        return {"price": float(data["price"]), "price_as_of": data.get("time")}
+
+    response = requests.get(PRICE_URL, headers=HTTP_HEADERS, timeout=10)
+    response.raise_for_status()
+    data = response.json()
+    return {"price": data.get("spot_usd_oz"), "price_as_of": data.get("price_as_of")}
+
 
 def ema(values, period):
     alpha = 2 / (period + 1)
@@ -121,9 +172,9 @@ def rsi(values, period=14):
     return 100 - (100 / (1 + rs))
 
 
-def analyze_timeframe(interval, points=None):
+def analyze_timeframe(interval, points=None, symbol="xau"):
     if points is None:
-        points = get_candles(interval)
+        points = get_candles(interval, symbol)
     closes = [float(p["c"]) for p in points]
 
     ema20 = ema(closes, 20)
@@ -188,30 +239,25 @@ def health():
 
 
 @app.get("/price")
-def gold_price():
+def price(symbol: str = "xau"):
+    symbol = check_symbol(symbol)
     try:
-        response = requests.get(PRICE_URL, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-
+        data = get_price(symbol)
         return {
-            "symbol": "XAUUSD",
-            "price": data.get("spot_usd_oz"),
+            "symbol": SYMBOLS[symbol]["name"],
+            "price": data["price"],
             "currency": "USD",
-            "source": "XAUS",
-            "price_as_of": data.get("price_as_of")
+            "source": SYMBOLS[symbol]["source"],
+            "price_as_of": data["price_as_of"]
         }
-
-    except requests.RequestException:
-        raise HTTPException(
-            status_code=502,
-            detail="Gold price unavailable"
-        )
+    except (requests.RequestException, ValueError, KeyError, TypeError):
+        raise HTTPException(status_code=502, detail="Price unavailable")
 
 
 @app.get("/candles")
-def candles(interval: str = "5m"):
-    if interval not in ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]:
+def candles(interval: str = "5m", symbol: str = "xau"):
+    symbol = check_symbol(symbol)
+    if interval not in INTERVALS:
         raise HTTPException(
             status_code=400,
             detail="Use 1m, 5m, 15m, 30m, 1h, 4h or 1d"
@@ -219,9 +265,9 @@ def candles(interval: str = "5m"):
 
     try:
         return {
-            "symbol": "XAUUSD",
+            "symbol": SYMBOLS[symbol]["name"],
             "timeframe": interval,
-            "points": get_candles(interval)[-200:]
+            "points": get_candles(interval, symbol)[-200:]
         }
     except Exception:
         raise HTTPException(
@@ -231,12 +277,13 @@ def candles(interval: str = "5m"):
 
 
 @app.get("/analyze")
-def analyze():
+def analyze(symbol: str = "xau"):
+    symbol = check_symbol(symbol)
     results = {}
 
     for interval in ["1m", "5m", "15m"]:
         try:
-            results[interval] = analyze_timeframe(interval)
+            results[interval] = analyze_timeframe(interval, symbol=symbol)
         except Exception:
             results[interval] = {
                 "signal": "UNAVAILABLE",
@@ -266,11 +313,11 @@ def analyze():
         reason = "Timeframe-үүдийн дохио зөрүүтэй байна."
 
     return {
-        "symbol": "XAUUSD",
+        "symbol": SYMBOLS[symbol]["name"],
         "overall_signal": overall,
         "timeframes": results,
         "reason": reason,
-        "data_source": "XAUS",
+        "data_source": SYMBOLS[symbol]["source"],
         "confidence": None
     }
 def get_atr(points, period=14):
@@ -288,7 +335,10 @@ def get_atr(points, period=14):
 
 
 @app.get("/ai-analyze")
-def ai_analyze():
+def ai_analyze(symbol: str = "xau"):
+    symbol = check_symbol(symbol)
+    name = SYMBOLS[symbol]["name"]
+    source = SYMBOLS[symbol]["source"]
     api_key = os.getenv("OPENAI_API_KEY")
 
     if not api_key:
@@ -301,7 +351,7 @@ def ai_analyze():
         market = {}
 
         for interval in ["1m", "5m", "15m"]:
-            points = get_candles(interval)
+            points = get_candles(interval, symbol)
 
             market[interval] = {
                 "analysis": analyze_timeframe(interval, points),
@@ -317,15 +367,13 @@ def ai_analyze():
                 ]
             }
 
-        price_response = requests.get(PRICE_URL, timeout=10)
-        price_response.raise_for_status()
-        price_data = price_response.json()
+        price_data = get_price(symbol)
 
         market_data = {
-            "symbol": "XAUUSD",
-            "price": price_data.get("spot_usd_oz"),
+            "symbol": name,
+            "price": price_data.get("price"),
             "price_as_of": price_data.get("price_as_of"),
-            "source": "XAUS",
+            "source": source,
             "timeframes": market
         }
 
@@ -388,8 +436,8 @@ def ai_analyze():
             "additionalProperties": False
         }
 
-        instructions = """
-You are a careful XAUUSD scalping analysis assistant.
+        instructions = f"""
+You are a careful {name} scalping analysis assistant.
 Analyze the supplied 1m, 5m and 15m candles and indicators.
 Respond in Mongolian.
 
@@ -405,7 +453,7 @@ For SELL: stop loss above entry and take profit below entry.
 
 Confidence is a qualitative AI estimate, NOT a proven
 win probability. Explain the reasons and risks.
-The XAUS price is not the exact XM execution quote.
+The {source} price is not the exact XM execution quote.
 Never promise profit.
 """
 
@@ -422,7 +470,7 @@ Never promise profit.
                 "text": {
                     "format": {
                         "type": "json_schema",
-                        "name": "gold_scalping_analysis",
+                        "name": "scalping_analysis",
                         "strict": True,
                         "schema": schema
                     }
@@ -449,8 +497,8 @@ Never promise profit.
         result = json.loads(output_text)
 
         return {
-            "symbol": "XAUUSD",
-            "data_source": "XAUS",
+            "symbol": name,
+            "data_source": source,
             "broker_quote": False,
             "price_as_of": price_data.get("price_as_of"),
             "analysis": result,

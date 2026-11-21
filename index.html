@@ -33,6 +33,9 @@ header{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:s
 .title span{color:var(--green)}
 .sub{font-size:12px;color:var(--muted)}
 .head-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.sym{display:flex;gap:2px;background:#fff;border:1px solid var(--border);border-radius:12px;padding:3px}
+.sym button{min-height:38px;border:0;border-radius:9px;padding:0 14px;font:700 13px var(--mono);cursor:pointer;background:transparent;color:var(--text2)}
+.sym button[aria-pressed="true"]{background:var(--accent);color:#fff}
 .status{display:flex;align-items:center;gap:8px;background:#E4EEEA;color:var(--accent);border-radius:999px;padding:8px 14px;font-size:12px;font-weight:600}
 .status i{width:8px;height:8px;border-radius:50%;background:var(--green)}
 .status.error{background:#F6E4DF;color:#8E3B28}.status.error i{background:var(--sell)}
@@ -160,10 +163,14 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
     </div>
     <div>
       <div class="title">Forex <span>AI</span> Analyzer</div>
-      <div class="sub">Алт · XAUUSD · SMC + техник шинжилгээ</div>
+      <div class="sub" id="sub">Алт · XAUUSD · SMC + техник шинжилгээ</div>
     </div>
   </div>
   <div class="head-right">
+    <div class="sym" role="group" aria-label="Хэрэгсэл" id="sym-switch">
+      <button type="button" data-sym="xau" aria-pressed="true">XAUUSD</button>
+      <button type="button" data-sym="btc" aria-pressed="false">BTCUSD</button>
+    </div>
     <div class="status busy" id="status"><i></i><span id="status-text">CONNECTING</span></div>
     <button class="btn btn-ghost" id="refresh-btn" type="button">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>Шинэчлэх
@@ -173,7 +180,7 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
 
 <div class="row">
   <section class="card price-card">
-    <div class="label">Алтны үнэ · USD/oz</div>
+    <div class="label" id="price-label">Алтны үнэ · USD/oz</div>
     <div class="price" id="price">Loading...</div>
     <div class="meta-row">
       <span>Графикийн доод <b id="range-low">--</b></span>
@@ -182,7 +189,7 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
     <div class="meta-row" style="border-top:0;padding-top:0">
       <span>Үнийн цаг <b id="price-time">--</b></span>
     </div>
-    <p class="note">XAUS-ын үнэ нь XM-ийн арилжааны яг үнэ биш (spread-ийн зөрүүтэй).</p>
+    <p class="note" id="src-note">XAUS-ын үнэ нь XM-ийн арилжааны яг үнэ биш (spread-ийн зөрүүтэй).</p>
   </section>
 
   <section class="card signal-card WAIT" id="signal-card">
@@ -213,7 +220,7 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
   <div class="chart-head">
     <div>
       <div class="label">Smart Money Concepts</div>
-      <h2 style="margin-top:4px;color:#fff">XAUUSD график</h2>
+      <h2 style="margin-top:4px;color:#fff" id="chart-title">XAUUSD график</h2>
     </div>
     <div class="tools">
       <div class="pills" role="group" aria-label="Timeframe" id="tf-pills">
@@ -257,12 +264,11 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
     <div class="form">
       <div class="field"><label for="in-balance">Баланс ($)</label><input id="in-balance" type="number" min="0" step="0.01" inputmode="decimal" placeholder="жишээ 500"></div>
       <div class="field"><label for="in-risk">Эрсдэл / арилжаа (%)</label><input id="in-risk" type="number" min="0.1" max="10" step="0.1" inputmode="decimal" value="1"></div>
-      <div class="field"><label for="in-type">XM дансны төрөл</label>
-        <select id="in-type"><option value="standard">Standard · 100 oz</option><option value="micro">Micro · 1 oz</option></select></div>
+      <div class="field"><label for="in-contract" id="contract-label">1 лот = (oz)</label><input id="in-contract" type="number" min="0.0001" step="any" inputmode="decimal"></div>
     </div>
     <button class="btn btn-ghost" id="save-acc" type="button">Балансаа хадгалах</button>
     <div id="calc-out"></div>
-    <p class="note">Лотын тооцоо: эрсдэлийн $ ÷ (SL хүртэлх зай × гэрээний хэмжээ). XM-ийн яг гэрээний хэмжээ, хамгийн бага лотыг өөрийн дансны тохиргооноос шалгаарай.</p>
+    <p class="note">Лотын тооцоо: эрсдэлийн $ ÷ (SL хүртэлх зай × гэрээний хэмжээ). Ихэвчлэн XAUUSD Standard = 100 oz, Micro = 1 oz, BTCUSD = 1 BTC. XM дээрх өөрийн дансны «Contract specifications»-оос яг хэмжээг шалгаж оруулаарай.</p>
   </section>
 
   <section class="card pos-card">
@@ -371,12 +377,16 @@ const FUTURE=16;          // empty bars on the right for the forecast
 const TICK_MS=3000;       // live price poll
 const ANIM_MS=900;        // smooth candle movement
 
-const S={tf:"5m",candles:[],smc:null,price:null,priceAsOf:null,overall:"WAIT",sigs:[],m5:[],ai:null,plan:null,
+const SYM={xau:{name:"XAUUSD",label:"Алтны үнэ · USD/oz",sub:"Алт · XAUUSD · SMC + техник шинжилгээ",unit:"oz",src:"XAUS",def:100},
+  btc:{name:"BTCUSD",label:"Bitcoin үнэ · USD",sub:"Bitcoin · BTCUSD · SMC + техник шинжилгээ",unit:"BTC",src:"Coinbase",def:1}};
+const savedSym=(()=>{try{return localStorage.getItem("fxa_symbol");}catch(_){return null;}})();
+const S={symbol:SYM[savedSym]?savedSym:"xau",posPrice:null,tf:"5m",candles:[],smc:null,price:null,priceAsOf:null,overall:"WAIT",sigs:[],m5:[],ai:null,plan:null,
   anim:null,lastShown:null,sigEvents:[],showSig:true};
 const view={count:90,offset:0};
 let layout=null;
 
 const $=id=>document.getElementById(id);
+const api=(path,params={})=>`${API}${path}?${new URLSearchParams({symbol:S.symbol,...params})}`;
 const fmt=(v,d=2)=>Number(v).toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
 const money=v=>(v<0?"-$":"$")+fmt(Math.abs(v));
 const sgnMoney=v=>(v>=0?"+$":"-$")+fmt(Math.abs(v));
@@ -591,7 +601,7 @@ function draw(){
   const futureVisible=endSlot>n;
   const extra=[];
   if(Number.isFinite(live))extra.push(live);
-  const pos=ACC.pos;
+  const pos=ACC.pos&&posSym(ACC.pos)===S.symbol?ACC.pos:null;
   if(S.plan&&futureVisible&&!pos)extra.push(S.plan.tp,S.plan.sl);
   const lastSig=S.showSig&&S.sigEvents.length?S.sigEvents[S.sigEvents.length-1]:null;
   if(lastSig&&lastSig.i<i1)extra.push(lastSig.sl,lastSig.tps[2]);
@@ -837,7 +847,7 @@ function showPrice(v,dir){
 
 async function tick(){
   try{
-    const r=await fetch(API+"/price");
+    const r=await fetch(api("/price"));
     if(!r.ok)return;
     const d=await r.json();
     const p=Number(d.price);
@@ -846,7 +856,12 @@ async function tick(){
     $("price-time").textContent=d.price_as_of?new Date(d.price_as_of).toLocaleTimeString():"--";
     rollCandle(p);
     startAnim(p);
-    checkStops(p);
+    const pos=ACC.pos;
+    if(pos&&posSym(pos)===S.symbol)checkStops(p);
+    else if(pos){
+      const r2=await fetch(`${API}/price?symbol=${posSym(pos)}`);
+      if(r2.ok){const d2=await r2.json();const p2=Number(d2.price);if(Number.isFinite(p2)){S.posPrice=p2;checkStops(p2);renderPosition();}}
+    }
   }catch(_){/* keep last value */}
 }
 
@@ -854,10 +869,11 @@ async function tick(){
 async function loadChart(){
   const tf=S.tf;
   try{
-    const r=await fetch(`${API}/candles?interval=${tf}`);
+    const sym=S.symbol;
+    const r=await fetch(api("/candles",{interval:tf}));
     if(!r.ok)throw new Error("Candle API "+r.status);
     const data=await r.json();
-    if(tf!==S.tf)return;
+    if(tf!==S.tf||sym!==S.symbol)return;
     S.candles=clean(data.points||[]);
     if(tf==="5m")S.m5=S.candles.map(c=>({...c}));
     S.smc=analyzeSMC(S.candles);
@@ -873,12 +889,14 @@ async function loadChart(){
 async function loadData(){
   setStatus("busy","UPDATING");
   try{
-    const reqs=[fetch(API+"/price"),fetch(API+"/analyze")];
-    if(S.tf!=="5m")reqs.push(fetch(API+"/candles?interval=5m"));
+    const sym=S.symbol;
+    const reqs=[fetch(api("/price")),fetch(api("/analyze"))];
+    if(S.tf!=="5m")reqs.push(fetch(api("/candles",{interval:"5m"})));
     const [pr,ar,cr]=await Promise.all(reqs);
     if(!pr.ok||!ar.ok)throw new Error("API response error");
     const priceData=await pr.json();
     const data=await ar.json();
+    if(sym!==S.symbol)return;
     if(cr&&cr.ok){const cd=await cr.json();S.m5=clean(cd.points||[]);}
 
     S.price=Number(priceData.price);
@@ -944,7 +962,10 @@ function loadAcc(){
 let ACC=loadAcc();
 ACC.history=Array.isArray(ACC.history)?ACC.history:[];
 function saveAcc(){try{localStorage.setItem(ACC_KEY,JSON.stringify(ACC));}catch(_){}}
-const contractOf=type=>type==="micro"?1:100;
+if(!ACC.contracts)ACC.contracts={xau:ACC.type==="micro"?1:100,btc:1};
+const curContract=()=>Number(ACC.contracts[S.symbol])||SYM[S.symbol].def;
+const posSym=pos=>pos.symbol||"xau";
+const posPriceOf=pos=>posSym(pos)===S.symbol?(S.lastShown??S.price):S.posPrice;
 const pnlOf=(pos,price)=>(price-pos.entry)*pos.dir*pos.contract*pos.lot;
 const localDate=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 const todayKey=()=>localDate(new Date());
@@ -959,7 +980,7 @@ function todayStats(){
 
 function lotFor(plan){
   const bal=ACC.balance,risk=ACC.riskPct||1;
-  const contract=contractOf(ACC.type);
+  const contract=curContract();
   const slDist=Math.abs(plan.entry-plan.sl);
   const perLot=slDist*contract;
   const riskUsd=bal*risk/100;
@@ -982,7 +1003,7 @@ function renderCalc(){
   if(!plan){out.innerHTML=html+`<div class="instr WAIT">Одоо нийт дохио <b>WAIT</b>. Манай дүрмээр арилжаа нээхгүй, хүлээнэ.</div>`;return;}
   const L=lotFor(plan);
   const rr=Math.abs(plan.tp-plan.entry)/L.slDist;
-  html+=`<div class="instr ${plan.side}">XM дээр: <b>${plan.side} ${fmt(L.lot)} лот</b>, Stop loss <b class="mono">${fmt(plan.sl)}</b>, Take profit <b class="mono">${fmt(plan.tp)}</b>.
+  html+=`<div class="instr ${plan.side}">XM дээр: <b>${SYM[S.symbol].name} ${plan.side} ${fmt(L.lot)} лот</b>, Stop loss <b class="mono">${fmt(plan.sl)}</b>, Take profit <b class="mono">${fmt(plan.tp)}</b>.
     <br>SL хүрвэл <b class="neg">${money(-L.realRisk)}</b> алдана, TP хүрвэл <b class="pos">+${money(L.profit)}</b> олно.</div>
   <div class="kv">
     <div><span>Entry (одоо)</span><b>${fmt(plan.entry)}</b></div>
@@ -1002,7 +1023,7 @@ function renderCalc(){
 
 function openPosition({side,entry,lot,sl,tp}){
   if(ACC.pos){alert("Нэг удаад нэг арилжаа хянана. Эхлээд нээлттэй арилжаагаа хаана уу.");return;}
-  ACC.pos={side,dir:side==="BUY"?1:-1,entry,lot,sl,tp,contract:contractOf(ACC.type),time:new Date().toISOString()};
+  ACC.pos={symbol:S.symbol,side,dir:side==="BUY"?1:-1,entry,lot,sl,tp,contract:curContract(),time:new Date().toISOString()};
   saveAcc();renderPosition();renderCalc();draw();
 }
 
@@ -1010,7 +1031,7 @@ function closePosition(price,reason){
   const pos=ACC.pos;if(!pos)return;
   const pnl=pnlOf(pos,price);
   ACC.balance=(ACC.balance||0)+pnl;
-  ACC.history.unshift({side:pos.side,lot:pos.lot,entry:pos.entry,exit:price,pnl,reason,time:new Date().toISOString()});
+  ACC.history.unshift({symbol:SYM[posSym(pos)].name,side:pos.side,lot:pos.lot,entry:pos.entry,exit:price,pnl,reason,time:new Date().toISOString()});
   ACC.history=ACC.history.slice(0,200);
   ACC.pos=null;
   saveAcc();
@@ -1026,8 +1047,8 @@ function checkStops(price){
 
 function renderPosition(){
   const bal=ACC.balance;
-  const price=S.lastShown??S.price;
   const pos=ACC.pos;
+  const price=pos?posPriceOf(pos):null;
   const floating=pos&&Number.isFinite(price)?pnlOf(pos,price):0;
   $("balance-view").textContent=bal>0?money(bal):"--";
   const eq=$("equity");
@@ -1038,7 +1059,7 @@ function renderPosition(){
   if(out.dataset.empty||!$("pos-pl")){
     delete out.dataset.empty;
     out.innerHTML=`<div class="kv">
-      <div><span>Чиглэл / лот</span><b class="${pos.side}">${pos.side} ${fmt(pos.lot)}</b></div>
+      <div><span>${SYM[posSym(pos)].name}</span><b class="${pos.side}">${pos.side} ${fmt(pos.lot)}</b></div>
       <div><span>Нээсэн үнэ</span><b>${fmt(pos.entry)}</b></div>
       <div><span>Одоогийн P&amp;L</span><b id="pos-pl">--</b></div>
       <div><span>Stop loss</span><b class="neg">${Number.isFinite(pos.sl)?fmt(pos.sl):"--"}</b></div>
@@ -1046,7 +1067,7 @@ function renderPosition(){
       <div><span>SL-д хүрвэл</span><b class="neg">${Number.isFinite(pos.sl)?sgnMoney(pnlOf(pos,pos.sl)):"--"}</b></div>
     </div>
     <button class="btn btn-danger" id="close-pos" type="button">Одоогийн үнээр хаах</button>`;
-    $("close-pos").addEventListener("click",()=>{const p=S.price??S.lastShown;if(Number.isFinite(p))closePosition(p,"Гараар");});
+    $("close-pos").addEventListener("click",()=>{const p=posSym(pos)===S.symbol?(S.price??S.lastShown):S.posPrice;if(Number.isFinite(p))closePosition(p,"Гараар");else alert("Үнэ ачаалагдаж байна, дахин оролдоно уу.");});
   }
   const pl=$("pos-pl");
   pl.textContent=Number.isFinite(price)?sgnMoney(floating):"--";
@@ -1058,7 +1079,7 @@ function renderHistory(){
   if(!ACC.history.length){el.innerHTML=`<p class="note">Хаагдсан арилжаа алга.</p>`;return;}
   el.innerHTML=ACC.history.slice(0,20).map(h=>{
     const d=new Date(h.time);
-    return `<div class="h-item"><span>${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")} · <b class="${esc(h.side)}">${esc(h.side)}</b> ${fmt(h.lot)} · ${fmt(h.entry)} → ${fmt(h.exit)} · ${esc(h.reason)}</span><b class="${h.pnl>=0?"pos":"neg"}">${sgnMoney(h.pnl)}</b></div>`;
+    return `<div class="h-item"><span>${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")} · ${esc(h.symbol||"XAUUSD")} <b class="${esc(h.side)}">${esc(h.side)}</b> ${fmt(h.lot)} · ${fmt(h.entry)} → ${fmt(h.exit)} · ${esc(h.reason)}</span><b class="${h.pnl>=0?"pos":"neg"}">${sgnMoney(h.pnl)}</b></div>`;
   }).join("");
 }
 
@@ -1099,17 +1120,20 @@ function renderGoal(){
 function initAccountUI(){
   if(ACC.balance>0)$("in-balance").value=Number(ACC.balance).toFixed(2);
   $("in-risk").value=ACC.riskPct||1;
-  $("in-type").value=ACC.type||"standard";
+  $("in-contract").value=curContract();
   if(ACC.goal>0)$("in-goal").value=ACC.goal;
   $("save-acc").addEventListener("click",()=>{
     const b=num($("in-balance").value),r=num($("in-risk").value);
     if(!(b>0)){alert("Балансаа зөв оруулна уу.");return;}
-    ACC.balance=b;ACC.riskPct=clamp(r||1,0.1,10);ACC.type=$("in-type").value;
+    ACC.balance=b;ACC.riskPct=clamp(r||1,0.1,10);
+    const ct=num($("in-contract").value);if(ct>0)ACC.contracts[S.symbol]=ct;
     if(ACC.goalMonth!==monthKey()){ACC.goalMonth=monthKey();ACC.monthStart=b;}
     saveAcc();renderCalc();renderPosition();renderGoal();
   });
-  ["in-risk","in-type"].forEach(id=>$(id).addEventListener("change",()=>{
-    ACC.riskPct=clamp(num($("in-risk").value)||1,0.1,10);ACC.type=$("in-type").value;saveAcc();renderCalc();renderGoal();
+  ["in-risk","in-contract"].forEach(id=>$(id).addEventListener("change",()=>{
+    ACC.riskPct=clamp(num($("in-risk").value)||1,0.1,10);
+    const ct=num($("in-contract").value);if(ct>0)ACC.contracts[S.symbol]=ct;
+    saveAcc();renderCalc();renderGoal();
   }));
   $("save-goal").addEventListener("click",()=>{
     const g=num($("in-goal").value);
@@ -1136,9 +1160,11 @@ async function runAI(){
   btn.disabled=true;btn.textContent="AI шинжилж байна...";
   $("ai-text").textContent="1M, 5M, 15M-ийн өгөгдлийг шинжилж байна. 10–40 секунд болно.";
   try{
-    const res=await fetch(API+"/ai-analyze");
+    const sym=S.symbol;
+    const res=await fetch(api("/ai-analyze"));
     const data=await res.json().catch(()=>({}));
     if(!res.ok)throw new Error(data.detail||("AI API "+res.status));
+    if(sym!==S.symbol)throw new Error("Хэрэгсэл солигдсон тул дахин ажиллуулна уу.");
     const a=data.analysis||{};
     S.ai=a;
     setSignal("ai-action",a.action);
@@ -1166,12 +1192,35 @@ $("tf-pills").addEventListener("click",e=>{
   [...$("tf-pills").children].forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
   view.count=90;view.offset=0;draw();loadChart();
 });
+function applySymbolUI(){
+  const m=SYM[S.symbol];
+  $("price-label").textContent=m.label;
+  $("sub").textContent=m.sub;
+  $("chart-title").textContent=`${m.name} график`;
+  $("src-note").textContent=`${m.src}-ийн үнэ нь XM-ийн арилжааны яг үнэ биш (spread-ийн зөрүүтэй).`;
+  $("contract-label").textContent=`1 лот = (${m.unit})`;
+  $("in-contract").value=curContract();
+  document.title=`${m.name} · Forex AI Analyzer`;
+  [...$("sym-switch").children].forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.sym===S.symbol)));
+}
+$("sym-switch").addEventListener("click",e=>{
+  const b=e.target.closest("button[data-sym]");if(!b||b.dataset.sym===S.symbol)return;
+  S.symbol=b.dataset.sym;
+  try{localStorage.setItem("fxa_symbol",S.symbol);}catch(_){}
+  Object.assign(S,{candles:[],m5:[],ai:null,plan:null,anim:null,lastShown:null,price:null,sigEvents:[],smc:null,overall:"WAIT",sigs:[]});
+  view.count=90;view.offset=0;
+  $("price").textContent="Loading...";
+  setSignal("ai-action",null);$("ai-meta").textContent="Шинжилгээ ажиллуулаагүй байна";
+  ["ai-entry","ai-sl","ai-tp"].forEach(id=>$(id).textContent="--");
+  applySymbolUI();renderForecast();renderCalc();renderPosition();draw();loadData();
+});
 $("refresh-btn").addEventListener("click",loadData);
 $("sig-toggle").addEventListener("click",e=>{S.showSig=!S.showSig;e.currentTarget.setAttribute("aria-pressed",String(S.showSig));draw();});
 $("ai-btn").addEventListener("click",runAI);
 window.addEventListener("resize",requestDraw);
 
 initAccountUI();
+applySymbolUI();
 draw();
 loadData();
 setInterval(loadData,30000);
