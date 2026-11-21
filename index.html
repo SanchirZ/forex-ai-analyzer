@@ -145,6 +145,13 @@ summary{cursor:pointer;font-weight:600;font-size:13px;min-height:28px;display:fl
 .meter{position:relative;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--sell) 0 30%,#DDD3C6 30% 70%,var(--green) 70% 100%)}
 .meter i{position:absolute;top:-4px;width:4px;height:14px;border-radius:2px;background:var(--text);left:50%;transition:left .3s}
 .bt{width:100%;border-collapse:collapse;font-size:13px}.bt th,.bt td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:right}.bt th:first-child,.bt td:first-child{text-align:left;color:var(--muted);font-weight:500}.bt td{font-family:var(--mono);font-weight:700}
+.mtf{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.mtf b{font:700 12px var(--mono);padding:4px 8px;border-radius:8px;background:var(--inner)}
+.mtf b.up{color:var(--green)}.mtf b.dn{color:var(--sell)}
+.jr{width:100%;border-collapse:collapse;font-size:12px}.jr th,.jr td{padding:6px 8px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}.jr td.n{font-family:var(--mono);text-align:right}
+.jr-wrap{overflow-x:auto;max-height:320px}
+.news-item{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:8px 10px;background:var(--inner);border-radius:10px;margin-bottom:6px}
+.news-item.soon{background:#FFF1DC;border:1px solid #F5C77E}
 .rules{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:14px;line-height:1.5}
 
 #message{font-size:12px;color:var(--muted);text-align:center}
@@ -210,6 +217,7 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
         <div class="bars" id="agree-bars"><span></span><span></span><span></span></div>
       </div>
     </div>
+    <div class="mtf" id="mtf" aria-label="Timeframe бүрийн чиглэл"><span class="sub">Чиглэл (EMA20/50):</span></div>
     <div class="tf-grid">
       <div class="tf"><span>5 MIN</span><strong id="tf1" class="WAIT">--</strong></div>
       <div class="tf"><span>15 MIN</span><strong id="tf5" class="WAIT">--</strong></div>
@@ -243,6 +251,8 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
         <button type="button" data-smc="ob" aria-pressed="true" title="Order Block харуулах/нуух">OB</button>
         <button type="button" data-smc="fvg" aria-pressed="true" title="Fair Value Gap харуулах/нуух">FVG</button>
         <button type="button" data-smc="bos" aria-pressed="true" title="CHoCH / BOS харуулах/нуух">CHoCH</button>
+        <button type="button" data-smc="sess" aria-pressed="true" title="Лондон, Нью-Йоркийн сешнийг өнгөөр харуулах">Сешн</button>
+        <button type="button" data-smc="news" aria-pressed="true" title="USD томоохон мэдээний цагийг харуулах">Мэдээ</button>
       </div>
       <div class="pills" role="group" aria-label="Стратеги" id="strat-pills">
         <button type="button" data-strat="trend" aria-pressed="true" title="EMA/MACD/RSI + H1 чиглэл">Trend</button>
@@ -264,6 +274,9 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
     <span><i style="width:14px;border-top:2px dashed #B39DDB"></i>CHoCH/BOS</span>
     <span><i style="width:14px;border-top:2px dashed #D1D4DC"></i>Зорилт / SL</span>
     <span id="legend-range" style="display:none"><i class="sw" style="border:1px solid #E0A84A;background:rgba(224,168,74,.12)"></i>Азийн range (00–07 UTC)</span>
+    <span><i class="sw" style="background:rgba(41,98,255,.25)"></i>Лондон</span>
+    <span><i class="sw" style="background:rgba(156,39,176,.25)"></i>Нью-Йорк</span>
+    <span><i style="width:14px;border-top:2px dashed #FF9800"></i>USD мэдээ</span>
     <span><b style="color:#089981">▲ BUY</b> / <b style="color:#F23645">▼ SELL</b> сигнал · <b style="color:#089981">✓</b> TP2 хүрсэн · <b style="color:#F23645">✗</b> SL хүрсэн</span>
   </div>
   <div class="sig-stats" id="sig-stats"></div>
@@ -320,8 +333,15 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
     </section>
 
     <section class="card">
+      <div class="ai-head"><h2>Бодит журнал · forward test</h2><span class="tag" id="jr-tag">LIVE</span></div>
+      <p class="note" style="font-size:13px">BTCUSD, XAUUSD-ийн M5, M15 дээр гарсан сигнал бүрийг 5 минут тутам автоматаар бүртгэж, TP2 (+2R), SL (−1R) эсвэл 48 цагийн дотор юу болсныг тэмдэглэнэ (spread хассан). Энэ бол өнгөрсөн биш, <b>бодитоор</b> гарсан үр дүн.</p>
+      <div id="jr-out"><p class="note">Ачаалж байна...</p></div>
+    </section>
+
+    <section class="card">
       <div class="ai-head"><h2>Backtest · сигналын түүхэн үр дүн</h2></div>
       <p class="note" style="font-size:13px">Сонгосон хэрэгсэл, timeframe-ийн сүүлийн ~1500 лаан дээр график дээрх BUY/SELL сигналыг манай дүрмээр туршина: TP2 (2R) хүрвэл +2R, эхлээд SL хүрвэл −1R, арилжаа бүрээс spread хасна. H1 дээр алтны ~3 сар, BTC-ийн ~2 сарын түүх хамгийн найдвартай.</p>
+      <label style="display:flex;gap:10px;align-items:center;font-size:13px;cursor:pointer"><input type="checkbox" id="be-toggle" style="width:20px;height:20px"> TP1-д хүрэхэд SL-ийг entry рүү зөөх (breakeven) · BTC backtest-ээр M5, M15, H1 гурвуулаа сайжирсан</label>
       <button class="btn btn-primary" id="bt-btn" type="button">Backtest ажиллуулах</button>
       <div id="bt-out"></div>
     </section>
@@ -353,6 +373,12 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
       </div>
       <div class="ai-text" id="ai-text">Товчийг дарж 5M, 15M, H1-ийн өгөгдөл дээр AI дүгнэлт гаргуулна. AI-ийн түвшин нийт дохиотой таарвал график, лотын тооцоонд ашиглагдана.</div>
       <button class="btn btn-primary" id="ai-btn" type="button">AI шинжилгээ ажиллуулах</button>
+    </section>
+
+    <section class="card">
+      <div class="ai-head"><h2>USD томоохон мэдээ</h2><span class="tag" style="background:#FF9800">HIGH</span></div>
+      <div id="news-out"><p class="note">Ачаалж байна...</p></div>
+      <p class="note">Мэдээнээс 30 минутын өмнө, дараа арилжаа нээхгүй. Эх сурвалж: Forex Factory.</p>
     </section>
 
     <section class="card">
@@ -401,7 +427,7 @@ const SYM={xau:{name:"XAUUSD",label:"Алтны үнэ · USD/oz",sub:"Алт ·
   btc:{name:"BTCUSD",label:"Bitcoin үнэ · USD",sub:"Bitcoin · BTCUSD · SMC + техник шинжилгээ",unit:"BTC",src:"Coinbase",def:1,cost:25}};
 const savedSym=(()=>{try{return localStorage.getItem("fxa_symbol");}catch(_){return null;}})();
 const S={symbol:SYM[savedSym]?savedSym:"xau",posPrice:null,tf:"5m",candles:[],smc:null,price:null,priceAsOf:null,overall:"WAIT",sigs:[],m5:[],ai:null,plan:null,
-  anim:null,lastShown:null,sigEvents:[],showSig:true,smcShow:(()=>{try{return Object.assign({ob:true,fvg:true,bos:true},JSON.parse(localStorage.getItem("fxa_smc")||"{}"));}catch(_){return {ob:true,fvg:true,bos:true};}})(),active:(()=>{try{return localStorage.getItem("fxa_active")!=="0";}catch(_){return true;}})(),strategy:(()=>{try{return localStorage.getItem("fxa_strategy")==="london"?"london":"trend";}catch(_){return "trend";}})(),ranges:[],htfOn:true,h1:[],htf:null,h1At:0,planBlock:null};
+  anim:null,lastShown:null,sigEvents:[],showSig:true,be:(()=>{try{return localStorage.getItem("fxa_be")==="1";}catch(_){return false;}})(),news:[],mtf:{},smcShow:(()=>{try{return Object.assign({ob:true,fvg:true,bos:true,sess:true,news:true},JSON.parse(localStorage.getItem("fxa_smc")||"{}"));}catch(_){return {ob:true,fvg:true,bos:true,sess:true,news:true};}})(),active:(()=>{try{return localStorage.getItem("fxa_active")!=="0";}catch(_){return true;}})(),strategy:(()=>{try{return localStorage.getItem("fxa_strategy")==="london"?"london":"trend";}catch(_){return "trend";}})(),ranges:[],htfOn:true,h1:[],htf:null,h1At:0,planBlock:null};
 const view={count:90,offset:0,yAuto:true,yZoom:1,yShift:0};
 const hover={on:false,x:0,y:0};
 let layout=null;
@@ -540,13 +566,13 @@ function computeSignals(p,tf=S.tf,H=null,active=false){
     for(let j=i+1;j<n;j++){
       const lossHit=dir>0?p[j].l<=sl:p[j].h>=sl;
       // conservative: if SL is touched in a candle, targets in that same candle do not count
-      if(lossHit){result=hit?"TP"+hit:"SL";exit=j;break;}
+      if(lossHit){result=hit?(S.be?"BE":"TP"+hit):"SL";exit=j;break;}
       while(hit<3&&(dir>0?p[j].h>=tps[hit]:p[j].l<=tps[hit]))hit++;
       if(hit===3){result="TP3";exit=j;break;}
     }
     if(result==="open"&&hit>0)result="TP"+hit;
     busyUntil=exit;
-    ev.push({i,side,dir,entry,sl,tps,result});
+    ev.push({i,side,dir,entry,sl,tps,result,r:result==="BE"?0:null});
   }
   return ev;
 }
@@ -607,14 +633,17 @@ function renderSigStats(){
   const st=btStats(ev);
   const last=ev[ev.length-1];
   const warn1m=S.tf==="1m"?`<b style="color:#E0A84A">M1 анхааруулга:</b> spread их тул backtest-ээр BTC M1 алдагдалтай гарсан. Зөвхөн M5/M15-ийн чиглэлтэй таарсан үед, бага лотоор. `:"";
-  el.innerHTML=warn1m+`Энэ график дээрх ${st.n} дууссан сигналаас <b>${st.wins}</b> ✓ TP2 (+2R), <b>${st.n-st.wins}</b> ✗ SL (−1R), spread-тай`+
+  el.innerHTML=warn1m+`Энэ график дээрх ${st.n} дууссан сигналаас <b>${st.wins}</b> ✓ TP2 (+2R), <b>${st.n-st.wins}</b> ✗ SL (−1R)${S.be?" эсвэл – breakeven (0R)":""}, spread-тай`+
     (st.n?` · нийт <b>${st.total>=0?"+":""}${st.total}R</b>`:"")+`. Сүүлийн сигнал: <b style="color:${last.side==="BUY"?"#089981":"#F23645"}">${last.side}</b> @ ${fmt(last.entry)} · ${last.result==="open"?"идэвхтэй":last.result}. `+
     (S.strategy==="london"?`London: 16:00 UTC хүртэл TP2/SL-д хүрээгүй бол тэр үеийн үнээр хаасан гэж тооцно (✓/✗ нь ашиг/алдагдал).`:`Анхаар: энэ дүрмээр ойролцоогоор 10 сигналын 4 нь л ашигтай гардаг. Ашиг нь ялалт бүр алдагдлаас 2 дахин том байхаас ирдэг тул SL-д хүрсэн сигнал «худал» биш, хэвийн үзэгдэл.`);
 }
 
 /* ---------- Trade plan (where price is expected to go) ---------- */
+function newsNear(ts,win=1800){return S.news.find(ev=>Math.abs(ev.time-ts)<=win)||null;}
 function buildPlan(){
   S.planBlock=null;
+  const nn=newsNear(Date.now()/1000);
+  if(nn&&["BUY","SELL"].includes(S.overall)){S.planBlock=`⚠️ ${nn.title} мэдээ ${new Date(nn.time*1000).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}-д гарна (эсвэл саяхан гарсан). Мэдээний ±30 минутад арилжаа нээхгүй.`;return null;}
   const sig=S.overall;
   const pts=S.m5;
   const price=S.lastShown??S.price;
@@ -715,6 +744,30 @@ function draw(){
   const step=Math.max(1,Math.round(110/barW));
   for(let i=Math.ceil(startSlot/step)*step;i<endSlot;i+=step){const xx=Math.round(x(i))+.5;ctx.beginPath();ctx.moveTo(xx,top);ctx.lineTo(xx,top+plotH);ctx.stroke();}
 
+  // trading sessions (UTC): London 07-16, New York 12-21
+  const secTF=TF_SEC[S.tf];
+  if(S.smcShow.sess&&secTF<=3600){
+    for(let i=i0;i<i1;i++){
+      const hU=new Date(p[i].t*1000).getUTCHours();
+      const lon=hU>=7&&hU<16,ny=hU>=12&&hU<21;
+      if(!lon&&!ny)continue;
+      ctx.fillStyle=lon&&ny?"rgba(98,70,215,.09)":lon?"rgba(41,98,255,.07)":"rgba(156,39,176,.07)";
+      ctx.fillRect(x(i)-barW/2,top,barW+.5,plotH);
+    }
+  }
+  // high-impact USD news
+  if(S.smcShow.news&&S.news.length){
+    ctx.font="600 10px Inter, Arial";
+    S.news.forEach(ev=>{
+      const slot=(ev.time-p[0].t)/secTF;
+      if(slot<startSlot||slot>endSlot)return;
+      const xx=Math.round(x(slot))+.5;
+      ctx.strokeStyle="rgba(255,152,0,.8)";ctx.setLineDash([3,3]);
+      ctx.beginPath();ctx.moveTo(xx,top);ctx.lineTo(xx,top+plotH);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle="#FF9800";ctx.fillText("⚠ "+ev.title.slice(0,18),xx+4,top+32);
+    });
+  }
+
   // watermark
   ctx.save();ctx.textAlign="center";ctx.textBaseline="middle";
   ctx.fillStyle="rgba(178,181,190,.07)";ctx.font="700 "+Math.round(Math.min(64,plotW/9))+"px Inter, Arial";
@@ -807,8 +860,9 @@ function draw(){
       // outcome of the past signal: ✓ reached TP2, ✗ hit SL first
       if(e.result!=="open"){
         const ok=e.r!=null?e.r>0:(e.result==="TP2"||e.result==="TP3");
-        ctx.font="bold 11px Inter, Arial";ctx.fillStyle=ok?"#089981":"#F23645";
-        ctx.fillText(ok?"✓":"✗",xx,buy?by+lh+12:by-4);
+        const flat=e.r===0;
+        ctx.font="bold 11px Inter, Arial";ctx.fillStyle=flat?"#B2B5BE":ok?"#089981":"#F23645";
+        ctx.fillText(flat?"–":ok?"✓":"✗",xx,buy?by+lh+12:by-4);
       }
       ctx.textAlign="left";
     });
@@ -1255,6 +1309,81 @@ async function runBacktest(){
   finally{btn.disabled=false;btn.textContent="Backtest ажиллуулах";}
 }
 
+/* ---------- News (Forex Factory, High impact USD) ---------- */
+async function loadNews(){
+  try{
+    const r=await fetch(`${API}/news`);if(!r.ok)throw new Error(r.status);
+    S.news=((await r.json()).events||[]).sort((a,b)=>a.time-b.time);
+  }catch(_){/* keep the last list */}
+  renderNews();refreshPlan();
+}
+function renderNews(){
+  const el=$("news-out"),now=Date.now()/1000;
+  const up=S.news.filter(e=>e.time>now-3600).slice(0,6);
+  if(!up.length){el.innerHTML=`<p class="note">Энэ долоо хоногт үлдсэн томоохон USD мэдээ алга${S.news.length?"":" (эсвэл эх сурвалж ачаалагдсангүй)"}.</p>`;return;}
+  el.innerHTML=up.map(e=>{
+    const d=new Date(e.time*1000),mins=Math.round((e.time-now)/60);
+    const when=mins<0?`${-mins} мин өмнө`:mins<60?`${mins} мин дараа`:mins<1440?`${Math.round(mins/60)} цаг дараа`:`${d.getMonth()+1}/${d.getDate()}`;
+    const soon=Math.abs(mins)<=30;
+    return `<div class="news-item${soon?" soon":""}"><span><b>${esc(e.title)}</b><br><span class="sub">${d.toLocaleString([], {weekday:"short",hour:"2-digit",minute:"2-digit"})}${e.forecast?` · таамаг ${esc(e.forecast)}`:""}</span></span><b class="${soon?"SELL":""}">${when}</b></div>`;
+  }).join("");
+}
+
+/* ---------- Multi-timeframe trend panel ---------- */
+const MTF_TFS=["5m","15m","1h","4h","1d"];
+async function loadMTF(){
+  const sym=S.symbol;
+  const res=await Promise.all(MTF_TFS.map(async tf=>{
+    try{const r=await fetch(api("/candles",{interval:tf}));if(!r.ok)return [tf,0];
+      const p=clean((await r.json()).points||[]).slice(0,-1);if(p.length<60)return [tf,0];
+      const cl=p.map(c=>c.c),a=emaArr(cl,20),b=emaArr(cl,50);return [tf,a.at(-1)>b.at(-1)?1:-1];}
+    catch(_){return [tf,0];}
+  }));
+  if(sym!==S.symbol)return;
+  S.mtf=Object.fromEntries(res);renderMTF();
+}
+function renderMTF(){
+  const el=$("mtf");
+  const ups=MTF_TFS.filter(t=>S.mtf[t]===1).length,dns=MTF_TFS.filter(t=>S.mtf[t]===-1).length;
+  el.innerHTML=`<span class="sub">Чиглэл (EMA20/50):</span>`+MTF_TFS.map(t=>{
+    const d=S.mtf[t];return `<b class="${d>0?"up":d<0?"dn":""}">${t.toUpperCase()} ${d>0?"↑":d<0?"↓":"·"}</b>`;}).join("")+
+    `<span class="sub">${ups>=4?"Хүчтэй өсөх":dns>=4?"Хүчтэй буурах":"Холимог"}</span>`;
+}
+
+/* ---------- Live journal (forward test) from the data branch ---------- */
+const JOURNAL_URL="https://raw.githubusercontent.com/SanchirZ/forex-ai-analyzer/data/journal.json";
+async function loadJournal(){
+  const el=$("jr-out");
+  try{
+    const r=await fetch(`${JOURNAL_URL}?t=${Math.floor(Date.now()/60000)}`);
+    if(r.status===404){el.innerHTML=`<p class="note">Журнал хараахан эхлээгүй байна. GitHub Actions-ийн «Signal alerts» анх ажиллахад автоматаар үүснэ.</p>`;return;}
+    if(!r.ok)throw new Error(r.status);
+    renderJournal(await r.json());
+  }catch(err){el.innerHTML=`<p class="note">Журнал ачаалсангүй (${esc(err.message)}).</p>`;}
+}
+function renderJournal(j){
+  const list=(j.signals||[]).slice().reverse(),done=list.filter(s=>s.status!=="open");
+  const total=done.reduce((a,s)=>a+(s.r||0),0),wins=done.filter(s=>(s.r||0)>0).length;
+  const since=j.started?new Date(j.started*1000).toLocaleDateString():"";
+  const by=k=>{const d=done.filter(s=>s.sym+"-"+s.tf===k);return d.length?`${d.reduce((a,s)=>a+(s.r||0),0).toFixed(1)}R (${d.length})`:"—";};
+  const st={TP2:'<b class="pos">✓ TP2</b>',SL:'<b class="neg">✗ SL</b>',EXPIRED:'<b>⌛ хугацаа</b>',open:'<b class="WAIT">● нээлттэй</b>'};
+  let html=`<div class="kv">
+    <div><span>Эхэлсэн</span><b>${since||"—"}</b></div>
+    <div><span>Хаагдсан сигнал</span><b>${done.length}</b></div>
+    <div><span>Нийт үр дүн</span><b class="${total>=0?"pos":"neg"}">${total>=0?"+":""}${total.toFixed(1)}R</b></div>
+    <div><span>Ялалт</span><b>${done.length?Math.round(wins/done.length*100)+"%":"—"}</b></div>
+    <div><span>BTC M5 / M15</span><b style="font-size:12px">${by("btc-5m")} · ${by("btc-15m")}</b></div>
+    <div><span>Алт M5 / M15</span><b style="font-size:12px">${by("xau-5m")} · ${by("xau-15m")}</b></div>
+  </div>`;
+  if(done.length<30)html+=`<p class="note">Дүгнэлт хийхэд дор хаяж 30–50 хаагдсан сигнал хэрэгтэй.</p>`;
+  html+=`<div class="jr-wrap"><table class="jr"><thead><tr><th>Цаг</th><th>Зах</th><th>Чиглэл</th><th>Entry</th><th>Үр дүн</th><th>R</th></tr></thead><tbody>`+
+    list.slice(0,40).map(s=>{const d=new Date(s.close_t*1000);
+      return `<tr><td>${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}</td><td>${esc(s.name)} ${esc(s.tf.toUpperCase())}${s.news?' <span title="'+esc(s.news)+'">⚠️</span>':""}</td><td class="${esc(s.side)}"><b>${esc(s.side)}</b></td><td class="n">${fmt(s.entry)}</td><td>${st[s.status]||esc(s.status)}</td><td class="n ${s.r>0?"pos":s.r<0?"neg":""}">${s.r==null?"":(s.r>0?"+":"")+s.r.toFixed(2)}</td></tr>`;}).join("")+
+    `</tbody></table></div>`;
+  $("jr-out").innerHTML=html;
+  $("jr-tag").textContent=j.updated?`шинэчилсэн ${new Date(j.updated*1000).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}`:"LIVE";
+}
+
 function refreshPlan(){
   S.plan=buildPlan();
   renderForecast();
@@ -1537,6 +1666,7 @@ $("sym-switch").addEventListener("click",e=>{
   ["ai-entry","ai-sl","ai-tp"].forEach(id=>$(id).textContent="--");
   applySymbolUI();renderForecast();renderCalc();renderPosition();draw();loadData();
   if(S.symbol==="btc")wsStart();else wsStop();
+  S.mtf={};renderMTF();loadMTF();
 });
 $("refresh-btn").addEventListener("click",loadData);
 function setStratUI(){
@@ -1544,6 +1674,11 @@ function setStratUI(){
   $("legend-range").style.display=S.strategy==="london"?"flex":"none";
   $("htf-toggle").style.display=S.strategy==="london"?"none":"";
 }
+$("be-toggle").checked=S.be;
+$("be-toggle").addEventListener("change",e=>{
+  S.be=e.target.checked;try{localStorage.setItem("fxa_be",S.be?"1":"0");}catch(_){}
+  recomputeSignals();draw();$("bt-out").innerHTML="";
+});
 function setSmcUI(){[...$("smc-pills").children].forEach(b=>b.setAttribute("aria-pressed",String(!!S.smcShow[b.dataset.smc])));}
 $("smc-pills").addEventListener("click",e=>{
   const b=e.target.closest("button[data-smc]");if(!b)return;
@@ -1590,6 +1725,9 @@ if(S.symbol==="btc")wsStart();
 loadData();
 setInterval(loadData,30000);
 setInterval(tick,TICK_MS);
+loadNews();setInterval(loadNews,30*60000);
+loadMTF();setInterval(loadMTF,120000);
+loadJournal();setInterval(loadJournal,5*60000);
 setInterval(()=>{if(!S.anim)requestDraw();},1000);   // candle countdown on the price scale
 setInterval(loadChart,60000);
 setInterval(()=>{if(S.overall!=="WAIT")refreshPlan();},TICK_MS*2);

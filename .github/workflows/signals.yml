@@ -14,12 +14,12 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: read
+  contents: write              # to update the journal on the `data` branch
 
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
 
@@ -30,24 +30,38 @@ jobs:
 
       - run: pip install -r requirements.txt
 
-      # remembers which signals were already sent, so each one is sent once
-      - name: Restore alert state
-        uses: actions/cache/restore@v4
-        with:
-          path: alert_state.json
-          key: alert-state-${{ github.run_id }}
-          restore-keys: alert-state-
+      # The live-signal journal lives on its own branch so that updating it
+      # never redeploys the website (GitHub Pages) or the backend (Render).
+      - name: Open the data branch
+        run: |
+          git config --global user.name "signal-bot"
+          git config --global user.email "signal-bot@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin data >/dev/null; then
+            git fetch --depth 1 origin data:data
+            git worktree add data data
+          else
+            git worktree add --detach data
+            cd data
+            git checkout --orphan data
+            git rm -rq . || true
+            git clean -fdq
+            echo "Live signal journal written by .github/workflows/signals.yml" > README.md
+            git add README.md
+            git commit -qm "Start signal journal"
+          fi
 
-      - name: Check signals and notify
+      - name: Check signals, update journal, notify
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          ALERT_STATE: alert_state.json
+          JOURNAL: data/journal.json
         run: python alerts/notify.py ${{ github.event.inputs.mode || 'run' }}
 
-      - name: Save alert state
-        if: always() && hashFiles('alert_state.json') != ''
-        uses: actions/cache/save@v4
-        with:
-          path: alert_state.json
-          key: alert-state-${{ github.run_id }}
+      - name: Save the journal
+        if: always()
+        run: |
+          cd data
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -qm "Journal update"
+          git push origin data

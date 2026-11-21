@@ -32,7 +32,7 @@ CACHE_TTL = {"1m": 15, "5m": 30, "15m": 60, "30m": 60, "1h": 120, "4h": 300, "1d
 _candle_cache = {}
 _cache_lock = threading.Lock()
 
-APP_VERSION = "2026.11.22-xaufix"
+APP_VERSION = "2026.11.22-journal"
 INTERVALS = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
 # M1 was dropped: backtests showed spread costs turn its signals into losses
 ANALYZE_TFS = ["5m", "15m", "1h"]
@@ -291,6 +291,58 @@ def home():
         "version": APP_VERSION,
         "symbols": [v["name"] for v in SYMBOLS.values()]
     }
+
+
+NEWS_URL = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
+_news_cache = {"t": 0, "items": []}
+
+
+def get_news():
+    """High-impact USD events of this week (Forex Factory calendar), cached 30 min."""
+    with _cache_lock:
+        if time.time() - _news_cache["t"] < 1800:
+            return list(_news_cache["items"])
+    items = []
+    try:
+        r = requests.get(NEWS_URL, headers=XAUS_HEADER_SETS[0], timeout=15)
+        r.raise_for_status()
+        for ev in r.json():
+            if ev.get("impact") != "High" or ev.get("country") != "USD":
+                continue
+            try:
+                ts = int(datetime.fromisoformat(ev["date"]).timestamp())
+            except (KeyError, ValueError, TypeError):
+                continue
+            items.append({
+                "title": ev.get("title", ""),
+                "country": "USD",
+                "time": ts,
+                "forecast": ev.get("forecast", ""),
+                "previous": ev.get("previous", ""),
+            })
+        items.sort(key=lambda x: x["time"])
+    except (requests.RequestException, ValueError) as exc:
+        print("news unavailable:", type(exc).__name__, exc)
+        with _cache_lock:
+            if _news_cache["items"]:
+                return list(_news_cache["items"])
+        return []
+    with _cache_lock:
+        _news_cache.update(t=time.time(), items=items)
+    return items
+
+
+def news_near(ts, window_min=30):
+    """First high-impact event within +-window minutes of ts, or None."""
+    for ev in get_news():
+        if abs(ev["time"] - ts) <= window_min * 60:
+            return ev
+    return None
+
+
+@app.get("/news")
+def news():
+    return {"events": get_news(), "source": "Forex Factory (High impact, USD)"}
 
 
 @app.get("/health")

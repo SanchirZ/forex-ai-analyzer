@@ -1,19 +1,23 @@
 """
-Telegram alerts for new BUY/SELL signals.
+Live signal journal + Telegram alerts.
 
 Runs every 5 minutes from GitHub Actions (.github/workflows/signals.yml).
-Uses the same data sources (main.get_candles) and the same rules as the
-website chart:
+Uses the backend's data functions (main.get_candles / main.get_news) and the
+same rules as the website chart in "active" mode:
 
   signal  : EMA20/EMA50 trend + MACD(12,26,9) + RSI(14) agree, on the
             closed candle where all three first agree
   filter  : H1 EMA20/EMA50 trend must point the same way
   levels  : SL = ATR(14) x 1.5, TP1/TP2/TP3 = 1R/2R/3R
 
+Every signal is written to a journal (forward test) and its result is
+followed until TP2 (+2R), SL (-1R) or 48 hours. Spread is subtracted.
+The journal lives on the `data` branch so it never redeploys the site.
+
 Environment:
-  TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID  (GitHub repository secrets)
-  ALERT_STATE   path of the JSON file that remembers sent alerts
-  ALERT_DRY_RUN "1" to print instead of sending
+  TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID   (optional; without them only the journal runs)
+  JOURNAL        path of journal.json   (default data/journal.json)
+  ALERT_DRY_RUN  "1" to print messages instead of sending
 """
 import json
 import os
@@ -23,14 +27,19 @@ import time
 import requests
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-import main  # noqa: E402  (reuses the backend's data functions)
+import main  # noqa: E402
 
 WATCH = [("btc", "5m"), ("btc", "15m"), ("xau", "5m"), ("xau", "15m")]
 TF_SECONDS = {"5m": 300, "15m": 900}
+COST = {"btc": 25.0, "xau": 0.35}           # approx. spread per trade, in price units
+LOOKBACK = 90 * 60                           # scan this far back (GitHub may delay runs)
+ALERT_MAX_AGE = 30 * 60                      # do not alert signals older than this
+EXPIRE = 48 * 3600
 SITE = "https://sanchirz.github.io/forex-ai-analyzer/"
-STATE_PATH = os.getenv("ALERT_STATE", "alert_state.json")
+JOURNAL = os.getenv("JOURNAL", "data/journal.json")
 
 
+# ---------------------------------------------------------------- indicators
 def ema(values, period):
     a = 2 / (period + 1)
     out = [values[0]]
@@ -86,38 +95,30 @@ def atr_series(p, period=14):
     return out
 
 
-def conditions(e20, e50, macd, sig, r, i):
-    if r[i] is None:
-        return 0
-    if e20[i] > e50[i] and macd[i] > sig[i] and 50 < r[i] < 75:
-        return 1
-    if e20[i] < e50[i] and macd[i] < sig[i] and 25 < r[i] < 50:
-        return -1
-    return 0
-
-
-def h1_trend(h1, at_time):
-    """Trend of the last H1 candle that had closed by `at_time`."""
+def h1_trend_fn(h1):
     closes = [c["c"] for c in h1]
     a, b = ema(closes, 20), ema(closes, 50)
-    k = -1
-    for i, c in enumerate(h1):
-        if c["t"] + 3600 <= at_time:
-            k = i
-    if k < 50:
-        return 0
-    return 1 if a[k] > b[k] else -1
+
+    def trend(at_time):
+        k = -1
+        for i, c in enumerate(h1):
+            if c["t"] + 3600 <= at_time:
+                k = i
+        if k < 50:
+            return 0
+        return 1 if a[k] > b[k] else -1
+    return trend
 
 
-def latest_signal(points, h1, tf):
-    """Signal on the last closed candle, or None."""
+# ---------------------------------------------------------------- signals
+def fresh_signals(points, h1, tf, since):
+    """All fresh signals on closed candles that closed after `since`."""
     sec = TF_SECONDS[tf]
     now = time.time()
-    # drop the candle that is still forming
     if points and points[-1]["t"] + sec > now:
-        points = points[:-1]
+        points = points[:-1]                 # drop the forming candle
     if len(points) < 60:
-        return None
+        return []
 
     closes = [c["c"] for c in points]
     e20, e50 = ema(closes, 20), ema(closes, 50)
@@ -126,50 +127,92 @@ def latest_signal(points, h1, tf):
     sig = ema(macd, 9)
     r = rsi_series(closes)
     atr = atr_series(points)
+    trend = h1_trend_fn(h1)
 
-    i = len(points) - 1
-    side = conditions(e20, e50, macd, sig, r, i)
-    if side == 0 or side == conditions(e20, e50, macd, sig, r, i - 1):
-        return None                       # not a fresh signal
-    candle = points[i]
-    if now - (candle["t"] + sec) > 2 * sec:
-        return None                       # too old (e.g. after a pause)
+    def cond(i):
+        if r[i] is None:
+            return 0
+        if e20[i] > e50[i] and macd[i] > sig[i] and 50 < r[i] < 75:
+            return 1
+        if e20[i] < e50[i] and macd[i] < sig[i] and 25 < r[i] < 50:
+            return -1
+        return 0
 
-    trend = h1_trend(h1, candle["t"] + sec)
-    if trend == 0 or trend != side:
-        return None                       # against (or unknown) H1 trend
+    out = []
+    for i in range(60, len(points)):
+        close_time = points[i]["t"] + sec
+        if close_time <= since:
+            continue
+        side = cond(i)
+        if side == 0 or side == cond(i - 1):
+            continue
+        h = trend(close_time)
+        if h == 0 or h != side:
+            continue
+        entry = points[i]["c"]
+        risk = max(atr[i] * 1.5, 1e-9)
+        out.append({
+            "t": points[i]["t"],
+            "close_t": close_time,
+            "dir": side,
+            "side": "BUY" if side > 0 else "SELL",
+            "entry": round(entry, 2),
+            "sl": round(entry - side * risk, 2),
+            "tps": [round(entry + side * risk * k, 2) for k in (1, 2, 3)],
+            "risk": risk,
+            "rsi": r[i],
+        })
+    return out
 
-    entry = candle["c"]
-    risk = max(atr[i] * 1.5, 1e-9)
-    return {
-        "side": "BUY" if side > 0 else "SELL",
-        "time": candle["t"],
-        "entry": entry,
-        "sl": entry - side * risk,
-        "tps": [entry + side * risk * k for k in (1, 2, 3)],
-        "risk": risk,
-        "rsi": r[i],
-    }
+
+def follow(sig, points, sec, cost):
+    """Update an open journal entry from candles after the signal candle."""
+    d = 1 if sig["side"] == "BUY" else -1
+    entry, sl, tp1, tp2 = sig["entry"], sig["sl"], sig["tps"][0], sig["tps"][1]
+    risk = abs(entry - sl) or 1e-9
+    after = [c for c in points if c["t"] >= sig["t"] + sec and c["t"] + sec <= time.time()]
+    tp1_hit = sig.get("tp1_hit", False)
+    for c in after:
+        if (d > 0 and c["l"] <= sl) or (d < 0 and c["h"] >= sl):   # stop first (conservative)
+            sig.update(status="SL", closed_t=c["t"] + sec, r=round(-1 - cost / risk, 2), tp1_hit=tp1_hit)
+            return
+        if (d > 0 and c["h"] >= tp1) or (d < 0 and c["l"] <= tp1):
+            tp1_hit = True
+        if (d > 0 and c["h"] >= tp2) or (d < 0 and c["l"] <= tp2):
+            sig.update(status="TP2", closed_t=c["t"] + sec, r=round(2 - cost / risk, 2), tp1_hit=True)
+            return
+    sig["tp1_hit"] = tp1_hit
+    if after and time.time() - sig["close_t"] > EXPIRE:
+        last = after[-1]["c"]
+        sig.update(status="EXPIRED", closed_t=after[-1]["t"] + sec,
+                   r=round((last - entry) * d / risk - cost / risk, 2))
 
 
+# ---------------------------------------------------------------- telegram
 def fmt(v):
     return f"{v:,.2f}"
 
 
-def message(symbol, tf, s):
+def message(symbol, tf, s, news):
     name = main.SYMBOLS[symbol]["name"]
     icon = "🟢" if s["side"] == "BUY" else "🔴"
-    return (
-        f"{icon} <b>{name} {tf.upper()} {s['side']}</b>\n"
-        f"Entry: {fmt(s['entry'])}\n"
-        f"Stop loss: {fmt(s['sl'])} ({fmt(s['risk'])}$ зай)\n"
-        f"TP1: {fmt(s['tps'][0])}\n"
-        f"TP2: {fmt(s['tps'][1])}  ← манай дүрмийн зорилт (2R)\n"
-        f"TP3: {fmt(s['tps'][2])}\n"
-        f"H1 чиглэл: {'өсөх ↑' if s['side'] == 'BUY' else 'буурах ↓'} · RSI {s['rsi']:.0f}\n\n"
-        f"Лотоо сайтын тооцоолуураар тогтооно уу (1% эрсдэл):\n{SITE}\n"
-        f"<i>Сигнал баталгаа биш. Stop loss-оо заавал тавина.</i>"
-    )
+    lines = [
+        f"{icon} <b>{name} {tf.upper()} {s['side']}</b>",
+        f"Entry: {fmt(s['entry'])}",
+        f"Stop loss: {fmt(s['sl'])} ({fmt(s['risk'])}$ зай)",
+        f"TP1: {fmt(s['tps'][0])}  (хүрвэл SL-ээ entry рүү зөө)",
+        f"TP2: {fmt(s['tps'][1])}  ← зорилт (2R)",
+        f"TP3: {fmt(s['tps'][2])}",
+        f"H1 чиглэл: {'өсөх ↑' if s['side'] == 'BUY' else 'буурах ↓'} · RSI {s['rsi']:.0f}",
+    ]
+    if news:
+        when = time.strftime("%H:%M UTC", time.gmtime(news["time"]))
+        lines.append(f"\n⚠️ <b>Мэдээ ойрхон:</b> {news['title']} ({when}). Энэ сигналыг алгасахыг зөвлөж байна.")
+    if time.time() - s["close_t"] > 10 * 60:
+        lines.append(f"\n⏱ Хоцорсон мэдэгдэл ({int((time.time() - s['close_t']) / 60)} мин). Үнэ entry-ээс холдсон эсэхийг шалга.")
+    lines.append(f"\nЛотоо сайтын тооцоолуураар (1% эрсдэл):\n{SITE}")
+    lines.append("<i>Сигнал баталгаа биш. Stop loss-оо заавал тавина.</i>")
+    return "\n".join(lines)
 
 
 def send(text):
@@ -179,60 +222,95 @@ def send(text):
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     chat = os.getenv("TELEGRAM_CHAT_ID")
     if not token or not chat:
-        print("TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID secrets are not set")
         return False
-    r = requests.post(
-        f"https://api.telegram.org/bot{token}/sendMessage",
-        json={"chat_id": chat, "text": text, "parse_mode": "HTML",
-              "disable_web_page_preview": True},
-        timeout=20,
-    )
+    try:
+        r = requests.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={"chat_id": chat, "text": text, "parse_mode": "HTML",
+                  "disable_web_page_preview": True},
+            timeout=20,
+        )
+    except requests.RequestException as exc:
+        print("Telegram error:", exc)
+        return False
     if not r.ok:
         print("Telegram error:", r.status_code, r.text[:300])
     return r.ok
 
 
-def load_state():
+# ---------------------------------------------------------------- journal
+def load_journal():
     try:
-        with open(STATE_PATH, encoding="utf-8") as f:
-            return json.load(f)
+        with open(JOURNAL, encoding="utf-8") as f:
+            data = json.load(f)
+            if isinstance(data, dict) and isinstance(data.get("signals"), list):
+                return data
     except (OSError, ValueError):
-        return {}
+        pass
+    return {"started": int(time.time()), "signals": []}
 
 
-def save_state(state):
-    with open(STATE_PATH, "w", encoding="utf-8") as f:
-        json.dump(state, f)
+def save_journal(data):
+    os.makedirs(os.path.dirname(JOURNAL) or ".", exist_ok=True)
+    data["updated"] = int(time.time())
+    data["signals"] = data["signals"][-500:]
+    with open(JOURNAL, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=1)
 
 
 def run():
-    state = load_state()
+    journal = load_journal()
+    known = {s["id"]: s for s in journal["signals"]}
     h1_cache = {}
-    sent = 0
+    added = alerted = 0
+    now = time.time()
+
     for symbol, tf in WATCH:
+        sec = TF_SECONDS[tf]
         try:
             if symbol not in h1_cache:
-                h1 = main.get_candles("1h", symbol)
-                h1_cache[symbol] = h1[:-1]       # closed H1 candles only
+                h1_cache[symbol] = main.get_candles("1h", symbol)[:-1]   # closed H1 candles
             points = main.get_candles(tf, symbol)
-            s = latest_signal(points, h1_cache[symbol], tf)
-        except Exception as exc:                  # one market failing must not stop the others
+        except Exception as exc:
             print(f"{symbol} {tf}: data error {type(exc).__name__}: {exc}")
             continue
 
-        key = f"{symbol}-{tf}"
-        if not s:
-            print(f"{key}: no new signal")
-            continue
-        if state.get(key) == s["time"]:
-            print(f"{key}: already sent")
-            continue
-        if send(message(symbol, tf, s)):
-            state[key] = s["time"]
-            sent += 1
-            print(f"{key}: sent {s['side']}")
-    save_state(state)
-    print(f"done, {sent} alert(s) sent")
+        # 1) follow open signals of this market
+        for s in journal["signals"]:
+            if s["sym"] == symbol and s["tf"] == tf and s["status"] == "open":
+                follow(s, points, sec, COST[symbol])
+
+        # 2) record new signals
+        for s in fresh_signals(points, h1_cache[symbol], tf, now - LOOKBACK):
+            sid = f"{symbol}-{tf}-{s['t']}"
+            if sid in known:
+                continue
+            news = None
+            try:
+                news = main.news_near(s["close_t"])
+            except Exception as exc:
+                print("news check failed:", exc)
+            entry = {
+                "id": sid, "sym": symbol, "name": main.SYMBOLS[symbol]["name"], "tf": tf,
+                "side": s["side"], "t": s["t"], "close_t": s["close_t"],
+                "entry": s["entry"], "sl": s["sl"], "tps": s["tps"],
+                "status": "open", "r": None, "news": news["title"] if news else None,
+                "alerted": False,
+            }
+            follow(entry, points, sec, COST[symbol])
+            if now - s["close_t"] <= ALERT_MAX_AGE and entry["status"] == "open":
+                entry["alerted"] = send(message(symbol, tf, s, news))
+                alerted += entry["alerted"]
+            journal["signals"].append(entry)
+            known[sid] = entry
+            added += 1
+            print(f"{sid}: {s['side']} recorded{' + alert' if entry['alerted'] else ''}")
+
+    journal["signals"].sort(key=lambda s: s["close_t"])
+    save_journal(journal)
+    done = [s for s in journal["signals"] if s["status"] != "open"]
+    total = sum(s["r"] or 0 for s in done)
+    print(f"done: {added} new, {alerted} alerted, {len(done)} closed, total {total:+.1f}R")
 
 
 if __name__ == "__main__":
