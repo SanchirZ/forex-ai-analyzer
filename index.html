@@ -239,6 +239,11 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
         <button type="button" id="zoom-out" aria-label="Жижигрүүлэх">−</button>
         <button type="button" id="zoom-reset" aria-label="Анхны байдал">⟲</button>
       </div>
+      <div class="pills" role="group" aria-label="SMC тэмдэглэгээ" id="smc-pills">
+        <button type="button" data-smc="ob" aria-pressed="true" title="Order Block харуулах/нуух">OB</button>
+        <button type="button" data-smc="fvg" aria-pressed="true" title="Fair Value Gap харуулах/нуух">FVG</button>
+        <button type="button" data-smc="bos" aria-pressed="true" title="CHoCH / BOS харуулах/нуух">CHoCH</button>
+      </div>
       <div class="pills" role="group" aria-label="Стратеги" id="strat-pills">
         <button type="button" data-strat="trend" aria-pressed="true" title="EMA/MACD/RSI + H1 чиглэл">Trend</button>
         <button type="button" data-strat="london" aria-pressed="false" title="Азийн range-ийн Лондоны breakout (зөвхөн алт)">London</button>
@@ -396,7 +401,7 @@ const SYM={xau:{name:"XAUUSD",label:"Алтны үнэ · USD/oz",sub:"Алт ·
   btc:{name:"BTCUSD",label:"Bitcoin үнэ · USD",sub:"Bitcoin · BTCUSD · SMC + техник шинжилгээ",unit:"BTC",src:"Coinbase",def:1,cost:25}};
 const savedSym=(()=>{try{return localStorage.getItem("fxa_symbol");}catch(_){return null;}})();
 const S={symbol:SYM[savedSym]?savedSym:"xau",posPrice:null,tf:"5m",candles:[],smc:null,price:null,priceAsOf:null,overall:"WAIT",sigs:[],m5:[],ai:null,plan:null,
-  anim:null,lastShown:null,sigEvents:[],showSig:true,active:(()=>{try{return localStorage.getItem("fxa_active")!=="0";}catch(_){return true;}})(),strategy:(()=>{try{return localStorage.getItem("fxa_strategy")==="london"?"london":"trend";}catch(_){return "trend";}})(),ranges:[],htfOn:true,h1:[],htf:null,h1At:0,planBlock:null};
+  anim:null,lastShown:null,sigEvents:[],showSig:true,smcShow:(()=>{try{return Object.assign({ob:true,fvg:true,bos:true},JSON.parse(localStorage.getItem("fxa_smc")||"{}"));}catch(_){return {ob:true,fvg:true,bos:true};}})(),active:(()=>{try{return localStorage.getItem("fxa_active")!=="0";}catch(_){return true;}})(),strategy:(()=>{try{return localStorage.getItem("fxa_strategy")==="london"?"london":"trend";}catch(_){return "trend";}})(),ranges:[],htfOn:true,h1:[],htf:null,h1At:0,planBlock:null};
 const view={count:90,offset:0,yAuto:true,yZoom:1,yShift:0};
 const hover={on:false,x:0,y:0};
 let layout=null;
@@ -731,7 +736,7 @@ function draw(){
   // SMC zones (extend from origin candle to the latest candle)
   const smc=S.smc||{obs:[],fvgs:[],liquidity:[],structure:[]};
   ctx.font="600 10px Inter, Arial";
-  [...smc.obs.slice(-3),...smc.fvgs.slice(-3)].forEach(z=>{
+  [...(S.smcShow.ob?smc.obs.slice(-3):[]),...(S.smcShow.fvg?smc.fvgs.slice(-3):[])].forEach(z=>{
     const xx=x(z.from)-barW/2,xe=x(n-1)+barW/2;
     const yy=y(z.high),hh=Math.max(2,y(z.low)-yy);
     const isOB=z.kind.includes("OB"),bull=z.kind.includes("Bullish");
@@ -741,7 +746,7 @@ function draw(){
     ctx.strokeStyle=col;ctx.globalAlpha=.6;ctx.strokeRect(xx,yy,xe-xx,hh);ctx.globalAlpha=1;
     ctx.fillStyle=col;ctx.fillText(isOB?"OB":"FVG",Math.max(left+2,xx+3),yy-3);
   });
-  smc.structure.forEach(s=>{
+  (S.smcShow.bos?smc.structure:[]).forEach(s=>{
     const yy=y(s.price);
     ctx.setLineDash([3,3]);ctx.strokeStyle=C.struct;ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(left+plotW,yy);ctx.stroke();ctx.setLineDash([]);
     ctx.fillStyle=C.struct;ctx.fillText(s.label,left+40,yy-5);
@@ -1539,6 +1544,14 @@ function setStratUI(){
   $("legend-range").style.display=S.strategy==="london"?"flex":"none";
   $("htf-toggle").style.display=S.strategy==="london"?"none":"";
 }
+function setSmcUI(){[...$("smc-pills").children].forEach(b=>b.setAttribute("aria-pressed",String(!!S.smcShow[b.dataset.smc])));}
+$("smc-pills").addEventListener("click",e=>{
+  const b=e.target.closest("button[data-smc]");if(!b)return;
+  S.smcShow[b.dataset.smc]=!S.smcShow[b.dataset.smc];
+  try{localStorage.setItem("fxa_smc",JSON.stringify(S.smcShow));}catch(_){}
+  setSmcUI();draw();
+});
+setSmcUI();
 function setActiveUI(){const b=$("active-toggle");b.setAttribute("aria-pressed",String(S.active));b.textContent=S.active?"⚡ Идэвхтэй":"⚡ Тайван";}
 $("active-toggle").addEventListener("click",()=>{
   S.active=!S.active;
