@@ -78,7 +78,7 @@ header{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:s
 .pills{display:flex;gap:2px;background:#1E222D;border-radius:10px;padding:3px;flex-wrap:wrap}
 .pills button,.zoom button{min-height:36px;min-width:40px;border:0;border-radius:8px;padding:0 9px;font:600 12px Inter,sans-serif;cursor:pointer;background:transparent;color:#B2B5BE}
 .pills button:hover,.zoom button:hover{background:#2A2E39;color:#fff}
-.pills button[aria-pressed="true"],#sig-toggle[aria-pressed="true"],#htf-toggle[aria-pressed="true"]{background:#2962FF;color:#fff}
+.pills button[aria-pressed="true"],#sig-toggle[aria-pressed="true"],#htf-toggle[aria-pressed="true"],#notify-toggle[aria-pressed="true"]{background:#2962FF;color:#fff}
 .sig-stats{font-size:12px;color:#B2B5BE;line-height:1.5}
 .sig-stats b{color:#fff}
 .zoom{display:flex;gap:2px;background:#1E222D;border-radius:10px;padding:3px}
@@ -238,7 +238,7 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
         <button type="button" id="zoom-out" aria-label="Жижигрүүлэх">−</button>
         <button type="button" id="zoom-reset" aria-label="Анхны байдал">⟲</button>
       </div>
-      <div class="zoom"><button type="button" id="sig-toggle" aria-pressed="true" style="padding:0 12px">BUY/SELL сигнал</button><button type="button" id="htf-toggle" aria-pressed="true" style="padding:0 12px" title="M1–M30 сигналыг зөвхөн H1-ийн чиглэлээр гаргана">H1 шүүлтүүр</button></div>
+      <div class="zoom"><button type="button" id="sig-toggle" aria-pressed="true" style="padding:0 12px">BUY/SELL сигнал</button><button type="button" id="notify-toggle" aria-pressed="false" style="padding:0 12px" title="Шинэ сигнал гарахад мэдэгдэл, дуу">🔔 Мэдэгдэл</button><button type="button" id="htf-toggle" aria-pressed="true" style="padding:0 12px" title="M1–M30 сигналыг зөвхөн H1-ийн чиглэлээр гаргана">H1 шүүлтүүр</button></div>
     </div>
   </div>
   <div class="chart-wrap">
@@ -1033,6 +1033,35 @@ async function loadData(){
 function recomputeSignals(){
   S.sigEvents=S.tf==="1m"?[]:computeSignals(S.candles,S.tf,S.htfOn?S.htf:null);
   renderSigStats();
+  notifyNewSignal();
+}
+
+/* Browser notification + sound when a fresh signal appears on the open chart */
+const NOTE={on:(()=>{try{return localStorage.getItem("fxa_notify")==="1";}catch(_){return false;}})(),seen:null};
+function beep(){
+  try{
+    const ac=new (window.AudioContext||window.webkitAudioContext)();
+    [0,0.18].forEach(t=>{const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=880;o.connect(g);g.connect(ac.destination);
+      g.gain.setValueAtTime(0.15,ac.currentTime+t);g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+t+0.15);o.start(ac.currentTime+t);o.stop(ac.currentTime+t+0.16);});
+  }catch(_){}
+}
+function notifyNewSignal(){
+  const ev=S.sigEvents,n=S.candles.length;
+  if(!ev.length||!n)return;
+  const e=ev[ev.length-1],key=`${S.symbol}-${S.tf}-${S.candles[e.i].t}`;
+  if(NOTE.seen===null){NOTE.seen=key;return;}          // do not alert for signals that existed when the page opened
+  if(key===NOTE.seen)return;
+  NOTE.seen=key;
+  if(!NOTE.on||e.i<n-3)return;                          // only a signal on a just-closed candle
+  const title=`${SYM[S.symbol].name} ${S.tf.toUpperCase()} ${e.side}`;
+  const body=`Entry ${fmt(e.entry)} · SL ${fmt(e.sl)} · TP2 ${fmt(e.tps[1])}`;
+  beep();
+  try{if("Notification" in window&&Notification.permission==="granted")new Notification(title,{body,tag:key});}catch(_){}
+  $("message").textContent=`🔔 Шинэ сигнал: ${title} · ${body}`;
+}
+function setNotifyUI(){
+  const b=$("notify-toggle");b.setAttribute("aria-pressed",String(NOTE.on));
+  b.textContent=NOTE.on?"🔔 Мэдэгдэл асаалттай":"🔔 Мэдэгдэл";
 }
 async function loadHTF(force=false){
   if(!force&&Date.now()-S.h1At<300000&&S.htf)return;
@@ -1338,7 +1367,7 @@ $("tf-pills").addEventListener("click",e=>{
   const b=e.target.closest("button[data-tf]");if(!b)return;
   S.tf=b.dataset.tf;S.candles=[];S.anim=null;
   [...$("tf-pills").children].forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
-  view.count=90;view.offset=0;draw();loadChart();
+  view.count=90;view.offset=0;NOTE.seen=null;draw();loadChart();
 });
 function applySymbolUI(){
   const m=SYM[S.symbol];
@@ -1355,6 +1384,7 @@ $("sym-switch").addEventListener("click",e=>{
   const b=e.target.closest("button[data-sym]");if(!b||b.dataset.sym===S.symbol)return;
   S.symbol=b.dataset.sym;
   try{localStorage.setItem("fxa_symbol",S.symbol);}catch(_){}
+  NOTE.seen=null;
   Object.assign(S,{candles:[],m5:[],ai:null,plan:null,anim:null,lastShown:null,price:null,sigEvents:[],smc:null,overall:"WAIT",sigs:[],h1:[],htf:null,h1At:0,planBlock:null});
   $("bt-out").innerHTML="";
   view.count=90;view.offset=0;
@@ -1365,6 +1395,17 @@ $("sym-switch").addEventListener("click",e=>{
   if(S.symbol==="btc")wsStart();else wsStop();
 });
 $("refresh-btn").addEventListener("click",loadData);
+$("notify-toggle").addEventListener("click",async()=>{
+  if(!NOTE.on&&"Notification" in window&&Notification.permission==="default"){
+    try{await Notification.requestPermission();}catch(_){}
+  }
+  NOTE.on=!NOTE.on;
+  try{localStorage.setItem("fxa_notify",NOTE.on?"1":"0");}catch(_){}
+  setNotifyUI();
+  if(NOTE.on){beep();if(!("Notification" in window)||Notification.permission!=="granted")
+    $("message").textContent="Дуут мэдэгдэл асаалттай. Хөтөч pop-up мэдэгдлийг зөвшөөрөөгүй тул зөвхөн дуу гарна. Сайт хаалттай үед Telegram мэдэгдлийг ашиглана уу.";}
+});
+setNotifyUI();
 $("htf-toggle").addEventListener("click",e=>{S.htfOn=!S.htfOn;e.currentTarget.setAttribute("aria-pressed",String(S.htfOn));recomputeSignals();refreshPlan();});
 $("bt-btn").addEventListener("click",runBacktest);
 $("sig-toggle").addEventListener("click",e=>{S.showSig=!S.showSig;e.currentTarget.setAttribute("aria-pressed",String(S.showSig));draw();});
