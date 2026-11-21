@@ -83,14 +83,15 @@ header{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:s
 .sig-stats b{color:#fff}
 .zoom{display:flex;gap:2px;background:#1E222D;border-radius:10px;padding:3px}
 .chart-wrap{position:relative;height:480px;background:#131722;border:1px solid #2A2E39;border-radius:12px;overflow:hidden}
-#chart{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#chart{width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
 #chart.dragging{cursor:grabbing}
-.hint{position:absolute;left:10px;top:8px;font-size:11px;color:#6A7186;pointer-events:none}
+#chart.axis{cursor:ns-resize}
+.hint{position:absolute;left:10px;bottom:32px;font-size:11px;color:#6A7186;pointer-events:none}
 .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:#B2B5BE}
 .legend span{display:flex;align-items:center;gap:6px}
 .sw{width:10px;height:10px;border-radius:3px}
 .forecast{display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:#1E222D;border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.5;color:#D1D4DC}
-.forecast b.BUY{color:#26A69A}.forecast b.SELL{color:#EF5350}.forecast b.WAIT{color:#E0A84A}
+.forecast b.BUY{color:#089981}.forecast b.SELL{color:#F23645}.forecast b.WAIT{color:#E0A84A}
 .forecast .src{font-size:11px;color:#8A93A6;border:1px solid #363A45;border-radius:999px;padding:2px 8px}
 
 /* Account */
@@ -247,19 +248,19 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
   </div>
   <div class="chart-wrap">
     <canvas id="chart" aria-label="XAUUSD лааны график"></canvas>
-    <div class="hint" id="hint">Чирж хөдөлгөх · Хулганы дугуй / 2 хуруугаар томруулах</div>
+    <div class="hint" id="hint">Чирж хөдөлгөх · Дугуй / 2 хуруугаар томруулах · Үнийн тэнхлэгийг дээш доош чирж сунгах</div>
   </div>
   <div class="forecast" id="forecast"><b class="WAIT">WAIT</b><span>Дохио хүлээж байна...</span></div>
   <div class="legend">
-    <span><i class="sw" style="background:#26A69A"></i>Өсөх лаа</span>
-    <span><i class="sw" style="background:#EF5350"></i>Буурах лаа</span>
-    <span><i class="sw" style="border:1px solid #26A69A;background:rgba(38,166,154,.2)"></i>Order Block</span>
+    <span><i class="sw" style="background:#089981"></i>Өсөх лаа</span>
+    <span><i class="sw" style="background:#F23645"></i>Буурах лаа</span>
+    <span><i class="sw" style="border:1px solid #089981;background:rgba(8,153,129,.2)"></i>Order Block</span>
     <span><i class="sw" style="border:1px solid #5B8DEF;background:rgba(91,141,239,.2)"></i>FVG</span>
     <span><i style="width:14px;border-top:2px dashed #E0A84A"></i>Liquidity</span>
     <span><i style="width:14px;border-top:2px dashed #B39DDB"></i>CHoCH/BOS</span>
     <span><i style="width:14px;border-top:2px dashed #D1D4DC"></i>Зорилт / SL</span>
     <span id="legend-range" style="display:none"><i class="sw" style="border:1px solid #E0A84A;background:rgba(224,168,74,.12)"></i>Азийн range (00–07 UTC)</span>
-    <span><b style="color:#26A69A">▲ BUY</b> / <b style="color:#EF5350">▼ SELL</b> сигнал · <b style="color:#26A69A">✓</b> TP2 хүрсэн · <b style="color:#EF5350">✗</b> SL хүрсэн</span>
+    <span><b style="color:#089981">▲ BUY</b> / <b style="color:#F23645">▼ SELL</b> сигнал · <b style="color:#089981">✓</b> TP2 хүрсэн · <b style="color:#F23645">✗</b> SL хүрсэн</span>
   </div>
   <div class="sig-stats" id="sig-stats"></div>
 </section>
@@ -386,7 +387,7 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
 "use strict";
 const API="https://forex-ai-analyzer-3.onrender.com";
 const TF_SEC={"1m":60,"5m":300,"15m":900,"30m":1800,"1h":3600,"4h":14400,"1d":86400};
-const C={bg:"#131722",grid:"#1E2433",axis:"#8A93A6",text:"#D1D4DC",bull:"#26A69A",bear:"#EF5350",
+const C={bg:"#131722",grid:"rgba(42,46,57,.55)",axis:"#B2B5BE",text:"#D1D4DC",bull:"#089981",bear:"#F23645",
   fvg:"#5B8DEF",liq:"#E0A84A",struct:"#B39DDB",entry:"#D1D4DC"};
 const FUTURE=16;          // empty bars on the right for the forecast
 const TICK_MS=3000;       // live price poll
@@ -397,7 +398,8 @@ const SYM={xau:{name:"XAUUSD",label:"Алтны үнэ · USD/oz",sub:"Алт ·
 const savedSym=(()=>{try{return localStorage.getItem("fxa_symbol");}catch(_){return null;}})();
 const S={symbol:SYM[savedSym]?savedSym:"xau",posPrice:null,tf:"5m",candles:[],smc:null,price:null,priceAsOf:null,overall:"WAIT",sigs:[],m5:[],ai:null,plan:null,
   anim:null,lastShown:null,sigEvents:[],showSig:true,strategy:(()=>{try{return localStorage.getItem("fxa_strategy")==="london"?"london":"trend";}catch(_){return "trend";}})(),ranges:[],htfOn:true,h1:[],htf:null,h1At:0,planBlock:null};
-const view={count:90,offset:0};
+const view={count:90,offset:0,yAuto:true,yZoom:1,yShift:0};
+const hover={on:false,x:0,y:0};
 let layout=null;
 
 const $=id=>document.getElementById(id);
@@ -424,7 +426,7 @@ function setOverall(sig,tfSignals){
   [...$("agree-bars").children].forEach((b,i)=>b.classList.toggle("on",i<n));
 }
 
-function candle(p){return {t:Number(p.t),o:Number(p.o),h:Number(p.h),l:Number(p.l),c:Number(p.c)};}
+function candle(p){return {t:Number(p.t),o:Number(p.o),h:Number(p.h),l:Number(p.l),c:Number(p.c),v:Number(p.v)||0};}
 function clean(raw){return raw.map(candle).filter(x=>[x.o,x.h,x.l,x.c].every(Number.isFinite));}
 
 function atr(p,period=14){
@@ -601,7 +603,7 @@ function renderSigStats(){
   const st=btStats(ev);
   const last=ev[ev.length-1];
   el.innerHTML=`Энэ график дээрх ${st.n} дууссан сигналаас <b>${st.wins}</b> ✓ TP2 (+2R), <b>${st.n-st.wins}</b> ✗ SL (−1R), spread-тай`+
-    (st.n?` · нийт <b>${st.total>=0?"+":""}${st.total}R</b>`:"")+`. Сүүлийн сигнал: <b style="color:${last.side==="BUY"?"#26A69A":"#EF5350"}">${last.side}</b> @ ${fmt(last.entry)} · ${last.result==="open"?"идэвхтэй":last.result}. `+
+    (st.n?` · нийт <b>${st.total>=0?"+":""}${st.total}R</b>`:"")+`. Сүүлийн сигнал: <b style="color:${last.side==="BUY"?"#089981":"#F23645"}">${last.side}</b> @ ${fmt(last.entry)} · ${last.result==="open"?"идэвхтэй":last.result}. `+
     (S.strategy==="london"?`London: 16:00 UTC хүртэл TP2/SL-д хүрээгүй бол тэр үеийн үнээр хаасан гэж тооцно (✓/✗ нь ашиг/алдагдал).`:`Анхаар: энэ дүрмээр ойролцоогоор 10 сигналын 4 нь л ашигтай гардаг. Ашиг нь ялалт бүр алдагдлаас 2 дахин том байхаас ирдэг тул SL-д хүрсэн сигнал «худал» биш, хэвийн үзэгдэл.`);
 }
 
@@ -692,7 +694,12 @@ function draw(){
   if(pos){extra.push(pos.entry);if(pos.sl)extra.push(pos.sl);if(pos.tp)extra.push(pos.tp);}
   extra.forEach(v=>{if(Number.isFinite(v)){min=Math.min(min,v);max=Math.max(max,v);}});
   const pad=(max-min)*.08||1;min-=pad;max+=pad;
+  if(!view.yAuto){                                   // manual price scale
+    const mid=(min+max)/2+view.yShift,half=(max-min)/2*view.yZoom;
+    min=mid-half;max=mid+half;
+  }
   const y=v=>top+(max-v)/(max-min)*plotH;
+  layout.top=top;layout.plotH=plotH;layout.min=min;layout.max=max;layout.n=n;layout.right=right;
 
   ctx.save();
   ctx.beginPath();ctx.rect(left,top,plotW,plotH);ctx.clip();
@@ -703,6 +710,24 @@ function draw(){
   const step=Math.max(1,Math.round(110/barW));
   for(let i=Math.ceil(startSlot/step)*step;i<endSlot;i+=step){const xx=Math.round(x(i))+.5;ctx.beginPath();ctx.moveTo(xx,top);ctx.lineTo(xx,top+plotH);ctx.stroke();}
 
+  // watermark
+  ctx.save();ctx.textAlign="center";ctx.textBaseline="middle";
+  ctx.fillStyle="rgba(178,181,190,.07)";ctx.font="700 "+Math.round(Math.min(64,plotW/9))+"px Inter, Arial";
+  ctx.fillText(`${SYM[S.symbol].name}, ${S.tf.toUpperCase()}`,left+plotW/2,top+plotH/2);
+  ctx.restore();
+
+  // volume (bottom 18%, like TradingView)
+  const vmax=Math.max(0,...vis.map(c=>c.v||0));
+  if(vmax>0){
+    const vh=plotH*.18,vw=Math.max(1,Math.min(14,barW*.7));
+    for(let i=i0;i<i1;i++){
+      const c=p[i];if(!c.v)continue;
+      const hh=c.v/vmax*vh;
+      ctx.fillStyle=c.c>=c.o?"rgba(8,153,129,.35)":"rgba(242,54,69,.35)";
+      ctx.fillRect(x(i)-vw/2,top+plotH-hh,vw,hh);
+    }
+  }
+
   // SMC zones (extend from origin candle to the latest candle)
   const smc=S.smc||{obs:[],fvgs:[],liquidity:[],structure:[]};
   ctx.font="600 10px Inter, Arial";
@@ -711,7 +736,7 @@ function draw(){
     const yy=y(z.high),hh=Math.max(2,y(z.low)-yy);
     const isOB=z.kind.includes("OB"),bull=z.kind.includes("Bullish");
     const col=isOB?(bull?C.bull:C.bear):C.fvg;
-    ctx.fillStyle=isOB?(bull?"rgba(38,166,154,.12)":"rgba(239,83,80,.12)"):"rgba(91,141,239,.12)";
+    ctx.fillStyle=isOB?(bull?"rgba(8,153,129,.12)":"rgba(242,54,69,.12)"):"rgba(91,141,239,.12)";
     ctx.fillRect(xx,yy,xe-xx,hh);
     ctx.strokeStyle=col;ctx.globalAlpha=.6;ctx.strokeRect(xx,yy,xe-xx,hh);ctx.globalAlpha=1;
     ctx.fillStyle=col;ctx.fillText(isOB?"OB":"FVG",Math.max(left+2,xx+3),yy-3);
@@ -765,7 +790,7 @@ function draw(){
     // labels on candles
     ev.forEach(e=>{
       if(e.i<i0||e.i>=i1)return;
-      const c=p[e.i],xx=x(e.i),buy=e.side==="BUY",col=buy?"#26A69A":"#EF5350";
+      const c=p[e.i],xx=x(e.i),buy=e.side==="BUY",col=buy?"#089981":"#F23645";
       const lw=36,lh=17,gap=6;
       const ty=buy?y(c.l)+gap:y(c.h)-gap;
       ctx.fillStyle=col;
@@ -782,7 +807,7 @@ function draw(){
       // outcome of the past signal: ✓ reached TP2, ✗ hit SL first
       if(e.result!=="open"){
         const ok=e.r!=null?e.r>0:(e.result==="TP2"||e.result==="TP3");
-        ctx.font="bold 11px Inter, Arial";ctx.fillStyle=ok?"#26A69A":"#EF5350";
+        ctx.font="bold 11px Inter, Arial";ctx.fillStyle=ok?"#089981":"#F23645";
         ctx.fillText(ok?"✓":"✗",xx,buy?by+lh+12:by-4);
       }
       ctx.textAlign="left";
@@ -794,9 +819,9 @@ function draw(){
   if(plan&&futureVisible&&!pos){
     const x0=x(n-1)+barW*.8,x1=x(n-1+FUTURE-1);
     const ye=y(plan.entry),yt=y(plan.tp),ys=y(plan.sl);
-    const good=plan.dir>0?"rgba(38,166,154,":"rgba(239,83,80,";
-    ctx.fillStyle="rgba(38,166,154,.16)";ctx.fillRect(x0,Math.min(ye,yt),x1-x0,Math.abs(yt-ye));
-    ctx.fillStyle="rgba(239,83,80,.14)";ctx.fillRect(x0,Math.min(ye,ys),x1-x0,Math.abs(ys-ye));
+    const good=plan.dir>0?"rgba(8,153,129,":"rgba(242,54,69,";
+    ctx.fillStyle="rgba(8,153,129,.16)";ctx.fillRect(x0,Math.min(ye,yt),x1-x0,Math.abs(yt-ye));
+    ctx.fillStyle="rgba(242,54,69,.14)";ctx.fillRect(x0,Math.min(ye,ys),x1-x0,Math.abs(ys-ye));
     ctx.strokeStyle=good+".9)";ctx.lineWidth=2;ctx.setLineDash([6,4]);
     ctx.beginPath();ctx.moveTo(x0,ye);ctx.lineTo(x1-8,yt);ctx.stroke();ctx.setLineDash([]);
     const ang=Math.atan2(yt-ye,x1-8-x0);
@@ -806,8 +831,8 @@ function draw(){
     ctx.lineTo(x1-8-10*Math.cos(ang+.45),yt-10*Math.sin(ang+.45));
     ctx.closePath();ctx.fill();
     ctx.font="bold 11px Inter, Arial";
-    ctx.fillStyle="#26A69A";ctx.fillText(`TP ${fmt(plan.tp)}`,x0+4,plan.dir>0?yt-6:yt+14);
-    ctx.fillStyle="#EF5350";ctx.fillText(`SL ${fmt(plan.sl)}`,x0+4,plan.dir>0?ys+14:ys-6);
+    ctx.fillStyle="#089981";ctx.fillText(`TP ${fmt(plan.tp)}`,x0+4,plan.dir>0?yt-6:yt+14);
+    ctx.fillStyle="#F23645";ctx.fillText(`SL ${fmt(plan.sl)}`,x0+4,plan.dir>0?ys+14:ys-6);
     ctx.fillStyle="#fff";ctx.fillText(`${plan.side} → ${fmt(plan.tp)}`,x0+4,ye+(plan.dir>0?14:-6));
   }
 
@@ -832,23 +857,61 @@ function draw(){
   ctx.restore();
 
   // price axis
-  ctx.font="10px 'JetBrains Mono', monospace";ctx.fillStyle=C.axis;
-  for(let k=0;k<=6;k++){const val=max-(max-min)*k/6;ctx.fillText(val.toFixed(2),left+plotW+6,top+plotH*k/6+3);}
+  ctx.fillStyle=C.bg;ctx.fillRect(left+plotW,0,right,h);
+  ctx.strokeStyle="#2A2E39";ctx.beginPath();ctx.moveTo(left+plotW+.5,0);ctx.lineTo(left+plotW+.5,h);ctx.stroke();
+  ctx.font="11px Inter, Arial";ctx.fillStyle=C.axis;
+  for(let k=0;k<=6;k++){const val=max-(max-min)*k/6;ctx.fillText(fmt(val),left+plotW+6,top+plotH*k/6+4);}
+  const sec=TF_SEC[S.tf];
   if(Number.isFinite(live)){
-    const yy=clamp(y(live),top+8,top+plotH-8),last=p[n-1];
-    ctx.fillStyle=last.c>=last.o?C.bull:C.bear;ctx.fillRect(left+plotW+1,yy-9,right-2,18);
-    ctx.fillStyle="#fff";ctx.font="bold 10px 'JetBrains Mono', monospace";ctx.fillText(live.toFixed(2),left+plotW+6,yy+4);
+    const yy=clamp(y(live),top+10,top+plotH-10),last=p[n-1];
+    const left2=Math.max(0,last.t+sec-Date.now()/1000);
+    const cd=left2>=3600?`${Math.floor(left2/3600)}:${String(Math.floor(left2%3600/60)).padStart(2,"0")}:${String(Math.floor(left2%60)).padStart(2,"0")}`:`${String(Math.floor(left2/60)).padStart(2,"0")}:${String(Math.floor(left2%60)).padStart(2,"0")}`;
+    ctx.fillStyle=last.c>=last.o?C.bull:C.bear;ctx.fillRect(left+plotW+1,yy-10,right-1,32);
+    ctx.fillStyle="#fff";ctx.font="bold 11px Inter, Arial";ctx.fillText(fmt(live),left+plotW+6,yy+4);
+    ctx.font="10px Inter, Arial";ctx.fillText(cd,left+plotW+6,yy+17);     // time left until the candle closes
   }
   // time axis
-  ctx.font="10px Inter, Arial";ctx.fillStyle=C.axis;
-  const sec=TF_SEC[S.tf];
+  ctx.fillStyle=C.bg;ctx.fillRect(0,top+plotH,w,h-top-plotH);
+  ctx.strokeStyle="#2A2E39";ctx.beginPath();ctx.moveTo(0,top+plotH+.5);ctx.lineTo(left+plotW,top+plotH+.5);ctx.stroke();
+  ctx.font="11px Inter, Arial";ctx.fillStyle=C.axis;
+  const MON=["1-р","2-р","3-р","4-р","5-р","6-р","7-р","8-р","9-р","10-р","11-р","12-р"];
+  const slotTime=i=>i<n?p[i].t:p[n-1].t+(i-n+1)*sec;
+  const tlabel=(t,full)=>{const d=new Date(t*1000),hm=`${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+    if(full)return `${d.getMonth()+1}/${d.getDate()} ${hm}`;
+    if(sec>=86400||(d.getHours()===0&&d.getMinutes()===0))return `${MON[d.getMonth()]} ${d.getDate()}`;
+    return hm;};
   for(let i=Math.ceil(startSlot/step)*step;i<endSlot;i+=step){
     if(i<0)continue;
-    const t=i<n?p[i].t:p[n-1].t+(i-n+1)*sec;
-    const d=new Date(t*1000);
-    const lab=S.tf==="1d"||S.tf==="4h"?`${d.getMonth()+1}/${d.getDate()}`:`${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
-    ctx.fillText(lab,x(i)-14,h-8);
+    const lab=tlabel(slotTime(i),false);
+    ctx.fillText(lab,x(i)-ctx.measureText(lab).width/2,h-8);
   }
+
+  // crosshair (snaps to the candle under the cursor)
+  let hi=n-1;
+  if(hover.on&&hover.x>=left&&hover.x<=left+plotW&&hover.y>=top&&hover.y<=top+plotH){
+    const slot=Math.round(startSlot+(hover.x-left)/barW-.5);
+    hi=clamp(slot,0,n-1);
+    const cx=Math.round(x(slot))+.5,cy=Math.round(hover.y)+.5;
+    ctx.save();ctx.strokeStyle="#9598A1";ctx.setLineDash([6,6]);ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(cx,top);ctx.lineTo(cx,top+plotH);ctx.moveTo(left,cy);ctx.lineTo(left+plotW,cy);ctx.stroke();ctx.restore();
+    const pv=max-(hover.y-top)/plotH*(max-min);
+    ctx.fillStyle="#363A45";ctx.fillRect(left+plotW+1,cy-10,right-1,20);
+    ctx.fillStyle="#fff";ctx.font="11px Inter, Arial";ctx.fillText(fmt(pv),left+plotW+6,cy+4);
+    const tl=tlabel(slotTime(slot),true),tw=ctx.measureText(tl).width+12;
+    const tx=clamp(cx-tw/2,0,left+plotW-tw);
+    ctx.fillStyle="#363A45";ctx.fillRect(tx,top+plotH+1,tw,h-top-plotH-1);
+    ctx.fillStyle="#fff";ctx.fillText(tl,tx+6,h-8);
+  }
+
+  // OHLC legend (hovered candle, or the latest one)
+  const c=p[hi],prev=hi>0?p[hi-1].c:c.o,chg=c.c-prev,col=c.c>=c.o?C.bull:C.bear;
+  ctx.font="600 12px Inter, Arial";let lx=left+8;const ly=top+16;
+  const put=(t,color)=>{ctx.fillStyle=color;ctx.fillText(t,lx,ly);lx+=ctx.measureText(t).width+8;};
+  put(`${SYM[S.symbol].name} · ${S.tf.toUpperCase()}`,"#D1D4DC");
+  ctx.font="12px Inter, Arial";
+  [["O",c.o],["H",c.h],["L",c.l],["C",c.c]].forEach(([k,v])=>{put(k,C.axis);lx-=4;put(fmt(v),col);});
+  put(`${chg>=0?"+":""}${fmt(chg)} (${chg>=0?"+":""}${fmt(prev?chg/prev*100:0)}%)`,col);
+  if(c.v)put(`Vol ${c.v>=1000?fmt(c.v/1000)+"K":fmt(c.v)}`,C.axis);
 }
 
 let drawQueued=false;
@@ -871,15 +934,27 @@ function zoomAt(factor,clientX){
   const cv=$("chart");
   const pts=new Map();
   let drag=null,pinch=null;
+  let axisDrag=null;
+  const local=e=>{const r=cv.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};};
+  const onAxis=e=>layout&&local(e).x>layout.left+layout.plotW;
   cv.addEventListener("pointerdown",e=>{
     cv.setPointerCapture(e.pointerId);
     pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
     $("hint").style.display="none";
-    if(pts.size===1){drag={x:e.clientX,offset:view.offset};cv.classList.add("dragging");}
+    if(e.pointerType!=="mouse"){const l=local(e);hover.on=true;hover.x=l.x;hover.y=l.y;}
+    if(pts.size===1&&onAxis(e)){                       // drag the price scale to stretch it
+      if(view.yAuto){view.yAuto=false;view.yZoom=1;view.yShift=0;}
+      axisDrag={y:e.clientY,zoom:view.yZoom};return;
+    }
+    if(pts.size===1){drag={x:e.clientX,y:e.clientY,offset:view.offset,shift:view.yShift};cv.classList.add("dragging");}
     if(pts.size===2){const [a,b]=[...pts.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y)||1,count:view.count,cx:(a.x+b.x)/2};drag=null;}
   });
   cv.addEventListener("pointermove",e=>{
-    if(!pts.has(e.pointerId))return;
+    const l=local(e);
+    if(e.pointerType==="mouse"){hover.on=true;hover.x=l.x;hover.y=l.y;cv.classList.toggle("axis",onAxis(e));}
+    else if(pts.size===1){hover.x=l.x;hover.y=l.y;}
+    if(!pts.has(e.pointerId)){requestDraw();return;}
+    if(axisDrag){view.yZoom=clamp(axisDrag.zoom*Math.exp((e.clientY-axisDrag.y)/150),0.05,20);requestDraw();return;}
     pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
     if(pinch&&pts.size>=2){
       const [a,b]=[...pts.values()];
@@ -888,22 +963,28 @@ function zoomAt(factor,clientX){
       zoomAt(target/view.count,pinch.cx);
     }else if(drag&&layout){
       view.offset=drag.offset+(e.clientX-drag.x)/layout.barW;
+      if(!view.yAuto)view.yShift=drag.shift+(e.clientY-drag.y)/layout.plotH*(layout.max-layout.min);
       requestDraw();
     }
   });
   const end=e=>{
-    pts.delete(e.pointerId);
+    pts.delete(e.pointerId);axisDrag=null;
     if(pts.size<2)pinch=null;
     if(pts.size===1){const v=[...pts.values()][0];drag={x:v.x,offset:view.offset};}
     if(pts.size===0){drag=null;cv.classList.remove("dragging");}
   };
   cv.addEventListener("pointerup",end);
   cv.addEventListener("pointercancel",end);
+  cv.addEventListener("pointerleave",e=>{if(e.pointerType==="mouse"){hover.on=false;requestDraw();}});
   cv.addEventListener("wheel",e=>{e.preventDefault();zoomAt(e.deltaY>0?1.12:1/1.12,e.clientX);},{passive:false});
-  cv.addEventListener("dblclick",()=>{view.count=90;view.offset=0;requestDraw();});
+  cv.addEventListener("dblclick",e=>{
+    if(onAxis(e)){view.yAuto=true;view.yZoom=1;view.yShift=0;}   // double-click the price scale: back to auto
+    else{view.count=90;view.offset=0;}
+    requestDraw();
+  });
   $("zoom-in").addEventListener("click",()=>zoomAt(1/1.3));
   $("zoom-out").addEventListener("click",()=>zoomAt(1.3));
-  $("zoom-reset").addEventListener("click",()=>{view.count=90;view.offset=0;requestDraw();});
+  $("zoom-reset").addEventListener("click",()=>{Object.assign(view,{count:90,offset:0,yAuto:true,yZoom:1,yShift:0});requestDraw();});
 })();
 
 /* ---------- Live price: smooth candle movement ---------- */
@@ -1494,6 +1575,7 @@ if(S.symbol==="btc")wsStart();
 loadData();
 setInterval(loadData,30000);
 setInterval(tick,TICK_MS);
+setInterval(()=>{if(!S.anim)requestDraw();},1000);   // candle countdown on the price scale
 setInterval(loadChart,60000);
 setInterval(()=>{if(S.overall!=="WAIT")refreshPlan();},TICK_MS*2);
 </script>
