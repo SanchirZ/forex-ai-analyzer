@@ -1,0 +1,34 @@
+{
+ "updated": 1795292010,
+ "source": "Forex Factory (High, USD)",
+ "events": [
+  {
+   "title": "Fed Chairman Warsh Speaks",
+   "country": "USD",
+   "time": 1794848400,
+   "forecast": "",
+   "previous": ""
+  },
+  {
+   "title": "Core Retail Sales m/m",
+   "country": "USD",
+   "time": 1794922200,
+   "forecast": "0.4%",
+   "previous": "0.9%"
+  },
+  {
+   "title": "Retail Sales m/m",
+   "country": "USD",
+   "time": 1794922200,
+   "forecast": "0.1%",
+   "previous": "0.8%"
+  },
+  {
+   "title": "FOMC Meeting Minutes",
+   "country": "USD",
+   "time": 1795028400,
+   "forecast": "",
+   "previous": ""
+  }
+ ]
+}
