@@ -1,34 +1,20 @@
 {
- "updated": 1795309544,
+ "updated": 1795334268,
  "source": "Forex Factory (High, USD)",
  "events": [
   {
-   "title": "Fed Chairman Warsh Speaks",
+   "title": "Core PCE Price Index m/m",
    "country": "USD",
-   "time": 1794848400,
-   "forecast": "",
-   "previous": ""
+   "time": 1795613400,
+   "forecast": "0.3%",
+   "previous": "0.3%"
   },
   {
-   "title": "Core Retail Sales m/m",
+   "title": "Prelim GDP q/q",
    "country": "USD",
-   "time": 1794922200,
-   "forecast": "0.4%",
-   "previous": "0.9%"
-  },
-  {
-   "title": "Retail Sales m/m",
-   "country": "USD",
-   "time": 1794922200,
-   "forecast": "0.1%",
-   "previous": "0.8%"
-  },
-  {
-   "title": "FOMC Meeting Minutes",
-   "country": "USD",
-   "time": 1795028400,
-   "forecast": "",
-   "previous": ""
+   "time": 1795613400,
+   "forecast": "3.5%",
+   "previous": "3.4%"
   }
  ]
 }
