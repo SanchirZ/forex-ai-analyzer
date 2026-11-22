@@ -1,5 +1,27 @@
 {
  "started": 1795291635,
- "signals": [],
- "updated": 1795294575
+ "signals": [
+  {
+   "id": "btc-5m-1795308600",
+   "sym": "btc",
+   "name": "BTCUSD",
+   "tf": "5m",
+   "side": "SELL",
+   "t": 1795308600,
+   "close_t": 1795308900,
+   "entry": 60063.62,
+   "sl": 60163.32,
+   "tps": [
+    59963.92,
+    59864.22,
+    59764.52
+   ],
+   "status": "open",
+   "r": null,
+   "news": null,
+   "alerted": false,
+   "tp1_hit": false
+  }
+ ],
+ "updated": 1795309545
 }
