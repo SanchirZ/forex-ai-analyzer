@@ -154,7 +154,28 @@
    "alerted": false,
    "closed_t": 1795428000,
    "tp1_hit": false
+  },
+  {
+   "id": "xau-5m-1795466700",
+   "sym": "xau",
+   "name": "XAUUSD",
+   "tf": "5m",
+   "side": "SELL",
+   "t": 1795466700,
+   "close_t": 1795467000,
+   "entry": 3635.9,
+   "sl": 3647.81,
+   "tps": [
+    3623.99,
+    3612.08,
+    3600.17
+   ],
+   "status": "open",
+   "r": null,
+   "news": null,
+   "alerted": false,
+   "tp1_hit": false
   }
  ],
- "updated": 1795430459
+ "updated": 1795472111
 }
