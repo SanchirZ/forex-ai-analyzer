@@ -993,7 +993,9 @@ function draw(){
 }
 
 let drawQueued=false;
-function requestDraw(){if(drawQueued)return;drawQueued=true;requestAnimationFrame(()=>{drawQueued=false;draw();});}
+function requestDraw(){if(drawQueued)return;drawQueued=true;
+  const go=()=>{if(!drawQueued)return;drawQueued=false;draw();};
+  requestAnimationFrame(go);setTimeout(go,250);}   // fallback when the browser pauses animation frames
 
 /* pan / zoom: mouse + touch */
 function zoomAt(factor,clientX){
@@ -1067,17 +1069,20 @@ function zoomAt(factor,clientX){
 
 /* ---------- Live price: smooth candle movement ---------- */
 function startAnim(to,ms=ANIM_MS){
-  if(document.hidden){                          // background tab: browsers pause animations, update directly
-    const d=to-(S.lastShown??to);S.anim=null;S.lastShown=to;updateLastCandle(to);showPrice(to,d);renderPosition();
+  const stalled=S.anim&&performance.now()-(S.animTick||0)>600;   // animation frames not arriving
+  if(document.hidden||stalled){                 // hidden/paused pane: update directly
+    const d=to-(S.lastShown??to);S.anim=null;S.lastShown=to;updateLastCandle(to);showPrice(to,d);renderPosition();draw();
     return;
   }
   const from=Number.isFinite(S.lastShown)?S.lastShown:to;
   const running=!!S.anim;
-  S.anim={from,to,start:performance.now(),ms};
-  if(!running)requestAnimationFrame(animate);
+  const a=S.anim={from,to,start:performance.now(),ms};
+  if(!running){S.animTick=performance.now();requestAnimationFrame(animate);}
+  setTimeout(()=>{if(S.anim===a&&performance.now()-(S.animTick||0)>ms+200){S.anim=null;S.lastShown=to;updateLastCandle(to);showPrice(to,to-from);renderPosition();draw();}},ms+400);
 }
 function animate(now){
   const a=S.anim;if(!a)return;
+  S.animTick=performance.now();
   const t=clamp((now-a.start)/(a.ms||ANIM_MS),0,1);
   const e=1-Math.pow(1-t,3);
   const v=a.from+(a.to-a.from)*e;
