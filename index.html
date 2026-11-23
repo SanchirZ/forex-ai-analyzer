@@ -1093,12 +1093,24 @@ function rollCandle(price){
   const c=S.candles;if(!c.length)return;
   const sec=TF_SEC[S.tf],now=Date.now()/1000;
   const last=c[c.length-1];
-  // open the next candle only when we are inside it; never invent candles over closed-market gaps
-  if(now>=last.t+sec&&now<last.t+2*sec&&price!==last.c){
-    c.push({t:last.t+sec,o:last.c,h:last.c,l:last.c,c:last.c});
-    if(view.offset>0)view.offset+=1;
-    recomputeSignals();
-  }
+  if(now<last.t+sec||price===last.c)return;
+  // with a live feed open the candle of the current period (the source may lag a few candles);
+  // without one, never invent candles over a long gap such as a closed market
+  if(!WS.alive&&now>=last.t+2*sec)return;
+  const t=Math.floor(now/sec)*sec;
+  if(t<=last.t)return;
+  c.push({t,o:last.c,h:last.c,l:last.c,c:last.c,live:true});
+  if(view.offset>0)view.offset+=1;
+  recomputeSignals();
+}
+/* Gold: the XAUS feed updates slowly, so live ticks come from PAXG (a token backed by
+   1 oz of gold, traded every second on Coinbase), shifted onto the XAUS price level. */
+function goldMarketOpen(d=new Date()){
+  const wd=d.getUTCDay(),h=d.getUTCHours();
+  if(wd===6)return false;                 // Saturday
+  if(wd===5&&h>=21)return false;          // Friday after 21:00 UTC
+  if(wd===0&&h<22)return false;           // Sunday before 22:00 UTC
+  return true;
 }
 function showPrice(v,dir){
   const el=$("price");
@@ -1110,15 +1122,22 @@ function showPrice(v,dir){
 const WS={sock:null,retry:0,last:0,timer:null,alive:false};
 function wsStart(){
   wsStop();
-  if(S.symbol!=="btc")return;
+  const sym=S.symbol;
+  if(sym==="xau"&&!goldMarketOpen())return;
+  const product=sym==="btc"?"BTC-USD":"PAXG-USD";
   let sock;
   try{sock=new WebSocket("wss://ws-feed.exchange.coinbase.com");}catch(_){return;}
-  WS.sock=sock;
-  sock.onopen=()=>{WS.retry=0;sock.send(JSON.stringify({type:"subscribe",product_ids:["BTC-USD"],channels:["ticker"]}));};
+  WS.sock=sock;WS.sym=sym;
+  sock.onopen=()=>{WS.retry=0;sock.send(JSON.stringify({type:"subscribe",product_ids:[product],channels:["ticker"]}));};
   sock.onmessage=ev=>{
     let m;try{m=JSON.parse(ev.data);}catch(_){return;}
-    if(m.type!=="ticker"||S.symbol!=="btc")return;
-    const p=Number(m.price);if(!Number.isFinite(p))return;
+    if(m.type!=="ticker"||S.symbol!==sym)return;
+    let p=Number(m.price);if(!Number.isFinite(p))return;
+    if(sym==="xau"){
+      WS.raw=p;
+      if(!Number.isFinite(S.basis))return;      // wait until we know the PAXG -> XAUS offset
+      p=p+S.basis;
+    }
     WS.alive=true;S.price=p;
     const now=performance.now();
     if(now-WS.last<120)return;           // at most ~8 updates a second
@@ -1127,12 +1146,12 @@ function wsStart(){
     rollCandle(p);
     startAnim(p,200);
     const pos=ACC.pos;
-    if(pos&&posSym(pos)==="btc")checkStops(p);
-    if(S.candles.length)setStatus("","LIVE · real-time");
+    if(pos&&posSym(pos)===sym)checkStops(p);
+    if(S.candles.length)setStatus("",sym==="xau"?"LIVE · real-time (PAXG)":"LIVE · real-time");
   };
   sock.onclose=()=>{
     WS.alive=false;
-    if(WS.sock!==sock||S.symbol!=="btc")return;
+    if(WS.sock!==sock||S.symbol!==sym)return;
     WS.retry=Math.min(WS.retry+1,6);
     WS.timer=setTimeout(wsStart,1000*2**WS.retry);
   };
@@ -1144,7 +1163,13 @@ function wsStop(){
   if(s0){try{s0.close();}catch(_){}}
 }
 
+let tickN=0;
 async function tick(){
+  tickN++;
+  if(S.symbol==="xau"&&(WS.sock||goldMarketOpen())){
+    if(!WS.sock&&goldMarketOpen())wsStart();
+    if(WS.alive&&tickN%5!==0)return;          // live ticks run; refresh the XAUS level every ~15 s
+  }
   if(S.symbol==="btc"&&WS.alive){            // live feed is running; only keep the other symbol's position fresh
     const pos=ACC.pos;
     if(pos&&posSym(pos)!==S.symbol){
@@ -1158,6 +1183,12 @@ async function tick(){
     const d=await r.json();
     const p=Number(d.price);
     if(!Number.isFinite(p))return;
+    if(S.symbol==="xau"&&Number.isFinite(WS.raw)){
+      // keep the live PAXG ticks on the XAUS level (smoothed so the chart does not jump)
+      const b=p-WS.raw;
+      S.basis=Number.isFinite(S.basis)?S.basis*0.7+b*0.3:b;
+      if(WS.alive)return;
+    }
     S.price=p;S.priceAsOf=d.price_as_of;
     $("price-time").textContent=d.price_as_of?new Date(d.price_as_of).toLocaleTimeString():"--";
     rollCandle(p);
@@ -1181,7 +1212,10 @@ async function loadChart(){
     const data=await r.json();
     if(tf!==S.tf||sym!==S.symbol)return;
     if(data.symbol&&data.symbol!==SYM[sym].name)throw new Error("backend хуучин хувилбар, Render deploy хэрэгтэй");
-    S.candles=clean(data.points||[]);
+    const fresh=clean(data.points||[]);
+    const lastT=fresh.length?fresh[fresh.length-1].t:0;
+    const keep=S.candles.filter(c=>c.live&&c.t>lastT);  // candles built from live ticks that the source has not published yet
+    S.candles=fresh.concat(keep);
     if(tf==="5m")S.m5=S.candles.map(c=>({...c}));
     S.smc=analyzeSMC(S.candles);
     recomputeSignals();
@@ -1733,7 +1767,8 @@ $("sym-switch").addEventListener("click",e=>{
   setSignal("ai-action",null);$("ai-meta").textContent="Шинжилгээ ажиллуулаагүй байна";
   ["ai-entry","ai-sl","ai-tp"].forEach(id=>$(id).textContent="--");
   applySymbolUI();renderForecast();renderCalc();renderPosition();draw();loadData();
-  if(S.symbol==="btc")wsStart();else wsStop();
+  S.basis=NaN;WS.raw=NaN;
+  if(S.symbol==="btc"||goldMarketOpen())wsStart();else wsStop();
   S.mtf={};renderMTF();loadMTF();
 });
 $("refresh-btn").addEventListener("click",loadData);
@@ -1784,7 +1819,7 @@ window.addEventListener("resize",requestDraw);
 initAccountUI();
 applySymbolUI();
 draw();
-if(S.symbol==="btc")wsStart();
+if(S.symbol==="btc"||goldMarketOpen())wsStart();
 loadData();
 setInterval(loadData,30000);
 setInterval(tick,TICK_MS);
