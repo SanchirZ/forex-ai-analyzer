@@ -34,8 +34,16 @@ _price_cache = {}
 _backoff = {}          # symbol -> time until which we do not call the source
 _cache_lock = threading.Lock()
 PRICE_TTL = {"xau": 5, "btc": 2}
+_key_locks = {}
 
-APP_VERSION = "2026.11.22-ratelimit"
+
+def _key_lock(key):
+    with _cache_lock:
+        if key not in _key_locks:
+            _key_locks[key] = threading.Lock()
+        return _key_locks[key]
+
+APP_VERSION = "2026.11.23-stable"
 INTERVALS = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
 # M1 was dropped: backtests showed spread costs turn its signals into losses
 ANALYZE_TFS = ["5m", "15m", "1h"]
@@ -91,10 +99,16 @@ def get_xau_candles(interval):
     points = None
     for headers in XAUS_HEADER_SETS:
         try:
-            response = requests.get(CHART_URL, params=params, headers=headers, timeout=20)
+            response = requests.get(CHART_URL, params=params, headers=headers, timeout=8)
+            if getattr(response, "status_code", 200) == 429:
+                raise requests.HTTPError("429 Too Many Requests")   # other headers will not help
             response.raise_for_status()
             points = response.json().get("points", [])
             if points:
+                break
+        except requests.HTTPError as exc:
+            last_error = exc
+            if "429" in str(exc):
                 break
         except (requests.RequestException, ValueError) as exc:
             last_error = exc
@@ -169,17 +183,29 @@ def get_candles(interval="5m", symbol="xau", pages=1):
             return [dict(p) for p in hit[1]]
     if cooling:
         raise ValueError(f"{symbol} source is rate-limiting, retry shortly")
-    try:
-        points = _fetch_candles(interval, symbol, pages)
-    except Exception as exc:
-        if "429" in str(exc):
-            _backoff[symbol] = time.time() + 90      # the source asked us to slow down
-        if hit and now - hit[0] < 3600:              # serve the last good candles
+    lock = _key_lock(key)
+    if not lock.acquire(blocking=hit is None, timeout=15 if hit is None else -1):
+        if hit:                                      # someone else is fetching: use the last data
             return [dict(p) for p in hit[1]]
-        raise
-    with _cache_lock:
-        _candle_cache[key] = (time.time(), points)
-    return [dict(p) for p in points]
+        raise ValueError("candles are being fetched, retry shortly")
+    try:
+        with _cache_lock:                            # maybe another thread just refreshed it
+            again = _candle_cache.get(key)
+            if again and time.time() - again[0] < CACHE_TTL[interval]:
+                return [dict(p) for p in again[1]]
+        try:
+            points = _fetch_candles(interval, symbol, pages)
+        except Exception as exc:
+            if "429" in str(exc):
+                _backoff[symbol] = time.time() + 90  # the source asked us to slow down
+            if hit and now - hit[0] < 3600:          # serve the last good candles
+                return [dict(p) for p in hit[1]]
+            raise
+        with _cache_lock:
+            _candle_cache[key] = (time.time(), points)
+        return [dict(p) for p in points]
+    finally:
+        lock.release()
 
 
 def _fetch_candles(interval, symbol, pages):
@@ -197,17 +223,25 @@ def get_price(symbol="xau"):
         hit = _price_cache.get(symbol)
         if hit and (now - hit[0] < PRICE_TTL[symbol] or now < _backoff.get(symbol, 0)):
             return dict(hit[1])
-    try:
-        data = _fetch_price(symbol)
-    except Exception as exc:
-        if "429" in str(exc):
-            _backoff[symbol] = time.time() + 90
-        if hit and now - hit[0] < 600:
+    lock = _key_lock(("price", symbol))
+    if not lock.acquire(blocking=hit is None, timeout=10 if hit is None else -1):
+        if hit:
             return dict(hit[1])
-        raise
-    with _cache_lock:
-        _price_cache[symbol] = (time.time(), data)
-    return dict(data)
+        raise ValueError("price is being fetched, retry shortly")
+    try:
+        try:
+            data = _fetch_price(symbol)
+        except Exception as exc:
+            if "429" in str(exc):
+                _backoff[symbol] = time.time() + 90
+            if hit and now - hit[0] < 600:
+                return dict(hit[1])
+            raise
+        with _cache_lock:
+            _price_cache[symbol] = (time.time(), data)
+        return dict(data)
+    finally:
+        lock.release()
 
 
 def _fetch_price(symbol):
@@ -217,7 +251,7 @@ def _fetch_price(symbol):
         data = response.json()
         return {"price": float(data["price"]), "price_as_of": data.get("time")}
 
-    response = requests.get(PRICE_URL, headers=XAUS_HEADER_SETS[0], timeout=10)
+    response = requests.get(PRICE_URL, headers=XAUS_HEADER_SETS[0], timeout=6)
     response.raise_for_status()
     data = response.json()
     return {"price": data.get("spot_usd_oz"), "price_as_of": data.get("price_as_of")}
