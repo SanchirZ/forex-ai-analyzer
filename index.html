@@ -1067,6 +1067,10 @@ function zoomAt(factor,clientX){
 
 /* ---------- Live price: smooth candle movement ---------- */
 function startAnim(to,ms=ANIM_MS){
+  if(document.hidden){                          // background tab: browsers pause animations, update directly
+    const d=to-(S.lastShown??to);S.anim=null;S.lastShown=to;updateLastCandle(to);showPrice(to,d);renderPosition();
+    return;
+  }
   const from=Number.isFinite(S.lastShown)?S.lastShown:to;
   const running=!!S.anim;
   S.anim={from,to,start:performance.now(),ms};
@@ -1199,8 +1203,12 @@ async function tick(){
     if(!Number.isFinite(p))return;
     if(S.symbol==="xau"&&Number.isFinite(WS.raw)){
       // keep the live PAXG ticks on the XAUS level (smoothed so the chart does not jump)
-      const b=p-WS.raw;
-      S.basis=Number.isFinite(S.basis)?S.basis*0.7+b*0.3:b;
+      // only learn the offset when XAUS publishes a new price, and slowly, so PAXG keeps the moves
+      if(p!==S.lastXaus||!Number.isFinite(S.basis)){
+        const b=p-WS.raw;
+        S.basis=Number.isFinite(S.basis)?S.basis*0.85+b*0.15:b;
+        S.lastXaus=p;
+      }
       if(WS.alive)return;
       if(WS.got){WS.alive=true;p=WS.raw+S.basis;}   // live feed is ready: continue from its level
     }
@@ -1830,6 +1838,7 @@ $("bt-btn").addEventListener("click",runBacktest);
 $("sig-toggle").addEventListener("click",e=>{S.showSig=!S.showSig;e.currentTarget.setAttribute("aria-pressed",String(S.showSig));draw();});
 $("ai-btn").addEventListener("click",runAI);
 window.addEventListener("resize",requestDraw);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&Number.isFinite(S.price)){S.anim=null;startAnim(S.price,200);}});
 
 initAccountUI();
 applySymbolUI();
