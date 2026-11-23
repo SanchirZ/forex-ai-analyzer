@@ -1124,15 +1124,28 @@ function wsStart(){
   wsStop();
   const sym=S.symbol;
   if(sym==="xau"&&!goldMarketOpen())return;
-  const product=sym==="btc"?"BTC-USD":"PAXG-USD";
+  // BTC: Coinbase trades. Gold: PAXG best bid/ask from Binance (several updates a second),
+  // Kraken as the backup feed.
+  const feeds={
+    btc:[{url:"wss://ws-feed.exchange.coinbase.com",sub:{type:"subscribe",product_ids:["BTC-USD"],channels:["ticker"]},
+          parse:m=>m.type==="ticker"?{p:Number(m.price),t:m.time}:null}],
+    xau:[{url:"wss://stream.binance.com:9443/ws/paxgusdt@bookTicker",sub:null,
+          parse:m=>m.s==="PAXGUSDT"?{p:(Number(m.b)+Number(m.a))/2}:null},
+         {url:"wss://ws.kraken.com/v2",sub:{method:"subscribe",params:{channel:"ticker",symbol:["PAXG/USD"],event_trigger:"bbo"}},
+          parse:m=>m.channel==="ticker"&&m.data&&m.data[0]?{p:(Number(m.data[0].bid)+Number(m.data[0].ask))/2}:null}]
+  };
+  const list=feeds[sym],feed=list[(WS.src||0)%list.length];
   let sock;
-  try{sock=new WebSocket("wss://ws-feed.exchange.coinbase.com");}catch(_){return;}
-  WS.sock=sock;WS.sym=sym;
-  sock.onopen=()=>{WS.retry=0;sock.send(JSON.stringify({type:"subscribe",product_ids:[product],channels:["ticker"]}));};
+  try{sock=new WebSocket(feed.url);}catch(_){return;}
+  WS.sock=sock;WS.sym=sym;WS.got=false;
+  sock.onopen=()=>{WS.retry=0;if(feed.sub)sock.send(JSON.stringify(feed.sub));};
   sock.onmessage=ev=>{
     let m;try{m=JSON.parse(ev.data);}catch(_){return;}
-    if(m.type!=="ticker"||S.symbol!==sym)return;
-    let p=Number(m.price);if(!Number.isFinite(p))return;
+    if(S.symbol!==sym)return;
+    const q=feed.parse(m);if(!q)return;
+    let p=q.p;if(!Number.isFinite(p))return;
+    WS.got=true;
+    if(q.t)m.time=q.t;
     if(sym==="xau"){
       WS.raw=p;
       if(!Number.isFinite(S.basis))return;      // wait until we know the PAXG -> XAUS offset
@@ -1152,6 +1165,7 @@ function wsStart(){
   sock.onclose=()=>{
     WS.alive=false;
     if(WS.sock!==sock||S.symbol!==sym)return;
+    if(!WS.got)WS.src=(WS.src||0)+1;             // this feed gave nothing: try the next one
     WS.retry=Math.min(WS.retry+1,6);
     WS.timer=setTimeout(wsStart,1000*2**WS.retry);
   };
@@ -1188,6 +1202,7 @@ async function tick(){
       const b=p-WS.raw;
       S.basis=Number.isFinite(S.basis)?S.basis*0.7+b*0.3:b;
       if(WS.alive)return;
+      if(WS.got){WS.alive=true;p=WS.raw+S.basis;}   // live feed is ready: continue from its level
     }
     S.price=p;S.priceAsOf=d.price_as_of;
     $("price-time").textContent=d.price_as_of?new Date(d.price_as_of).toLocaleTimeString():"--";
