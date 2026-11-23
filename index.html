@@ -334,14 +334,13 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
 
     <section class="card">
       <div class="ai-head"><h2>Бодит журнал · forward test</h2><span class="tag" id="jr-tag">LIVE</span></div>
-      <p class="note" style="font-size:13px">BTCUSD, XAUUSD-ийн M5, M15 дээр гарсан сигнал бүрийг 5 минут тутам автоматаар бүртгэж, TP2 (+2R), SL (−1R) эсвэл 48 цагийн дотор юу болсныг тэмдэглэнэ (spread хассан). Энэ бол өнгөрсөн биш, <b>бодитоор</b> гарсан үр дүн.</p>
+      <p class="note" style="font-size:13px">BTCUSD, XAUUSD-ийн M5, M15 дээр гарсан сигнал бүрийг 5 минут тутам автоматаар бүртгэж, TP1-д хагасыг хааж, TP2 (3R) / SL / breakeven эсвэл 48 цагийн дотор юу болсныг тэмдэглэнэ (spread хассан). Энэ бол өнгөрсөн биш, <b>бодитоор</b> гарсан үр дүн.</p>
       <div id="jr-out"><p class="note">Ачаалж байна...</p></div>
     </section>
 
     <section class="card">
       <div class="ai-head"><h2>Backtest · сигналын түүхэн үр дүн</h2></div>
-      <p class="note" style="font-size:13px">Сонгосон хэрэгсэл, timeframe-ийн сүүлийн ~1500 лаан дээр график дээрх BUY/SELL сигналыг манай дүрмээр туршина: TP2 (2R) хүрвэл +2R, эхлээд SL хүрвэл −1R, арилжаа бүрээс spread хасна. H1 дээр алтны ~3 сар, BTC-ийн ~2 сарын түүх хамгийн найдвартай.</p>
-      <label style="display:flex;gap:10px;align-items:center;font-size:13px;cursor:pointer"><input type="checkbox" id="be-toggle" style="width:20px;height:20px"> TP1-д хүрэхэд SL-ийг entry рүү зөөх (breakeven) · BTC backtest-ээр M5, M15, H1 гурвуулаа сайжирсан</label>
+      <p class="note" style="font-size:13px">Сонгосон хэрэгсэл, timeframe-ийн сүүлийн ~1500 лаан дээр график дээрх BUY/SELL сигналыг манай дүрмээр туршина: SL нь swing-ийн цаана, TP1 (1R)-д хагасыг хааж SL-ийг entry рүү зөөнө, үлдсэнийг TP2 (3R)-д хаана. SL = −1R, TP1+BE = +0.5R, TP2 = +2R. Арилжаа бүрээс spread хасна. H1 дээр алтны ~3 сар, BTC-ийн ~2 сарын түүх хамгийн найдвартай.</p>
       <button class="btn btn-primary" id="bt-btn" type="button">Backtest ажиллуулах</button>
       <div id="bt-out"></div>
     </section>
@@ -427,7 +426,7 @@ const SYM={xau:{name:"XAUUSD",label:"Алтны үнэ · USD/oz",sub:"Алт ·
   btc:{name:"BTCUSD",label:"Bitcoin үнэ · USD",sub:"Bitcoin · BTCUSD · SMC + техник шинжилгээ",unit:"BTC",src:"Coinbase",def:1,cost:25}};
 const savedSym=(()=>{try{return localStorage.getItem("fxa_symbol");}catch(_){return null;}})();
 const S={symbol:SYM[savedSym]?savedSym:"xau",posPrice:null,tf:"5m",candles:[],smc:null,price:null,priceAsOf:null,overall:"WAIT",sigs:[],m5:[],ai:null,plan:null,
-  anim:null,lastShown:null,sigEvents:[],showSig:true,be:(()=>{try{return localStorage.getItem("fxa_be")==="1";}catch(_){return false;}})(),news:[],mtf:{},smcShow:(()=>{try{return Object.assign({ob:true,fvg:true,bos:true,sess:true,news:true},JSON.parse(localStorage.getItem("fxa_smc")||"{}"));}catch(_){return {ob:true,fvg:true,bos:true,sess:true,news:true};}})(),active:(()=>{try{return localStorage.getItem("fxa_active")!=="0";}catch(_){return true;}})(),strategy:(()=>{try{return localStorage.getItem("fxa_strategy")==="london"?"london":"trend";}catch(_){return "trend";}})(),ranges:[],htfOn:true,h1:[],htf:null,h1At:0,planBlock:null};
+  anim:null,lastShown:null,sigEvents:[],showSig:true,news:[],mtf:{},smcShow:(()=>{try{return Object.assign({ob:true,fvg:true,bos:true,sess:true,news:true},JSON.parse(localStorage.getItem("fxa_smc")||"{}"));}catch(_){return {ob:true,fvg:true,bos:true,sess:true,news:true};}})(),active:(()=>{try{return localStorage.getItem("fxa_active")!=="0";}catch(_){return true;}})(),strategy:(()=>{try{return localStorage.getItem("fxa_strategy")==="london"?"london":"trend";}catch(_){return "trend";}})(),ranges:[],htfOn:true,h1:[],htf:null,h1At:0,planBlock:null};
 const view={count:90,offset:0,yAuto:true,yZoom:1,yShift:0};
 const hover={on:false,x:0,y:0};
 let layout=null;
@@ -537,6 +536,30 @@ function htfDirAt(t,H){
   return k<0?0:H.dir[k];
 }
 const HTF_TFS=["1m","5m","15m","30m"];
+/* Stop loss like a discretionary trader: just beyond the last swing.
+   BUY: lowest low of the last 10 candles minus 0.25 ATR; SELL: highest high plus 0.25 ATR.
+   Kept between 0.75 and 3.5 ATR from the entry so it is never absurdly tight or wide.
+   Management: at TP1 (1R) close half and move the stop to entry; close the rest at TP2 (3R).
+   Backtests on BTC/XAU: +53.7R vs +25.5R for the old ATR x 1.5 / 2R rule (5/5 sets positive). */
+function structureStop(p,i,dir,atrVal,entry=p[i].c){
+  let ext=dir>0?Infinity:-Infinity;
+  for(let k=Math.max(0,i-9);k<=i;k++)ext=dir>0?Math.min(ext,p[k].l):Math.max(ext,p[k].h);
+  const a=atrVal||Math.abs(p[i].h-p[i].l)||1;
+  let dist=(entry-(ext-dir*0.25*a))*dir;
+  dist=Math.min(Math.max(dist,0.75*a),3.5*a);
+  return entry-dir*dist;
+}
+function manageTrade(p,i,dir,entry,sl,tps){
+  // returns {result, r, exit}: SL = -1R, BE = +0.5R (half at TP1, rest at entry), TP2 = +2R (half 1R + half 3R)
+  let stop=sl,half=false;
+  for(let j=i+1;j<p.length;j++){
+    const c=p[j];
+    if(dir>0?c.l<=stop:c.h>=stop)return half?{result:"BE",r:0.5,exit:j}:{result:"SL",r:-1,exit:j};   // stop first (conservative)
+    if(!half&&(dir>0?c.h>=tps[0]:c.l<=tps[0])){half=true;stop=entry;}
+    if(half&&(dir>0?c.h>=tps[2]:c.l<=tps[2]))return {result:"TP2",r:2,exit:j};
+  }
+  return {result:half?"TP1":"open",r:null,exit:p.length};
+}
 function computeSignals(p,tf=S.tf,H=null,active=false){
   const n=p.length;
   const useH=H&&HTF_TFS.includes(tf),sec=TF_SEC[tf];
@@ -560,19 +583,11 @@ function computeSignals(p,tf=S.tf,H=null,active=false){
     const dir=side==="BUY"?1:-1;
     if(useH){const d=htfDirAt(p[i].t+sec,H);if(d!==0&&d!==dir)continue;}   // never against the H1 trend
     last=side;
-    const entry=p[i].c,risk=Math.max(at[i]*1.5,0.3);
-    const sl=entry-dir*risk,tps=[1,2,3].map(k=>entry+dir*risk*k);
-    let result="open",hit=0,exit=n;
-    for(let j=i+1;j<n;j++){
-      const lossHit=dir>0?p[j].l<=sl:p[j].h>=sl;
-      // conservative: if SL is touched in a candle, targets in that same candle do not count
-      if(lossHit){result=hit?(S.be?"BE":"TP"+hit):"SL";exit=j;break;}
-      while(hit<3&&(dir>0?p[j].h>=tps[hit]:p[j].l<=tps[hit]))hit++;
-      if(hit===3){result="TP3";exit=j;break;}
-    }
-    if(result==="open"&&hit>0)result="TP"+hit;
-    busyUntil=exit;
-    ev.push({i,side,dir,entry,sl,tps,result,r:result==="BE"?0:null});
+    const entry=p[i].c,sl=structureStop(p,i,dir,at[i]),risk=Math.abs(entry-sl);
+    const tps=[1,2,3].map(k=>entry+dir*risk*k);      // TP1 = 1R (close half), TP2 = 3R (tps[2])
+    const mt=manageTrade(p,i,dir,entry,sl,tps);
+    busyUntil=mt.exit;
+    ev.push({i,side,dir,entry,sl,tps,result:mt.result,r:mt.r});
   }
   return ev;
 }
@@ -613,11 +628,11 @@ function londonSignals(p,tf){
 }
 
 function btStats(ev,cost=SYM[S.symbol].cost){
-  const done=ev.filter(e=>e.result!=="open");
+  const done=ev.filter(e=>e.r!=null);
   let cum=0,peak=0,dd=0,wins=0;
   done.forEach(e=>{
     const risk=Math.abs(e.entry-e.sl)||1;
-    const base=e.r!=null?e.r:((e.result==="TP2"||e.result==="TP3")?2:-1);
+    const base=e.r!=null?e.r:-1;
     const r=base-cost/risk;   // spread is paid on every trade
     if(r>0)wins++;cum+=r;peak=Math.max(peak,cum);dd=Math.min(dd,cum-peak);
   });
@@ -633,9 +648,9 @@ function renderSigStats(){
   const st=btStats(ev);
   const last=ev[ev.length-1];
   const warn1m=S.tf==="1m"?`<b style="color:#E0A84A">M1 анхааруулга:</b> spread их тул backtest-ээр BTC M1 алдагдалтай гарсан. Зөвхөн M5/M15-ийн чиглэлтэй таарсан үед, бага лотоор. `:"";
-  el.innerHTML=warn1m+`Энэ график дээрх ${st.n} дууссан сигналаас <b>${st.wins}</b> ✓ TP2 (+2R), <b>${st.n-st.wins}</b> ✗ SL (−1R)${S.be?" эсвэл – breakeven (0R)":""}, spread-тай`+
-    (st.n?` · нийт <b>${st.total>=0?"+":""}${st.total}R</b>`:"")+`. Сүүлийн сигнал: <b style="color:${last.side==="BUY"?"#089981":"#F23645"}">${last.side}</b> @ ${fmt(last.entry)} · ${last.result==="open"?"идэвхтэй":last.result}. `+
-    (S.strategy==="london"?`London: 16:00 UTC хүртэл TP2/SL-д хүрээгүй бол тэр үеийн үнээр хаасан гэж тооцно (✓/✗ нь ашиг/алдагдал).`:`Анхаар: энэ дүрмээр ойролцоогоор 10 сигналын 4 нь л ашигтай гардаг. Ашиг нь ялалт бүр алдагдлаас 2 дахин том байхаас ирдэг тул SL-д хүрсэн сигнал «худал» биш, хэвийн үзэгдэл.`);
+  el.innerHTML=warn1m+`Энэ график дээрх ${st.n} дууссан сигналаас <b>${st.wins}</b> ✓ ашигтай (TP2 +2R эсвэл TP1-ийн дараа BE +0.5R), <b>${st.n-st.wins}</b> ✗ SL (−1R), spread-тай`+
+    (st.n?` · нийт <b>${st.total>=0?"+":""}${st.total}R</b>`:"")+`. Сүүлийн сигнал: <b style="color:${last.side==="BUY"?"#089981":"#F23645"}">${last.side}</b> @ ${fmt(last.entry)} · ${last.result==="open"?"идэвхтэй":last.result==="TP1"?"TP1 авсан, үлдсэн нь нээлттэй":last.result}. `+
+    (S.strategy==="london"?`London: 16:00 UTC хүртэл TP2/SL-д хүрээгүй бол тэр үеийн үнээр хаасан гэж тооцно (✓/✗ нь ашиг/алдагдал).`:`Арга: SL — сүүлийн 10 лааны swing-ийн цаана; TP1 (1R)-д хагасыг хааж SL-ийг entry рүү зөөнө; үлдсэнийг TP2 (3R)-д хаана.`);
 }
 
 /* ---------- Trade plan (where price is expected to go) ---------- */
@@ -654,18 +669,12 @@ function buildPlan(){
   const ai=S.ai;
   if(ai&&ai.action===sig&&[ai.entry_price,ai.stop_loss,ai.take_profit].every(v=>v!=null)){
     const e=+ai.entry_price,sl=+ai.stop_loss,tp=+ai.take_profit;
-    if(dir*(tp-e)>0&&dir*(e-sl)>0)return {dir,side:sig,entry:e,sl,tp,src:"AI"};
+    if(dir*(tp-e)>0&&dir*(e-sl)>0)return {dir,side:sig,entry:e,sl,tp,tp1:e+dir*Math.abs(e-sl),src:"AI"};
   }
-  const a=atr(pts)||1;
-  const slDist=Math.max(a*1.5,0.5);
-  const smc=analyzeSMC(pts);
-  const levels=[
-    ...smc.liquidity.map(l=>l.price),
-    ...smc.obs.filter(o=>dir>0?o.kind.includes("Bearish"):o.kind.includes("Bullish")).map(o=>dir>0?o.low:o.high)
-  ];
-  const cands=levels.filter(v=>dir*(v-price)>=slDist*2).sort((x,y)=>dir*(x-y));
-  const tp=cands.length?cands[0]:price+dir*slDist*2;
-  return {dir,side:sig,entry:price,sl:price-dir*slDist,tp,src:cands.length?"SMC түвшин":"ATR × 2"};
+  const closed=pts.slice(0,-1);
+  const a=atr(closed)||1;
+  const sl=structureStop(closed,closed.length-1,dir,a,price),risk=Math.abs(price-sl);
+  return {dir,side:sig,entry:price,sl,tp1:price+dir*risk,tp:price+dir*risk*3,src:"Swing SL · TP1 1R · TP2 3R"};
 }
 
 function renderForecast(){
@@ -678,8 +687,8 @@ function renderForecast(){
   const move=Math.abs(p.tp-p.entry),risk=Math.abs(p.entry-p.sl);
   const verb=p.dir>0?"өсөх":"буурах";
   el.innerHTML=`<b class="${p.side}">${p.side}</b>
-    <span>Үнэ <b class="mono">${fmt(p.tp)}</b> хүртэл ${verb} боломжтой (${fmt(move)}$ зай).
-    Тэр хүртэл ${p.side} барина. Stop loss: <b class="mono">${fmt(p.sl)}</b> (${fmt(risk)}$ зай) · R:R 1:${fmt(move/risk,1)}</span>
+    <span>Зорилт <b class="mono">${fmt(p.tp)}</b> хүртэл ${verb} боломжтой (${fmt(move)}$). Stop loss <b class="mono">${fmt(p.sl)}</b> (сүүлийн swing-ийн цаана, ${fmt(risk)}$).
+    <b>TP1 ${fmt(p.tp1)}</b>-д хагасыг хааж SL-ийг entry рүү зөө, үлдсэнийг <b>TP2 ${fmt(p.tp)}</b>-д хаа.</span>
     <span class="src">${esc(p.src)} · таамаг, баталгаа биш</span>`;
 }
 
@@ -831,7 +840,8 @@ function draw(){
     const ev=S.sigEvents,lastEv=ev[ev.length-1];
     // levels of the latest signal
     const xs=x(lastEv.i),xe=x(n-1)+barW*2;
-    const lv=[[lastEv.entry,"#B2B5BE","Entry"],[lastEv.sl,C.bear,"SL"],...lastEv.tps.map((v,k)=>[v,C.bull,"TP"+(k+1)])];
+    const lv=S.strategy==="london"?[[lastEv.entry,"#B2B5BE","Entry"],[lastEv.sl,C.bear,"SL"],...lastEv.tps.map((v,k)=>[v,C.bull,"TP"+(k+1)])]
+      :[[lastEv.entry,"#B2B5BE","Entry"],[lastEv.sl,C.bear,"SL (swing)"],[lastEv.tps[0],C.bull,"TP1 · хагасыг хаа"],[lastEv.tps[2],C.bull,"TP2 · 3R"]];
     ctx.font="600 10px Inter, Arial";
     lv.forEach(([v,col,lab])=>{
       const yy=y(v);
@@ -858,11 +868,11 @@ function draw(){
       ctx.fillStyle="#fff";ctx.font="bold 10px Inter, Arial";ctx.textAlign="center";
       ctx.fillText(e.side,xx,by+12);
       // outcome of the past signal: ✓ reached TP2, ✗ hit SL first
-      if(e.result!=="open"){
-        const ok=e.r!=null?e.r>0:(e.result==="TP2"||e.result==="TP3");
-        const flat=e.r===0;
-        ctx.font="bold 11px Inter, Arial";ctx.fillStyle=flat?"#B2B5BE":ok?"#089981":"#F23645";
-        ctx.fillText(flat?"–":ok?"✓":"✗",xx,buy?by+lh+12:by-4);
+      if(e.r!=null){
+        const ok=e.r>0;
+        const half=e.result==="BE";
+        ctx.font="bold 11px Inter, Arial";ctx.fillStyle=ok?"#089981":"#F23645";
+        ctx.fillText(half?"½✓":ok?"✓":"✗",xx,buy?by+lh+12:by-4);
       }
       ctx.textAlign="left";
     });
@@ -885,14 +895,17 @@ function draw(){
     ctx.lineTo(x1-8-10*Math.cos(ang+.45),yt-10*Math.sin(ang+.45));
     ctx.closePath();ctx.fill();
     ctx.font="bold 11px Inter, Arial";
-    ctx.fillStyle="#089981";ctx.fillText(`TP ${fmt(plan.tp)}`,x0+4,plan.dir>0?yt-6:yt+14);
+    ctx.fillStyle="#089981";ctx.fillText(`TP2 ${fmt(plan.tp)}`,x0+4,plan.dir>0?yt-6:yt+14);
+    if(plan.tp1){const y1=y(plan.tp1);ctx.strokeStyle="rgba(8,153,129,.8)";ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(x0,y1);ctx.lineTo(x1,y1);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillText(`TP1 ${fmt(plan.tp1)} · ½`,x0+4,y1+(plan.dir>0?-4:12));}
     ctx.fillStyle="#F23645";ctx.fillText(`SL ${fmt(plan.sl)}`,x0+4,plan.dir>0?ys+14:ys-6);
     ctx.fillStyle="#fff";ctx.fillText(`${plan.side} → ${fmt(plan.tp)}`,x0+4,ye+(plan.dir>0?14:-6));
   }
 
   // open position lines
   if(pos){
-    const lines=[[pos.entry,C.entry,`${pos.side} ${pos.lot} @ ${fmt(pos.entry)}`],[pos.sl,C.bear,`SL ${fmt(pos.sl)}`],[pos.tp,C.bull,`TP ${fmt(pos.tp)}`]];
+    const lines=[[pos.entry,C.entry,`${pos.side} ${pos.lot} @ ${fmt(pos.entry)}`],[pos.sl,C.bear,`SL ${fmt(pos.sl)}`],[pos.tp,C.bull,`TP2 ${fmt(pos.tp)}`]];
+    if(Number.isFinite(pos.tp1)&&!pos.partial)lines.push([pos.tp1,C.bull,`TP1 ${fmt(pos.tp1)} · ½`]);
     ctx.font="600 10px Inter, Arial";
     lines.forEach(([v,col,label])=>{
       if(!Number.isFinite(v))return;
@@ -1249,7 +1262,7 @@ function notifyNewSignal(){
   NOTE.seen=key;
   if(!NOTE.on||e.i<n-3)return;                          // only a signal on a just-closed candle
   const title=`${SYM[S.symbol].name} ${S.tf.toUpperCase()} ${e.side}`;
-  const body=`Entry ${fmt(e.entry)} · SL ${fmt(e.sl)} · TP2 ${fmt(e.tps[1])}`;
+  const body=`Entry ${fmt(e.entry)} · SL ${fmt(e.sl)} · TP1 ${fmt(e.tps[0])} (½) · TP2 ${fmt(e.tps[2])}`;
   beep();
   try{if("Notification" in window&&Notification.permission==="granted")new Notification(title,{body,tag:key});}catch(_){}
   $("message").textContent=`🔔 Шинэ сигнал: ${title} · ${body}`;
@@ -1295,7 +1308,7 @@ async function runBacktest(){
       const cls=k==="total"||k==="pct"||k==="avg"?(st.total>=0?"pos":"neg"):k==="dd"?"neg":"";
       return `<td class="${cls}">${v}</td>`;
     };
-    const rows=[["Дууссан сигнал","n"],["Ялалтын хувь (TP2)","rate"],["Нийт үр дүн","total"],["Дундаж / арилжаа","avg"],["Хамгийн их уналт","dd"],[`${fmt(risk,1)}% эрсдэлээр`,"pct"]];
+    const rows=[["Дууссан сигнал","n"],["Ашигтай арилжаа","rate"],["Нийт үр дүн","total"],["Дундаж / арилжаа","avg"],["Хамгийн их уналт","dd"],[`${fmt(risk,1)}% эрсдэлээр`,"pct"]];
     const useH=!london&&HTF_TFS.includes(tf);
     let html=`<p class="note" style="font-size:12px">${london?"London breakout":"Trend"+(S.active?" · идэвхтэй":"")} · ${SYM[sym].name} · ${tf} · ${p.length} лаа ≈ ${fmt(days,1)} өдөр · spread ≈ ${cost}$ арилжаа бүрт тооцсон</p>
       <table class="bt"><thead><tr><th></th>${useH?"<th>H1 шүүлтүүртэй</th>":""}<th>${london?"London breakout":"Шүүлтүүргүй"}</th></tr></thead><tbody>`+
@@ -1370,7 +1383,7 @@ function renderJournal(j){
   const total=done.reduce((a,s)=>a+(s.r||0),0),wins=done.filter(s=>(s.r||0)>0).length;
   const since=j.started?new Date(j.started*1000).toLocaleDateString():"";
   const by=k=>{const d=done.filter(s=>s.sym+"-"+s.tf===k);return d.length?`${d.reduce((a,s)=>a+(s.r||0),0).toFixed(1)}R (${d.length})`:"—";};
-  const st={TP2:'<b class="pos">✓ TP2</b>',SL:'<b class="neg">✗ SL</b>',EXPIRED:'<b>⌛ хугацаа</b>',open:'<b class="WAIT">● нээлттэй</b>'};
+  const st={TP2:'<b class="pos">✓ TP2</b>',TP:'<b class="pos">✓ TP2</b>',BE:'<b class="pos">½ TP1+BE</b>',SL:'<b class="neg">✗ SL</b>',EXPIRED:'<b>⌛ хугацаа</b>',open:'<b class="WAIT">● нээлттэй</b>'};
   let html=`<div class="kv">
     <div><span>Эхэлсэн</span><b>${since||"—"}</b></div>
     <div><span>Хаагдсан сигнал</span><b>${done.length}</b></div>
@@ -1442,7 +1455,8 @@ function lotFor(plan){
   let tooSmall=false;
   if(lot<0.01){lot=0.01;tooSmall=true;}
   const realRisk=lot*perLot;
-  const profit=Math.abs(plan.tp-plan.entry)*contract*lot;
+  const tp1=plan.tp1??plan.tp;
+  const profit=(0.5*Math.abs(tp1-plan.entry)+0.5*Math.abs(plan.tp-plan.entry))*contract*lot;   // half at TP1, half at TP2
   return {lot,riskUsd,realRisk,profit,slDist,contract,tooSmall};
 }
 
@@ -1457,8 +1471,10 @@ function renderCalc(){
   if(!plan){out.innerHTML=html+`<div class="instr WAIT">${S.planBlock?esc(S.planBlock):"Одоо нийт дохио <b>WAIT</b>. Манай дүрмээр арилжаа нээхгүй, хүлээнэ."}</div>`;return;}
   const L=lotFor(plan);
   const rr=Math.abs(plan.tp-plan.entry)/L.slDist;
+  const halfLot=Math.max(0.01,Math.floor(L.lot/2*100)/100);
   html+=`<div class="instr ${plan.side}">XM дээр: <b>${SYM[S.symbol].name} ${plan.side} ${fmt(L.lot)} лот</b>, Stop loss <b class="mono">${fmt(plan.sl)}</b>, Take profit <b class="mono">${fmt(plan.tp)}</b>.
-    <br>SL хүрвэл <b class="neg">${money(-L.realRisk)}</b> алдана, TP хүрвэл <b class="pos">+${money(L.profit)}</b> олно.</div>
+    <br>Үнэ <b class="mono">${fmt(plan.tp1??plan.tp)}</b> (TP1)-д хүрэхэд <b>${fmt(halfLot)} лотыг хааж</b>, SL-ээ <b class="mono">${fmt(plan.entry)}</b> (entry) рүү зөө.
+    <br>SL хүрвэл <b class="neg">${money(-L.realRisk)}</b> алдана, хоёр TP хоёулаа хүрвэл <b class="pos">+${money(L.profit)}</b> олно.</div>
   <div class="kv">
     <div><span>Entry (одоо)</span><b>${fmt(plan.entry)}</b></div>
     <div><span>SL зай</span><b>${fmt(L.slDist)}$</b></div>
@@ -1472,12 +1488,12 @@ function renderCalc(){
   html+=`<button class="btn btn-primary" id="open-plan" type="button" ${ACC.pos||stop?"disabled":""}>Энэ төлөвлөгөөг дансандаа нээх</button>`;
   out.innerHTML=html;
   const b=$("open-plan");
-  if(b)b.addEventListener("click",()=>openPosition({side:plan.side,entry:S.price??plan.entry,lot:L.lot,sl:plan.sl,tp:plan.tp}));
+  if(b)b.addEventListener("click",()=>openPosition({side:plan.side,entry:S.price??plan.entry,lot:L.lot,sl:plan.sl,tp:plan.tp,tp1:plan.tp1}));
 }
 
-function openPosition({side,entry,lot,sl,tp}){
+function openPosition({side,entry,lot,sl,tp,tp1}){
   if(ACC.pos){alert("Нэг удаад нэг арилжаа хянана. Эхлээд нээлттэй арилжаагаа хаана уу.");return;}
-  ACC.pos={symbol:S.symbol,side,dir:side==="BUY"?1:-1,entry,lot,sl,tp,contract:curContract(),time:new Date().toISOString()};
+  ACC.pos={symbol:S.symbol,side,dir:side==="BUY"?1:-1,entry,lot,sl,tp,tp1:Number.isFinite(tp1)?tp1:null,contract:curContract(),time:new Date().toISOString()};
   saveAcc();renderPosition();renderCalc();draw();
 }
 
@@ -1495,6 +1511,19 @@ function closePosition(price,reason){
 
 function checkStops(price){
   const pos=ACC.pos;if(!pos)return;
+  if(Number.isFinite(pos.tp1)&&!pos.partial&&(pos.dir>0?price>=pos.tp1:price<=pos.tp1)){
+    // take half at TP1 and move the stop to entry
+    const half=Math.floor(pos.lot/2*100)/100;
+    if(half>=0.01){
+      const pnl=(pos.tp1-pos.entry)*pos.dir*pos.contract*half;
+      ACC.balance=(ACC.balance||0)+pnl;
+      ACC.history.unshift({symbol:SYM[posSym(pos)].name,side:pos.side,lot:half,entry:pos.entry,exit:pos.tp1,pnl,reason:"TP1 ½",time:new Date().toISOString()});
+      pos.lot=Math.round((pos.lot-half)*100)/100;
+    }
+    pos.partial=true;pos.sl=pos.entry;
+    saveAcc();renderHistory();$("pos-out").dataset.empty="1";renderPosition();renderGoal();draw();
+    return;
+  }
   if(Number.isFinite(pos.sl)&&(pos.dir>0?price<=pos.sl:price>=pos.sl))closePosition(pos.sl,"SL");
   else if(Number.isFinite(pos.tp)&&(pos.dir>0?price>=pos.tp:price<=pos.tp))closePosition(pos.tp,"TP");
 }
@@ -1678,11 +1707,6 @@ function setStratUI(){
   $("legend-range").style.display=S.strategy==="london"?"flex":"none";
   $("htf-toggle").style.display=S.strategy==="london"?"none":"";
 }
-$("be-toggle").checked=S.be;
-$("be-toggle").addEventListener("change",e=>{
-  S.be=e.target.checked;try{localStorage.setItem("fxa_be",S.be?"1":"0");}catch(_){}
-  recomputeSignals();draw();$("bt-out").innerHTML="";
-});
 function setSmcUI(){[...$("smc-pills").children].forEach(b=>b.setAttribute("aria-pressed",String(!!S.smcShow[b.dataset.smc])));}
 $("smc-pills").addEventListener("click",e=>{
   const b=e.target.closest("button[data-smc]");if(!b)return;

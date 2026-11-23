@@ -5,7 +5,9 @@
 //|  Entry : EMA20 vs EMA50 trend + MACD(12,26,9) + RSI(14) agree    |
 //|          (signal on the candle where all three first agree)      |
 //|  Filter: H1 EMA20/EMA50 trend must point the same way            |
-//|  Exit  : SL = ATR(14) x 1.5, TP = 2R                             |
+//|  Exit  : SL beyond the last swing (10 bars) +-0.25 ATR,          |
+//|          kept 0.75-3.5 ATR; TP1 = 1R closes half and moves SL    |
+//|          to entry; TP2 = 3R closes the rest                      |
 //|  Risk  : lot from % of balance, one position at a time,          |
 //|          stop for the day after 3 losses or -3%                  |
 //|                                                                  |
@@ -18,8 +20,12 @@
 
 //--- inputs
 input double InpRiskPercent    = 1.0;    // Risk per trade, % of balance
-input double InpSlAtrMult      = 1.5;    // Stop loss = ATR x this
-input double InpRewardRisk     = 2.0;    // Take profit = SL distance x this
+input int    InpSwingBars      = 10;     // Stop loss beyond the swing of the last N bars
+input double InpSwingBufferAtr = 0.25;   // Extra distance beyond the swing, x ATR
+input double InpMinStopAtr     = 0.75;   // Stop distance at least this x ATR
+input double InpMaxStopAtr     = 3.5;    // Stop distance at most this x ATR
+input double InpRewardRisk     = 3.0;    // Final take profit (TP2) = SL distance x this
+input bool   InpPartialAtTP1   = true;   // At 1R: close half and move SL to entry
 input bool   InpUseH1Filter    = true;   // Trade only with the H1 trend
 input int    InpMaxLossesDay   = 3;      // Stop for the day after N losses
 input double InpMaxDayLossPct  = 3.0;    // Stop for the day after this % loss
@@ -199,8 +205,68 @@ double LotForRisk(double slDistance, double &realRisk)
   }
 
 //+------------------------------------------------------------------+
+//| stop just beyond the last swing                                  |
+//+------------------------------------------------------------------+
+double StructureStop(int side, double entry, double atr)
+  {
+   int lowestBar  = iLowest(_Symbol, _Period, MODE_LOW, InpSwingBars, 1);
+   int highestBar = iHighest(_Symbol, _Period, MODE_HIGH, InpSwingBars, 1);
+   double swing = side > 0 ? iLow(_Symbol, _Period, lowestBar) : iHigh(_Symbol, _Period, highestBar);
+   double dist  = (entry - (swing - side * InpSwingBufferAtr * atr)) * side;
+   dist = MathMax(dist, InpMinStopAtr * atr);
+   dist = MathMin(dist, InpMaxStopAtr * atr);
+   return(entry - side * dist);
+  }
+
+//+------------------------------------------------------------------+
+//| at 1R: close half and move the stop to entry (once)              |
+//+------------------------------------------------------------------+
+void ManagePositions()
+  {
+   if(!InpPartialAtTP1)
+      return;
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+     {
+      ulong ticket = PositionGetTicket(i);
+      if(ticket == 0 || PositionGetString(POSITION_SYMBOL) != _Symbol ||
+         PositionGetInteger(POSITION_MAGIC) != InpMagic)
+         continue;
+      long   type  = PositionGetInteger(POSITION_TYPE);
+      double open  = PositionGetDouble(POSITION_PRICE_OPEN);
+      double sl    = PositionGetDouble(POSITION_SL);
+      double tp    = PositionGetDouble(POSITION_TP);
+      double vol   = PositionGetDouble(POSITION_VOLUME);
+      int    side  = (type == POSITION_TYPE_BUY) ? 1 : -1;
+      if(sl == 0.0 || (sl - open) * side >= 0)
+         continue;                              // already at breakeven (or no stop)
+      double risk  = (open - sl) * side;
+      double price = side > 0 ? SymbolInfoDouble(_Symbol, SYMBOL_BID) : SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+      if((price - open) * side < risk)
+         continue;                              // TP1 (1R) not reached yet
+
+      double step = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_STEP);
+      double minV = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
+      double half = MathFloor(vol / 2.0 / step) * step;
+      if(half >= minV && vol - half >= minV)
+        {
+         if(trade.PositionClosePartial(ticket, half))
+            PrintFormat("TP1: closed %.2f lot of %.2f", half, vol);
+         else
+            PrintFormat("Partial close failed: %d %s", trade.ResultRetcode(), trade.ResultRetcodeDescription());
+        }
+      int digits = (int)SymbolInfoInteger(_Symbol, SYMBOL_DIGITS);
+      if(trade.PositionModify(ticket, NormalizeDouble(open, digits), tp))
+         Print("TP1: stop moved to entry");
+      else
+         PrintFormat("Move to breakeven failed: %d %s", trade.ResultRetcode(), trade.ResultRetcodeDescription());
+     }
+  }
+
+//+------------------------------------------------------------------+
 void OnTick()
   {
+   ManagePositions();
+
    // work once per closed candle
    datetime bar = iTime(_Symbol, _Period, 0);
    if(bar == lastBar)
@@ -250,7 +316,8 @@ void OnTick()
    if(!Val(hAtr, 0, 1, atr) || atr <= 0)
       return;
 
-   double slDist = atr * InpSlAtrMult;
+   double refPrice = signal > 0 ? SymbolInfoDouble(_Symbol, SYMBOL_ASK) : SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   double slDist = MathAbs(refPrice - StructureStop(signal, refPrice, atr));
    int    digits = (int)SymbolInfoInteger(_Symbol, SYMBOL_DIGITS);
    double point  = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
    double minStop = SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL) * point;

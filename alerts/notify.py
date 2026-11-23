@@ -8,10 +8,12 @@ same rules as the website chart in "active" mode:
   signal  : EMA20/EMA50 trend + MACD(12,26,9) + RSI(14) agree, on the
             closed candle where all three first agree
   filter  : H1 EMA20/EMA50 trend must point the same way
-  levels  : SL = ATR(14) x 1.5, TP1/TP2/TP3 = 1R/2R/3R
+  levels  : SL just beyond the last swing (10 candles) +-0.25 ATR, 0.75-3.5 ATR
+            TP1 = 1R: close half, move SL to entry; TP2 = 3R: close the rest
 
 Every signal is written to a journal (forward test) and its result is
-followed until TP2 (+2R), SL (-1R) or 48 hours. Spread is subtracted.
+followed until TP2 (+2R in total), breakeven after TP1 (+0.5R), SL (-1R) or
+48 hours. Spread is subtracted.
 The journal lives on the `data` branch so it never redeploys the site.
 
 Environment:
@@ -122,6 +124,17 @@ def atr_series(p, period=14):
     return out
 
 
+def structure_stop(points, i, side, atr_value):
+    lows = [c["l"] for c in points[max(0, i - 9):i + 1]]
+    highs = [c["h"] for c in points[max(0, i - 9):i + 1]]
+    entry = points[i]["c"]
+    a = atr_value or abs(points[i]["h"] - points[i]["l"]) or 1.0
+    ext = min(lows) if side > 0 else max(highs)
+    dist = (entry - (ext - side * 0.25 * a)) * side
+    dist = min(max(dist, 0.75 * a), 3.5 * a)
+    return entry - side * dist
+
+
 def h1_trend_fn(h1):
     closes = [c["c"] for c in h1]
     a, b = ema(closes, 20), ema(closes, 50)
@@ -177,14 +190,15 @@ def fresh_signals(points, h1, tf, since):
         if h == 0 or h != side:
             continue
         entry = points[i]["c"]
-        risk = max(atr[i] * 1.5, 1e-9)
+        sl = structure_stop(points, i, side, atr[i])
+        risk = abs(entry - sl)
         out.append({
             "t": points[i]["t"],
             "close_t": close_time,
             "dir": side,
             "side": "BUY" if side > 0 else "SELL",
             "entry": round(entry, 2),
-            "sl": round(entry - side * risk, 2),
+            "sl": round(sl, 2),
             "tps": [round(entry + side * risk * k, 2) for k in (1, 2, 3)],
             "risk": risk,
             "rsi": r[i],
@@ -193,26 +207,31 @@ def fresh_signals(points, h1, tf, since):
 
 
 def follow(sig, points, sec, cost):
-    """Update an open journal entry from candles after the signal candle."""
+    """Update an open journal entry: half at TP1 (1R) then stop at entry, rest at TP2 (3R)."""
     d = 1 if sig["side"] == "BUY" else -1
-    entry, sl, tp1, tp2 = sig["entry"], sig["sl"], sig["tps"][0], sig["tps"][1]
+    entry, sl, tp1, tp2 = sig["entry"], sig["sl"], sig["tps"][0], sig["tps"][2]
     risk = abs(entry - sl) or 1e-9
     after = [c for c in points if c["t"] >= sig["t"] + sec and c["t"] + sec <= time.time()]
-    tp1_hit = sig.get("tp1_hit", False)
+    half = False                                  # replayed from the candles every run
     for c in after:
-        if (d > 0 and c["l"] <= sl) or (d < 0 and c["h"] >= sl):   # stop first (conservative)
-            sig.update(status="SL", closed_t=c["t"] + sec, r=round(-1 - cost / risk, 2), tp1_hit=tp1_hit)
+        stop = entry if half else sl
+        if (d > 0 and c["l"] <= stop) or (d < 0 and c["h"] >= stop):   # stop first (conservative)
+            if half:
+                sig.update(status="BE", closed_t=c["t"] + sec, r=round(0.5 - cost / risk, 2), tp1_hit=True)
+            else:
+                sig.update(status="SL", closed_t=c["t"] + sec, r=round(-1 - cost / risk, 2), tp1_hit=False)
             return
-        if (d > 0 and c["h"] >= tp1) or (d < 0 and c["l"] <= tp1):
-            tp1_hit = True
-        if (d > 0 and c["h"] >= tp2) or (d < 0 and c["l"] <= tp2):
+        if not half and ((d > 0 and c["h"] >= tp1) or (d < 0 and c["l"] <= tp1)):
+            half = True
+        if half and ((d > 0 and c["h"] >= tp2) or (d < 0 and c["l"] <= tp2)):
             sig.update(status="TP2", closed_t=c["t"] + sec, r=round(2 - cost / risk, 2), tp1_hit=True)
             return
-    sig["tp1_hit"] = tp1_hit
+    sig["tp1_hit"] = half
     if after and time.time() - sig["close_t"] > EXPIRE:
         last = after[-1]["c"]
-        sig.update(status="EXPIRED", closed_t=after[-1]["t"] + sec,
-                   r=round((last - entry) * d / risk - cost / risk, 2))
+        open_r = (last - entry) * d / risk
+        r = 0.5 + 0.5 * open_r if half else open_r
+        sig.update(status="EXPIRED", closed_t=after[-1]["t"] + sec, r=round(r - cost / risk, 2))
 
 
 # ---------------------------------------------------------------- telegram
@@ -226,10 +245,9 @@ def message(symbol, tf, s, news):
     lines = [
         f"{icon} <b>{name} {tf.upper()} {s['side']}</b>",
         f"Entry: {fmt(s['entry'])}",
-        f"Stop loss: {fmt(s['sl'])} ({fmt(s['risk'])}$ зай)",
-        f"TP1: {fmt(s['tps'][0])}  (хүрвэл SL-ээ entry рүү зөө)",
-        f"TP2: {fmt(s['tps'][1])}  ← зорилт (2R)",
-        f"TP3: {fmt(s['tps'][2])}",
+        f"Stop loss: {fmt(s['sl'])}  (сүүлийн swing-ийн цаана, {fmt(s['risk'])}$)",
+        f"TP1: {fmt(s['tps'][0])}  → хагасыг хааж, SL-ээ {fmt(s['entry'])} (entry) рүү зөө",
+        f"TP2: {fmt(s['tps'][2])}  → үлдсэнийг хаа (3R)",
         f"H1 чиглэл: {'өсөх ↑' if s['side'] == 'BUY' else 'буурах ↓'} · RSI {s['rsi']:.0f}",
     ]
     if news:
