@@ -145,6 +145,12 @@ summary{cursor:pointer;font-weight:600;font-size:13px;min-height:28px;display:fl
 .meter{position:relative;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--sell) 0 30%,#DDD3C6 30% 70%,var(--green) 70% 100%)}
 .meter i{position:absolute;top:-4px;width:4px;height:14px;border-radius:2px;background:var(--text);left:50%;transition:left .3s}
 .bt{width:100%;border-collapse:collapse;font-size:13px}.bt th,.bt td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:right}.bt th:first-child,.bt td:first-child{text-align:left;color:var(--muted);font-weight:500}.bt td{font-family:var(--mono);font-weight:700}
+.jr-pills{display:flex;gap:4px;background:var(--inner);border-radius:12px;padding:4px;width:max-content;max-width:100%;flex-wrap:wrap}
+.jr-pills button{min-height:40px;border:0;border-radius:9px;padding:0 14px;font:700 13px var(--mono);cursor:pointer;background:transparent;color:var(--text2)}
+.jr-pills button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.last10{display:flex;gap:4px;flex-wrap:wrap}
+.last10 span{min-width:46px;text-align:center;padding:6px 4px;border-radius:8px;font:700 12px var(--mono);background:var(--inner)}
+.last10 span.w{background:#E4EEEA;color:var(--accent)}.last10 span.l{background:#F6E4DF;color:#8E3B28}
 .mtf{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .mtf b{font:700 12px var(--mono);padding:4px 8px;border-radius:8px;background:var(--inner)}
 .mtf b.up{color:var(--green)}.mtf b.dn{color:var(--sell)}
@@ -335,6 +341,11 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
     <section class="card">
       <div class="ai-head"><h2>Бодит журнал · forward test</h2><span class="tag" id="jr-tag">LIVE</span></div>
       <p class="note" style="font-size:13px">BTCUSD, XAUUSD-ийн M5, M15 дээр гарсан сигнал бүрийг 5 минут тутам автоматаар бүртгэж, TP1-д хагасыг хааж, TP2 (3R) / SL / breakeven эсвэл 48 цагийн дотор юу болсныг тэмдэглэнэ (spread хассан). Энэ бол өнгөрсөн биш, <b>бодитоор</b> гарсан үр дүн.</p>
+      <div class="jr-pills" role="group" aria-label="Журналын зах" id="jr-pills">
+        <button type="button" data-jr="all" aria-pressed="true">Бүгд</button>
+        <button type="button" data-jr="btc" aria-pressed="false">BTCUSD</button>
+        <button type="button" data-jr="xau" aria-pressed="false">XAUUSD</button>
+      </div>
       <div id="jr-out"><p class="note">Ачаалж байна...</p></div>
     </section>
 
@@ -1378,28 +1389,52 @@ async function loadJournal(){
     renderJournal(await r.json());
   }catch(err){el.innerHTML=`<p class="note">Журнал ачаалсангүй (${esc(err.message)}).</p>`;}
 }
+let JR=null,JR_FILTER=(()=>{try{return localStorage.getItem("fxa_jr")||"all";}catch(_){return "all";}})();
 function renderJournal(j){
-  const list=(j.signals||[]).slice().reverse(),done=list.filter(s=>s.status!=="open");
-  const total=done.reduce((a,s)=>a+(s.r||0),0),wins=done.filter(s=>(s.r||0)>0).length;
-  const since=j.started?new Date(j.started*1000).toLocaleDateString():"";
-  const by=k=>{const d=done.filter(s=>s.sym+"-"+s.tf===k);return d.length?`${d.reduce((a,s)=>a+(s.r||0),0).toFixed(1)}R (${d.length})`:"—";};
+  if(j)JR=j;
+  if(!JR)return;
+  const sig=(JR.signals||[]).filter(s=>JR_FILTER==="all"||s.sym===JR_FILTER);
+  const list=sig.slice().reverse(),done=list.filter(s=>s.status!=="open"&&s.r!=null);
+  const total=done.reduce((a,s)=>a+s.r,0),wins=done.filter(s=>s.r>0).length;
+  const since=JR.started?new Date(JR.started*1000).toLocaleDateString():"";
+  const riskUsd=ACC.balance>0?ACC.balance*(ACC.riskPct||1)/100:null;
+  const usd=r=>riskUsd?` (${r>=0?"+":"-"}$${fmt(Math.abs(r*riskUsd))})`:"";
+  const by=k=>{const d=done.filter(s=>s.sym+"-"+s.tf===k);return d.length?`${d.reduce((a,s)=>a+s.r,0).toFixed(1)}R (${d.length})`:"—";};
   const st={TP2:'<b class="pos">✓ TP2</b>',TP:'<b class="pos">✓ TP2</b>',BE:'<b class="pos">½ TP1+BE</b>',SL:'<b class="neg">✗ SL</b>',EXPIRED:'<b>⌛ хугацаа</b>',open:'<b class="WAIT">● нээлттэй</b>'};
-  let html=`<div class="kv">
+  const name={all:"Бүх зах",btc:"BTCUSD",xau:"XAUUSD"}[JR_FILTER];
+
+  // last 10 closed signals
+  const last10=done.slice(0,10),l10=last10.reduce((a,s)=>a+s.r,0),l10w=last10.filter(s=>s.r>0).length;
+  let html=`<div class="instr ${l10>=0?"":"SELL"}" style="display:flex;flex-direction:column;gap:8px">
+    <div><b>${name} · сүүлийн ${last10.length} сигнал:</b> ${l10w} ашигтай, ${last10.length-l10w} алдагдалтай ·
+      нийт <b class="${l10>=0?"pos":"neg"}">${l10>=0?"+":""}${l10.toFixed(1)}R${usd(l10)}</b></div>
+    <div class="last10">${last10.slice().reverse().map(s=>`<span class="${s.r>0?"w":"l"}" title="${esc(s.name)} ${esc(s.tf)} ${esc(s.side)} · ${esc(s.status)}">${s.r>0?"+":""}${s.r.toFixed(1)}</span>`).join("")||'<span class="note">Хаагдсан сигнал алга</span>'}</div>
+    ${riskUsd?`<div class="note">Доллар нь таны баланс ${money(ACC.balance)}, ${fmt(ACC.riskPct||1,1)}% эрсдэлээр (1R = ${money(riskUsd)}) тооцсон.</div>`:`<div class="note">Балансаа «Данс ба лот тооцоолуур» хэсэгт оруулбал $-оор харуулна.</div>`}
+  </div>
+  <div class="kv">
     <div><span>Эхэлсэн</span><b>${since||"—"}</b></div>
     <div><span>Хаагдсан сигнал</span><b>${done.length}</b></div>
     <div><span>Нийт үр дүн</span><b class="${total>=0?"pos":"neg"}">${total>=0?"+":""}${total.toFixed(1)}R</b></div>
-    <div><span>Ялалт</span><b>${done.length?Math.round(wins/done.length*100)+"%":"—"}</b></div>
-    <div><span>BTC M5 / M15</span><b style="font-size:12px">${by("btc-5m")} · ${by("btc-15m")}</b></div>
-    <div><span>Алт M5 / M15</span><b style="font-size:12px">${by("xau-5m")} · ${by("xau-15m")}</b></div>
+    <div><span>Ашигтай</span><b>${done.length?Math.round(wins/done.length*100)+"%":"—"}</b></div>
+    ${JR_FILTER!=="xau"?`<div><span>BTC M5 / M15</span><b style="font-size:12px">${by("btc-5m")} · ${by("btc-15m")}</b></div>`:""}
+    ${JR_FILTER!=="btc"?`<div><span>Алт M5 / M15</span><b style="font-size:12px">${by("xau-5m")} · ${by("xau-15m")}</b></div>`:""}
   </div>`;
   if(done.length<30)html+=`<p class="note">Дүгнэлт хийхэд дор хаяж 30–50 хаагдсан сигнал хэрэгтэй.</p>`;
-  html+=`<div class="jr-wrap"><table class="jr"><thead><tr><th>Цаг</th><th>Зах</th><th>Чиглэл</th><th>Entry</th><th>Үр дүн</th><th>R</th></tr></thead><tbody>`+
+  html+=`<div class="jr-wrap"><table class="jr"><thead><tr><th>Цаг</th><th>Зах</th><th>Чиглэл</th><th>Entry</th><th>Үр дүн</th><th>R</th>${riskUsd?"<th>$</th>":""}</tr></thead><tbody>`+
     list.slice(0,40).map(s=>{const d=new Date(s.close_t*1000);
-      return `<tr><td>${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}</td><td>${esc(s.name)} ${esc(s.tf.toUpperCase())}${s.news?' <span title="'+esc(s.news)+'">⚠️</span>':""}</td><td class="${esc(s.side)}"><b>${esc(s.side)}</b></td><td class="n">${fmt(s.entry)}</td><td>${st[s.status]||esc(s.status)}</td><td class="n ${s.r>0?"pos":s.r<0?"neg":""}">${s.r==null?"":(s.r>0?"+":"")+s.r.toFixed(2)}</td></tr>`;}).join("")+
+      return `<tr><td>${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}</td><td>${esc(s.name)} ${esc(s.tf.toUpperCase())}${s.news?' <span title="'+esc(s.news)+'">⚠️</span>':""}</td><td class="${esc(s.side)}"><b>${esc(s.side)}</b></td><td class="n">${fmt(s.entry)}</td><td>${st[s.status]||esc(s.status)}</td><td class="n ${s.r>0?"pos":s.r<0?"neg":""}">${s.r==null?"":(s.r>0?"+":"")+s.r.toFixed(2)}</td>${riskUsd?`<td class="n ${s.r>0?"pos":s.r<0?"neg":""}">${s.r==null?"":sgnMoney(s.r*riskUsd)}</td>`:""}</tr>`;}).join("")+
     `</tbody></table></div>`;
+  if(!list.length)html=`<p class="note">${name}-д одоогоор бүртгэгдсэн сигнал алга.</p>`;
   $("jr-out").innerHTML=html;
-  $("jr-tag").textContent=j.updated?`шинэчилсэн ${new Date(j.updated*1000).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}`:"LIVE";
+  $("jr-tag").textContent=JR.updated?`шинэчилсэн ${new Date(JR.updated*1000).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}`:"LIVE";
 }
+function setJrUI(){[...$("jr-pills").children].forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.jr===JR_FILTER)));}
+$("jr-pills").addEventListener("click",e=>{
+  const b=e.target.closest("button[data-jr]");if(!b)return;
+  JR_FILTER=b.dataset.jr;try{localStorage.setItem("fxa_jr",JR_FILTER);}catch(_){}
+  setJrUI();renderJournal();
+});
+setJrUI();
 
 function refreshPlan(){
   S.plan=buildPlan();
@@ -1611,7 +1646,7 @@ function initAccountUI(){
     ACC.balance=b;ACC.riskPct=clamp(r||1,0.1,10);
     const ct=num($("in-contract").value);if(ct>0)ACC.contracts[S.symbol]=ct;
     if(ACC.goalMonth!==monthKey()){ACC.goalMonth=monthKey();ACC.monthStart=b;}
-    saveAcc();renderCalc();renderPosition();renderGoal();
+    saveAcc();renderCalc();renderPosition();renderGoal();renderJournal();
   });
   ["in-risk","in-contract"].forEach(id=>$(id).addEventListener("change",()=>{
     ACC.riskPct=clamp(num($("in-risk").value)||1,0.1,10);
