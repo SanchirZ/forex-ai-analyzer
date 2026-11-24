@@ -176,7 +176,50 @@
    "alerted": false,
    "tp1_hit": true,
    "closed_t": 1795478700
+  },
+  {
+   "id": "xau-5m-1795537200",
+   "sym": "xau",
+   "name": "XAUUSD",
+   "tf": "5m",
+   "side": "SELL",
+   "t": 1795537200,
+   "close_t": 1795537500,
+   "entry": 3569.8,
+   "sl": 3596.51,
+   "tps": [
+    3543.09,
+    3516.38,
+    3489.66
+   ],
+   "status": "open",
+   "r": null,
+   "news": null,
+   "alerted": false,
+   "tp1_hit": false
+  },
+  {
+   "id": "btc-5m-1795539300",
+   "sym": "btc",
+   "name": "BTCUSD",
+   "tf": "5m",
+   "side": "SELL",
+   "t": 1795539300,
+   "close_t": 1795539600,
+   "entry": 59337.08,
+   "sl": 59851.35,
+   "tps": [
+    58822.81,
+    58308.55,
+    57794.28
+   ],
+   "status": "SL",
+   "r": -1.05,
+   "news": null,
+   "alerted": false,
+   "closed_t": 1795540500,
+   "tp1_hit": false
   }
  ],
- "updated": 1795500580
+ "updated": 1795542432
 }
