@@ -170,12 +170,13 @@
     3612.08,
     3600.17
    ],
-   "status": "open",
-   "r": null,
+   "status": "BE",
+   "r": 0.47,
    "news": null,
    "alerted": false,
-   "tp1_hit": false
+   "tp1_hit": true,
+   "closed_t": 1795478700
   }
  ],
- "updated": 1795472111
+ "updated": 1795500580
 }
