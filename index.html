@@ -263,6 +263,7 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
       <div class="pills" role="group" aria-label="Стратеги" id="strat-pills">
         <button type="button" data-strat="trend" aria-pressed="true" title="EMA/MACD/RSI + H1 чиглэл">Trend</button>
         <button type="button" data-strat="london" aria-pressed="false" title="Азийн range-ийн Лондоны breakout (зөвхөн алт)">London</button>
+        <button type="button" data-strat="lit" aria-pressed="false" title="LIT: liquidity sweep (stop цохилт) → CHoCH баталгаа → entry">LIT</button>
       </div>
       <div class="zoom"><button type="button" id="sig-toggle" aria-pressed="true" style="padding:0 12px">BUY/SELL сигнал</button><button type="button" id="active-toggle" aria-pressed="true" style="padding:0 12px" title="Бүх шинэ сигналыг харуулна, M1-ийг асаана">⚡ Идэвхтэй</button><button type="button" id="notify-toggle" aria-pressed="false" style="padding:0 12px" title="Шинэ сигнал гарахад мэдэгдэл, дуу">🔔 Мэдэгдэл</button><button type="button" id="htf-toggle" aria-pressed="true" style="padding:0 12px" title="M1–M30 сигналыг зөвхөн H1-ийн чиглэлээр гаргана">H1 шүүлтүүр</button></div>
     </div>
@@ -279,6 +280,7 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
     <span><i class="sw" style="border:1px solid #5B8DEF;background:rgba(91,141,239,.2)"></i>FVG</span>
     <span><i style="width:14px;border-top:2px dashed #B39DDB"></i>CHoCH/BOS</span>
     <span><i style="width:14px;border-top:2px dashed #D1D4DC"></i>Зорилт / SL</span>
+    <span id="legend-lit" style="display:none"><i class="sw" style="border-top:2px dashed #E0A84A;height:0;width:14px"></i>Liquidity sweep (цохигдсон swing)</span>
     <span id="legend-range" style="display:none"><i class="sw" style="border:1px solid #E0A84A;background:rgba(224,168,74,.12)"></i>Азийн range (00–07 UTC)</span>
     <span><i class="sw" style="background:rgba(41,98,255,.25)"></i>Лондон</span>
     <span><i class="sw" style="background:rgba(156,39,176,.25)"></i>Нью-Йорк</span>
@@ -437,7 +439,7 @@ const SYM={xau:{name:"XAUUSD",label:"Алтны үнэ · USD/oz",sub:"Алт ·
   btc:{name:"BTCUSD",label:"Bitcoin үнэ · USD",sub:"Bitcoin · BTCUSD · SMC + техник шинжилгээ",unit:"BTC",src:"Coinbase",def:1,cost:25}};
 const savedSym=(()=>{try{return localStorage.getItem("fxa_symbol");}catch(_){return null;}})();
 const S={symbol:SYM[savedSym]?savedSym:"xau",posPrice:null,tf:"5m",candles:[],smc:null,price:null,priceAsOf:null,overall:"WAIT",sigs:[],m5:[],ai:null,plan:null,
-  anim:null,lastShown:null,sigEvents:[],showSig:true,news:[],mtf:{},smcShow:(()=>{try{return Object.assign({ob:true,fvg:true,bos:true,sess:true,news:true},JSON.parse(localStorage.getItem("fxa_smc")||"{}"));}catch(_){return {ob:true,fvg:true,bos:true,sess:true,news:true};}})(),active:(()=>{try{return localStorage.getItem("fxa_active")!=="0";}catch(_){return true;}})(),strategy:(()=>{try{return localStorage.getItem("fxa_strategy")==="london"?"london":"trend";}catch(_){return "trend";}})(),ranges:[],htfOn:true,h1:[],htf:null,h1At:0,planBlock:null};
+  anim:null,lastShown:null,sigEvents:[],showSig:true,news:[],mtf:{},smcShow:(()=>{try{return Object.assign({ob:true,fvg:true,bos:true,sess:true,news:true},JSON.parse(localStorage.getItem("fxa_smc")||"{}"));}catch(_){return {ob:true,fvg:true,bos:true,sess:true,news:true};}})(),active:(()=>{try{return localStorage.getItem("fxa_active")!=="0";}catch(_){return true;}})(),strategy:(()=>{try{return (v=>["london","lit"].includes(v)?v:"trend")(localStorage.getItem("fxa_strategy"));}catch(_){return "trend";}})(),ranges:[],htfOn:true,h1:[],htf:null,h1At:0,planBlock:null};
 const view={count:90,offset:0,yAuto:true,yZoom:1,yShift:0};
 const hover={on:false,x:0,y:0};
 let layout=null;
@@ -638,6 +640,69 @@ function londonSignals(p,tf){
   return {ev,ranges};
 }
 
+/* LIT (Liquidity Inducement Theorem), coded version:
+   1. Swing points are fractals confirmed 3 candles later (no look-ahead).
+   2. Liquidity sweep: a candle wicks beyond a recent swing low/high (the inducement / stops)
+      by at most 1.5 ATR and closes back inside it.
+   3. Confirmation (CHoCH): within the next 8 candles one closes beyond the high/low of the
+      pullback that led into the sweep. Entry on that close.
+   4. Stop just beyond the sweep extreme (+0.1 ATR, kept 0.5-3.5 ATR); half at 1R, stop to entry, rest at 3R.
+   5. Optional H1 filter: only with the H1 trend. */
+function litSignals(p,tf=S.tf,H=null,active=false,K=3){
+  const n=p.length,ev=[],marks=[];
+  if(n<60)return {ev,marks};
+  const sec=TF_SEC[tf],useH=H&&HTF_TFS.includes(tf),at=atrArr(p);
+  const hiP=[],loP=[];                       // confirmed swing points {i,v}
+  let setup=null,busyUntil=-1,lastSide=null;
+  for(let i=2*K;i<n-1;i++){                  // closed candles only
+    const c=i-K;                             // pivot candidate confirmed at i
+    let isH=true,isL=true;
+    for(let k=c-K;k<=c+K;k++){if(k===c)continue;if(p[k].h>=p[c].h)isH=false;if(p[k].l<=p[c].l)isL=false;}
+    if(isH)hiP.push({i:c,v:p[c].h});
+    if(isL)loP.push({i:c,v:p[c].l});
+    const a=at[i];if(a==null)continue;
+    // 3. confirmation of an open setup
+    if(setup){
+      if(i-setup.at>8){setup=null;}
+      else{
+        const s=setup;
+        s.ext=s.dir>0?Math.min(s.ext,p[i].l):Math.max(s.ext,p[i].h);
+        if(s.dir>0?p[i].c>s.trig:p[i].c<s.trig){
+          setup=null;
+          const dir=s.dir,side=dir>0?"BUY":"SELL";
+          if(!active&&i<=busyUntil)continue;
+          if(useH){const d=htfDirAt(p[i].t+sec,H);if(d!==0&&d!==dir)continue;}
+          const entry=p[i].c;
+          let dist=(entry-(s.ext-dir*0.1*a))*dir;
+          dist=Math.min(Math.max(dist,0.5*a),3.5*a);
+          const sl=entry-dir*dist,tps=[1,2,3].map(k=>entry+dir*dist*k);
+          const mt=manageTrade(p,i,dir,entry,sl,tps);
+          busyUntil=mt.exit;lastSide=side;
+          ev.push({i,side,dir,entry,sl,tps,result:mt.result,r:mt.r,sweep:s.si,liq:s.lvl});
+          marks.push({from:s.li,to:s.si,price:s.lvl,dir});
+          continue;
+        }
+      }
+    }
+    // 2. new liquidity sweep on this candle
+    const recent=(arr)=>arr.filter(q=>q.i>=i-40&&q.i<i-1);
+    for(const q of recent(loP).slice(-3).reverse()){
+      if(p[i].l<q.v&&p[i].c>q.v&&q.v-p[i].l<=1.5*a&&!q.used){
+        let trig=-Infinity;for(let k=Math.max(q.i,i-6);k<=i;k++)trig=Math.max(trig,p[k].h);
+        q.used=true;setup={dir:1,at:i,si:i,li:q.i,lvl:q.v,ext:p[i].l,trig};break;
+      }
+    }
+    if(setup&&setup.at===i)continue;
+    for(const q of recent(hiP).slice(-3).reverse()){
+      if(p[i].h>q.v&&p[i].c<q.v&&p[i].h-q.v<=1.5*a&&!q.used){
+        let trig=Infinity;for(let k=Math.max(q.i,i-6);k<=i;k++)trig=Math.min(trig,p[k].l);
+        q.used=true;setup={dir:-1,at:i,si:i,li:q.i,lvl:q.v,ext:p[i].h,trig};break;
+      }
+    }
+  }
+  return {ev,marks};
+}
+
 function btStats(ev,cost=SYM[S.symbol].cost){
   const done=ev.filter(e=>e.r!=null);
   let cum=0,peak=0,dd=0,wins=0;
@@ -661,7 +726,7 @@ function renderSigStats(){
   const warn1m=S.tf==="1m"?`<b style="color:#E0A84A">M1 анхааруулга:</b> spread их тул backtest-ээр BTC M1 алдагдалтай гарсан. Зөвхөн M5/M15-ийн чиглэлтэй таарсан үед, бага лотоор. `:"";
   el.innerHTML=warn1m+`Энэ график дээрх ${st.n} дууссан сигналаас <b>${st.wins}</b> ✓ ашигтай (TP2 +2R эсвэл TP1-ийн дараа BE +0.5R), <b>${st.n-st.wins}</b> ✗ SL (−1R), spread-тай`+
     (st.n?` · нийт <b>${st.total>=0?"+":""}${st.total}R</b>`:"")+`. Сүүлийн сигнал: <b style="color:${last.side==="BUY"?"#089981":"#F23645"}">${last.side}</b> @ ${fmt(last.entry)} · ${last.result==="open"?"идэвхтэй":last.result==="TP1"?"TP1 авсан, үлдсэн нь нээлттэй":last.result}. `+
-    (S.strategy==="london"?`London: 16:00 UTC хүртэл TP2/SL-д хүрээгүй бол тэр үеийн үнээр хаасан гэж тооцно (✓/✗ нь ашиг/алдагдал).`:`Арга: SL — сүүлийн 10 лааны swing-ийн цаана; TP1 (1R)-д хагасыг хааж SL-ийг entry рүү зөөнө; үлдсэнийг TP2 (3R)-д хаана.`);
+    (S.strategy==="lit"?`LIT: swing-ийн stop-уудыг цохисон (sweep) лааны дараа 8 лаан дотор pullback-ийн оройг close-оор эвдвэл (CHoCH) орно. SL — sweep хийсэн оройн цаана; TP1 (1R)-д хагасыг хааж SL-ийг entry рүү зөөнө; үлдсэнийг 3R-д хаана.`:S.strategy==="london"?`London: 16:00 UTC хүртэл TP2/SL-д хүрээгүй бол тэр үеийн үнээр хаасан гэж тооцно (✓/✗ нь ашиг/алдагдал).`:`Арга: SL — сүүлийн 10 лааны swing-ийн цаана; TP1 (1R)-д хагасыг хааж SL-ийг entry рүү зөөнө; үлдсэнийг TP2 (3R)-д хаана.`);
 }
 
 /* ---------- Trade plan (where price is expected to go) ---------- */
@@ -832,6 +897,18 @@ function draw(){
       const xa=x(r.from)-barW/2,xb=x(r.to)+barW/2,ya=y(r.hi),yb=y(r.lo);
       ctx.fillStyle="rgba(224,168,74,.10)";ctx.fillRect(xa,ya,xb-xa,yb-ya);
       ctx.strokeStyle="rgba(224,168,74,.6)";ctx.setLineDash([4,3]);ctx.strokeRect(xa,ya,xb-xa,yb-ya);ctx.setLineDash([]);
+    });
+  }
+
+  // LIT: swept liquidity levels (swing point -> sweep candle)
+  if(S.showSig&&S.litMarks&&S.litMarks.length){
+    ctx.font="600 9px Inter, Arial";
+    S.litMarks.forEach(m=>{
+      if(m.to<i0||m.from>=i1)return;
+      const yy=y(m.price),xa=x(m.from),xb=x(m.to)+barW;
+      ctx.strokeStyle="#E0A84A";ctx.lineWidth=1;ctx.setLineDash([3,3]);
+      ctx.beginPath();ctx.moveTo(xa,yy);ctx.lineTo(xb,yy);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle="#E0A84A";ctx.textAlign="left";ctx.fillText(m.dir>0?"SSL sweep":"BSL sweep",xa+2,m.dir>0?yy+11:yy-4);
     });
   }
 
@@ -1306,12 +1383,13 @@ async function loadData(){
 }
 
 function recomputeSignals(){
-  S.ranges=[];
+  S.ranges=[];S.litMarks=[];
   if(S.tf==="1m"&&!S.active)S.sigEvents=[];
   else if(S.strategy==="london"){
     if(S.symbol==="xau"){const L=londonSignals(S.candles,S.tf);S.sigEvents=L.ev;S.ranges=L.ranges;}
     else S.sigEvents=[];
   }
+  else if(S.strategy==="lit"){const L=litSignals(S.candles,S.tf,S.htfOn?S.htf:null,S.active);S.sigEvents=L.ev;S.litMarks=L.marks;}
   else S.sigEvents=computeSignals(S.candles,S.tf,S.htfOn?S.htf:null,S.active);
   renderSigStats();
   notifyNewSignal();
@@ -1370,10 +1448,11 @@ async function runBacktest(){
     const H=hr.ok?buildHTF(clean((await hr.json()).points||[]).slice(0,-1)):null;
     if(p.length<80)throw new Error("Хангалттай лаа алга");
     const cost=SYM[sym].cost;
-    const london=S.strategy==="london";
+    const london=S.strategy==="london",litS=S.strategy==="lit";
     if(london&&sym!=="xau")throw new Error("London breakout зөвхөн XAUUSD дээр");
-    const withF=london?btStats(londonSignals(p,tf).ev,cost):btStats(computeSignals(p,tf,H,S.active),cost),
-          noF=london?withF:btStats(computeSignals(p,tf,null,S.active),cost);
+    const gen=(h)=>litS?litSignals(p,tf,h,S.active).ev:computeSignals(p,tf,h,S.active);
+    const withF=london?btStats(londonSignals(p,tf).ev,cost):btStats(gen(H),cost),
+          noF=london?withF:btStats(gen(null),cost);
     const days=(p[p.length-1].t-p[0].t)/86400;
     const risk=ACC.riskPct||1;
     const col=(st,k)=>{
@@ -1383,7 +1462,7 @@ async function runBacktest(){
     };
     const rows=[["Дууссан сигнал","n"],["Ашигтай арилжаа","rate"],["Нийт үр дүн","total"],["Дундаж / арилжаа","avg"],["Хамгийн их уналт","dd"],[`${fmt(risk,1)}% эрсдэлээр`,"pct"]];
     const useH=!london&&HTF_TFS.includes(tf);
-    let html=`<p class="note" style="font-size:12px">${london?"London breakout":"Trend"+(S.active?" · идэвхтэй":"")} · ${SYM[sym].name} · ${tf} · ${p.length} лаа ≈ ${fmt(days,1)} өдөр · spread ≈ ${cost}$ арилжаа бүрт тооцсон</p>
+    let html=`<p class="note" style="font-size:12px">${london?"London breakout":(litS?"LIT":"Trend")+(S.active?" · идэвхтэй":"")} · ${SYM[sym].name} · ${tf} · ${p.length} лаа ≈ ${fmt(days,1)} өдөр · spread ≈ ${cost}$ арилжаа бүрт тооцсон</p>
       <table class="bt"><thead><tr><th></th>${useH?"<th>H1 шүүлтүүртэй</th>":""}<th>${london?"London breakout":"Шүүлтүүргүй"}</th></tr></thead><tbody>`+
       rows.map(([lab,k])=>`<tr><td>${lab}</td>${useH?col(withF,k):""}${col(noF,k)}</tr>`).join("")+`</tbody></table>`;
     const best=useH?withF:noF;
@@ -1804,6 +1883,7 @@ function setStratUI(){
   [...$("strat-pills").children].forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.strat===S.strategy)));
   $("legend-range").style.display=S.strategy==="london"?"flex":"none";
   $("htf-toggle").style.display=S.strategy==="london"?"none":"";
+  $("legend-lit").style.display=S.strategy==="lit"?"flex":"none";
 }
 function setSmcUI(){[...$("smc-pills").children].forEach(b=>b.setAttribute("aria-pressed",String(!!S.smcShow[b.dataset.smc])));}
 $("smc-pills").addEventListener("click",e=>{
