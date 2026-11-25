@@ -259,6 +259,8 @@ footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
         <button type="button" data-smc="bos" aria-pressed="true" title="CHoCH / BOS харуулах/нуух">CHoCH</button>
         <button type="button" data-smc="sess" aria-pressed="true" title="Лондон, Нью-Йоркийн сешнийг өнгөөр харуулах">Сешн</button>
         <button type="button" data-smc="news" aria-pressed="true" title="USD томоохон мэдээний цагийг харуулах">Мэдээ</button>
+        <button type="button" data-smc="vol" aria-pressed="true" title="Volume баар, 20 лааны дундаж, огцом өссөн volume">Volume</button>
+        <button type="button" data-smc="vp" aria-pressed="true" title="Volume Profile: аль үнэ дээр хамгийн их арилжаа хийгдсэн (POC, VAH, VAL)">Vol Profile</button>
       </div>
       <div class="pills" role="group" aria-label="Стратеги" id="strat-pills">
         <button type="button" data-strat="trend" aria-pressed="true" title="EMA/MACD/RSI + H1 чиглэл">Trend</button>
@@ -439,7 +441,7 @@ const SYM={xau:{name:"XAUUSD",label:"Алтны үнэ · USD/oz",sub:"Алт ·
   btc:{name:"BTCUSD",label:"Bitcoin үнэ · USD",sub:"Bitcoin · BTCUSD · SMC + техник шинжилгээ",unit:"BTC",src:"Coinbase",def:1,cost:25}};
 const savedSym=(()=>{try{return localStorage.getItem("fxa_symbol");}catch(_){return null;}})();
 const S={symbol:SYM[savedSym]?savedSym:"xau",posPrice:null,tf:"5m",candles:[],smc:null,price:null,priceAsOf:null,overall:"WAIT",sigs:[],m5:[],ai:null,plan:null,
-  anim:null,lastShown:null,sigEvents:[],showSig:true,news:[],mtf:{},smcShow:(()=>{try{return Object.assign({ob:true,fvg:true,bos:true,sess:true,news:true},JSON.parse(localStorage.getItem("fxa_smc")||"{}"));}catch(_){return {ob:true,fvg:true,bos:true,sess:true,news:true};}})(),active:(()=>{try{return localStorage.getItem("fxa_active")!=="0";}catch(_){return true;}})(),strategy:(()=>{try{return (v=>["london","lit"].includes(v)?v:"trend")(localStorage.getItem("fxa_strategy"));}catch(_){return "trend";}})(),ranges:[],htfOn:true,h1:[],htf:null,h1At:0,planBlock:null};
+  anim:null,lastShown:null,sigEvents:[],showSig:true,news:[],mtf:{},smcShow:(()=>{try{return Object.assign({ob:true,fvg:true,bos:true,sess:true,news:true,vol:true,vp:true},JSON.parse(localStorage.getItem("fxa_smc")||"{}"));}catch(_){return {ob:true,fvg:true,bos:true,sess:true,news:true,vol:true,vp:true};}})(),active:(()=>{try{return localStorage.getItem("fxa_active")!=="0";}catch(_){return true;}})(),strategy:(()=>{try{return (v=>["london","lit"].includes(v)?v:"trend")(localStorage.getItem("fxa_strategy"));}catch(_){return "trend";}})(),ranges:[],htfOn:true,h1:[],htf:null,h1At:0,planBlock:null};
 const view={count:90,offset:0,yAuto:true,yZoom:1,yShift:0};
 const hover={on:false,x:0,y:0};
 let layout=null;
@@ -768,6 +770,34 @@ function renderForecast(){
     <span class="src">${esc(p.src)} · таамаг, баталгаа биш</span>`;
 }
 
+/* ---------- Volume helpers ---------- */
+function volMA(p,per=20){
+  const out=new Array(p.length).fill(null);let s=0,k=0;
+  for(let i=0;i<p.length;i++){s+=p[i].v||0;k++;if(i>=per){s-=p[i-per].v||0;k--;}if(k===per&&s>0)out[i]=s/per;}
+  return out;
+}
+function fmtVol(v){return v>=1e6?fmt(v/1e6,2)+"M":v>=1e3?fmt(v/1e3,1)+"K":fmt(v,v<10?2:0);}
+/* each candle's volume is spread evenly over the price rows its range covers */
+function volumeProfile(cs,lo,hi,N=40){
+  if(!(hi>lo))return null;
+  const step=(hi-lo)/N,rows=Array.from({length:N},(_,k)=>({lo:lo+k*step,hi:lo+(k+1)*step,v:0}));
+  let tot=0;
+  cs.forEach(c=>{
+    if(!c.v)return;
+    const a=Math.max(0,Math.floor((c.l-lo)/step)),b=Math.min(N-1,Math.floor((c.h-lo)/step));
+    if(b<a)return;
+    const per=c.v/(b-a+1);for(let k=a;k<=b;k++)rows[k].v+=per;tot+=c.v;
+  });
+  if(!tot)return null;
+  let poc=0;rows.forEach((r,k)=>{if(r.v>rows[poc].v)poc=k;});
+  let vaLo=poc,vaHi=poc,acc=rows[poc].v;
+  while(acc<tot*0.7&&(vaLo>0||vaHi<N-1)){
+    const dn=vaLo>0?rows[vaLo-1].v:-1,up=vaHi<N-1?rows[vaHi+1].v:-1;
+    if(up>=dn){vaHi++;acc+=rows[vaHi].v;}else{vaLo--;acc+=rows[vaLo].v;}
+  }
+  return {rows,poc,vaLo,vaHi,maxV:rows[poc].v,pocPrice:(rows[poc].lo+rows[poc].hi)/2,vah:rows[vaHi].hi,val:rows[vaLo].lo};
+}
+
 /* ---------- Chart ---------- */
 function draw(){
   const cv=$("chart");
@@ -813,6 +843,7 @@ function draw(){
   if(pos){extra.push(pos.entry);if(pos.sl)extra.push(pos.sl);if(pos.tp)extra.push(pos.tp);}
   extra.forEach(v=>{if(Number.isFinite(v)){min=Math.min(min,v);max=Math.max(max,v);}});
   const pad=(max-min)*.08||1;min-=pad;max+=pad;
+  if(S.smcShow.vol&&vis.some(c=>c.v>0))min-=(max-min)*.25;   // keep candles above the volume pane
   if(!view.yAuto){                                   // manual price scale
     const mid=(min+max)/2+view.yShift,half=(max-min)/2*view.yZoom;
     min=mid-half;max=mid+half;
@@ -859,16 +890,23 @@ function draw(){
   ctx.fillText(`${SYM[S.symbol].name}, ${S.tf.toUpperCase()}`,left+plotW/2,top+plotH/2);
   ctx.restore();
 
-  // volume (bottom 18%, like TradingView)
+  // volume (bottom 20%, like TradingView): bars, 20-candle average, spikes (> 2x average) brighter
   const vmax=Math.max(0,...vis.map(c=>c.v||0));
-  if(vmax>0){
-    const vh=plotH*.18,vw=Math.max(1,Math.min(14,barW*.7));
+  if(S.smcShow.vol&&vmax>0){
+    const vh=plotH*.2,vb=top+plotH,vw=Math.max(1,Math.min(14,barW*.7));
+    const ma=volMA(p,20);
     for(let i=i0;i<i1;i++){
       const c=p[i];if(!c.v)continue;
-      const hh=c.v/vmax*vh;
-      ctx.fillStyle=c.c>=c.o?"rgba(8,153,129,.35)":"rgba(242,54,69,.35)";
-      ctx.fillRect(x(i)-vw/2,top+plotH-hh,vw,hh);
+      const hh=c.v/vmax*vh,spike=ma[i]&&c.v>2*ma[i],up=c.c>=c.o;
+      ctx.fillStyle=up?(spike?"rgba(8,153,129,.85)":"rgba(8,153,129,.38)"):(spike?"rgba(242,54,69,.85)":"rgba(242,54,69,.38)");
+      ctx.fillRect(x(i)-vw/2,vb-hh,vw,hh);
     }
+    ctx.strokeStyle="rgba(224,168,74,.9)";ctx.lineWidth=1.2;ctx.beginPath();let st=false;
+    for(let i=i0;i<i1;i++){if(!ma[i])continue;const yy=vb-ma[i]/vmax*vh;if(!st){ctx.moveTo(x(i),yy);st=true;}else ctx.lineTo(x(i),yy);}
+    ctx.stroke();
+    ctx.fillStyle=C.axis;ctx.font="600 10px Inter, Arial";ctx.textAlign="left";
+    const lv=p[Math.min(i1,n)-1];
+    ctx.fillText(`Volume ${lv&&lv.v?fmtVol(lv.v):"—"} · MA20 ${ma[Math.min(i1,n)-1]?fmtVol(ma[Math.min(i1,n)-1]):"—"}`,left+4,vb-vh-4);
   }
 
   // SMC zones (extend from origin candle to the latest candle)
@@ -898,6 +936,29 @@ function draw(){
       ctx.fillStyle="rgba(224,168,74,.10)";ctx.fillRect(xa,ya,xb-xa,yb-ya);
       ctx.strokeStyle="rgba(224,168,74,.6)";ctx.setLineDash([4,3]);ctx.strokeRect(xa,ya,xb-xa,yb-ya);ctx.setLineDash([]);
     });
+  }
+
+  // Volume Profile of the visible candles: volume traded at each price, POC and 70% value area
+  if(S.smcShow.vp&&vmax>0){
+    const vp=volumeProfile(vis,min,max,40);
+    if(vp){
+      const maxW=plotW*.22,x0=left+plotW,rowH=plotH/vp.rows.length;
+      vp.rows.forEach((r,k)=>{
+        if(!r.v)return;
+        const ww=r.v/vp.maxV*maxW,inVA=k>=vp.vaLo&&k<=vp.vaHi;
+        const yy=y(r.hi);
+        ctx.fillStyle=k===vp.poc?"rgba(224,168,74,.55)":inVA?"rgba(91,141,239,.28)":"rgba(178,181,190,.14)";
+        ctx.fillRect(x0-ww,yy+0.5,ww,Math.max(1,rowH-1));
+      });
+      const line=(v,col,lab,dash)=>{const yy=Math.round(y(v))+.5;ctx.strokeStyle=col;ctx.lineWidth=1;ctx.setLineDash(dash);
+        ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(left+plotW,yy);ctx.stroke();ctx.setLineDash([]);
+        ctx.fillStyle=col;ctx.font="600 10px Inter, Arial";ctx.textAlign="right";ctx.fillText(`${lab} ${fmt(v)}`,left+plotW-4,yy-3);};
+      line(vp.pocPrice,"rgba(224,168,74,.95)","POC",[]);
+      line(vp.vah,"rgba(91,141,239,.8)","VAH",[4,3]);
+      line(vp.val,"rgba(91,141,239,.8)","VAL",[4,3]);
+      ctx.textAlign="left";
+      S.vp=vp;
+    }
   }
 
   // LIT: swept liquidity levels (swing point -> sweep candle)
@@ -1214,7 +1275,7 @@ function wsStart(){
   // Kraken as the backup feed.
   const feeds={
     btc:[{url:"wss://ws-feed.exchange.coinbase.com",sub:{type:"subscribe",product_ids:["BTC-USD"],channels:["ticker"]},
-          parse:m=>m.type==="ticker"?{p:Number(m.price),t:m.time}:null}],
+          parse:m=>m.type==="ticker"?{p:Number(m.price),t:m.time,q:Number(m.last_size)||0}:null}],
     xau:[{url:"wss://stream.binance.com:9443/ws/paxgusdt@bookTicker",sub:null,
           parse:m=>m.s==="PAXGUSDT"?{p:(Number(m.b)+Number(m.a))/2}:null},
          {url:"wss://ws.kraken.com/v2",sub:{method:"subscribe",params:{channel:"ticker",symbol:["PAXG/USD"],event_trigger:"bbo"}},
@@ -1238,6 +1299,7 @@ function wsStart(){
       p=p+S.basis;
     }
     WS.alive=true;S.price=p;
+    if(q.q){rollCandle(p);const lc=S.candles[S.candles.length-1];if(lc&&Date.now()/1000>=lc.t)lc.v=(lc.v||0)+q.q;}   // live volume (BTC trades)
     const now=performance.now();
     if(now-WS.last<120)return;           // at most ~8 updates a second
     WS.last=now;
