@@ -905,8 +905,8 @@ function draw(){
     for(let i=i0;i<i1;i++){if(!ma[i])continue;const yy=vb-ma[i]/vmax*vh;if(!st){ctx.moveTo(x(i),yy);st=true;}else ctx.lineTo(x(i),yy);}
     ctx.stroke();
     ctx.fillStyle=C.axis;ctx.font="600 10px Inter, Arial";ctx.textAlign="left";
-    const lv=p[Math.min(i1,n)-1];
-    ctx.fillText(`Volume ${lv&&lv.v?fmtVol(lv.v):"—"} · MA20 ${ma[Math.min(i1,n)-1]?fmtVol(ma[Math.min(i1,n)-1]):"—"}`,left+4,vb-vh-4);
+    let li=Math.min(i1,n)-1;while(li>i0&&!p[li].v)li--;      // live gold candles have no volume yet
+    ctx.fillText(`Volume ${p[li].v?fmtVol(p[li].v):"—"} · MA20 ${ma[li]?fmtVol(ma[li]):"—"}`,left+4,vb-vh-4);
   }
 
   // SMC zones (extend from origin candle to the latest candle)
