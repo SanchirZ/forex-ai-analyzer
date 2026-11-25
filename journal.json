@@ -196,7 +196,7 @@
    "r": null,
    "news": null,
    "alerted": false,
-   "tp1_hit": false
+   "tp1_hit": true
   },
   {
    "id": "btc-5m-1795539300",
@@ -219,7 +219,134 @@
    "alerted": false,
    "closed_t": 1795540500,
    "tp1_hit": false
+  },
+  {
+   "id": "btc-5m-1795565100",
+   "sym": "btc",
+   "name": "BTCUSD",
+   "tf": "5m",
+   "side": "SELL",
+   "t": 1795565100,
+   "close_t": 1795565400,
+   "entry": 59583.26,
+   "sl": 59882.1,
+   "tps": [
+    59284.42,
+    58985.58,
+    58686.73
+   ],
+   "status": "open",
+   "r": null,
+   "news": null,
+   "alerted": false,
+   "tp1_hit": true
+  },
+  {
+   "id": "btc-15m-1795564800",
+   "sym": "btc",
+   "name": "BTCUSD",
+   "tf": "15m",
+   "side": "SELL",
+   "t": 1795564800,
+   "close_t": 1795565700,
+   "entry": 59469.83,
+   "sl": 60054.83,
+   "tps": [
+    58884.83,
+    58299.83,
+    57714.82
+   ],
+   "status": "open",
+   "r": null,
+   "news": null,
+   "alerted": false,
+   "tp1_hit": false
+  },
+  {
+   "id": "btc-5m-1795566000",
+   "sym": "btc",
+   "name": "BTCUSD",
+   "tf": "5m",
+   "side": "SELL",
+   "t": 1795566000,
+   "close_t": 1795566300,
+   "entry": 59476.79,
+   "sl": 59827.49,
+   "tps": [
+    59126.09,
+    58775.39,
+    58424.69
+   ],
+   "status": "open",
+   "r": null,
+   "news": null,
+   "alerted": false,
+   "tp1_hit": false
+  },
+  {
+   "id": "btc-5m-1795568400",
+   "sym": "btc",
+   "name": "BTCUSD",
+   "tf": "5m",
+   "side": "SELL",
+   "t": 1795568400,
+   "close_t": 1795568700,
+   "entry": 59419.15,
+   "sl": 59659.4,
+   "tps": [
+    59178.9,
+    58938.65,
+    58698.4
+   ],
+   "status": "SL",
+   "r": -1.1,
+   "news": null,
+   "alerted": false,
+   "closed_t": 1795569600,
+   "tp1_hit": false
+  },
+  {
+   "id": "xau-5m-1795568700",
+   "sym": "xau",
+   "name": "XAUUSD",
+   "tf": "5m",
+   "side": "SELL",
+   "t": 1795568700,
+   "close_t": 1795569000,
+   "entry": 3538.9,
+   "sl": 3557.89,
+   "tps": [
+    3519.91,
+    3500.92,
+    3481.93
+   ],
+   "status": "open",
+   "r": null,
+   "news": null,
+   "alerted": false,
+   "tp1_hit": false
+  },
+  {
+   "id": "btc-5m-1795569600",
+   "sym": "btc",
+   "name": "BTCUSD",
+   "tf": "5m",
+   "side": "SELL",
+   "t": 1795569600,
+   "close_t": 1795569900,
+   "entry": 59336.34,
+   "sl": 59703.0,
+   "tps": [
+    58969.68,
+    58603.03,
+    58236.37
+   ],
+   "status": "open",
+   "r": null,
+   "news": null,
+   "alerted": false,
+   "tp1_hit": false
   }
  ],
- "updated": 1795542432
+ "updated": 1795570740
 }
