@@ -192,11 +192,12 @@
     3516.38,
     3489.66
    ],
-   "status": "open",
-   "r": null,
+   "status": "BE",
+   "r": 0.49,
    "news": null,
    "alerted": false,
-   "tp1_hit": true
+   "tp1_hit": true,
+   "closed_t": 1795574100
   },
   {
    "id": "btc-5m-1795539300",
@@ -235,11 +236,12 @@
     58985.58,
     58686.73
    ],
-   "status": "open",
-   "r": null,
+   "status": "TP2",
+   "r": 1.92,
    "news": null,
    "alerted": false,
-   "tp1_hit": true
+   "tp1_hit": true,
+   "closed_t": 1795592400
   },
   {
    "id": "btc-15m-1795564800",
@@ -256,11 +258,12 @@
     58299.83,
     57714.82
    ],
-   "status": "open",
-   "r": null,
+   "status": "BE",
+   "r": 0.46,
    "news": null,
    "alerted": false,
-   "tp1_hit": false
+   "tp1_hit": true,
+   "closed_t": 1795577400
   },
   {
    "id": "btc-5m-1795566000",
@@ -277,11 +280,12 @@
     58775.39,
     58424.69
    ],
-   "status": "open",
-   "r": null,
+   "status": "BE",
+   "r": 0.43,
    "news": null,
    "alerted": false,
-   "tp1_hit": false
+   "tp1_hit": true,
+   "closed_t": 1795577100
   },
   {
    "id": "btc-5m-1795568400",
@@ -320,11 +324,12 @@
     3500.92,
     3481.93
    ],
-   "status": "open",
-   "r": null,
+   "status": "SL",
+   "r": -1.02,
    "news": null,
    "alerted": false,
-   "tp1_hit": false
+   "tp1_hit": false,
+   "closed_t": 1795572900
   },
   {
    "id": "btc-5m-1795569600",
@@ -341,6 +346,49 @@
     58603.03,
     58236.37
    ],
+   "status": "BE",
+   "r": 0.43,
+   "news": null,
+   "alerted": false,
+   "tp1_hit": true,
+   "closed_t": 1795576500
+  },
+  {
+   "id": "btc-5m-1795598400",
+   "sym": "btc",
+   "name": "BTCUSD",
+   "tf": "5m",
+   "side": "SELL",
+   "t": 1795598400,
+   "close_t": 1795598700,
+   "entry": 59008.99,
+   "sl": 59406.34,
+   "tps": [
+    58611.64,
+    58214.28,
+    57816.93
+   ],
+   "status": "open",
+   "r": null,
+   "news": null,
+   "alerted": false,
+   "tp1_hit": false
+  },
+  {
+   "id": "btc-5m-1795601400",
+   "sym": "btc",
+   "name": "BTCUSD",
+   "tf": "5m",
+   "side": "SELL",
+   "t": 1795601400,
+   "close_t": 1795601700,
+   "entry": 58902.96,
+   "sl": 59158.31,
+   "tps": [
+    58647.61,
+    58392.26,
+    58136.91
+   ],
    "status": "open",
    "r": null,
    "news": null,
@@ -348,5 +396,5 @@
    "tp1_hit": false
   }
  ],
- "updated": 1795570740
+ "updated": 1795602636
 }
