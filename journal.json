@@ -368,11 +368,12 @@
     58214.28,
     57816.93
    ],
-   "status": "open",
-   "r": null,
+   "status": "TP2",
+   "r": 1.94,
    "news": null,
    "alerted": false,
-   "tp1_hit": false
+   "tp1_hit": true,
+   "closed_t": 1795617300
   },
   {
    "id": "btc-5m-1795601400",
@@ -389,12 +390,13 @@
     58392.26,
     58136.91
    ],
-   "status": "open",
-   "r": null,
+   "status": "TP2",
+   "r": 1.9,
    "news": null,
    "alerted": false,
-   "tp1_hit": false
+   "tp1_hit": true,
+   "closed_t": 1795614300
   }
  ],
- "updated": 1795602636
+ "updated": 1795637310
 }
