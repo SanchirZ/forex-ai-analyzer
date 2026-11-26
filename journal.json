@@ -396,7 +396,29 @@
    "alerted": false,
    "tp1_hit": true,
    "closed_t": 1795614300
+  },
+  {
+   "id": "btc-5m-1795687800",
+   "sym": "btc",
+   "name": "BTCUSD",
+   "tf": "5m",
+   "side": "BUY",
+   "t": 1795687800,
+   "close_t": 1795688100,
+   "entry": 60881.38,
+   "sl": 60653.96,
+   "tps": [
+    61108.8,
+    61336.21,
+    61563.63
+   ],
+   "status": "SL",
+   "r": -1.11,
+   "news": null,
+   "alerted": false,
+   "closed_t": 1795689600,
+   "tp1_hit": false
   }
  ],
- "updated": 1795661469
+ "updated": 1795693413
 }
