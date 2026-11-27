@@ -478,11 +478,12 @@
     62320.94,
     62889.63
    ],
-   "status": "open",
-   "r": null,
+   "status": "BE",
+   "r": 0.46,
    "news": null,
    "alerted": false,
-   "tp1_hit": true
+   "tp1_hit": true,
+   "closed_t": 1795789800
   },
   {
    "id": "btc-5m-1795746900",
@@ -499,11 +500,12 @@
     63184.51,
     63989.89
    ],
-   "status": "open",
-   "r": null,
+   "status": "SL",
+   "r": -1.03,
    "news": null,
    "alerted": false,
-   "tp1_hit": false
+   "tp1_hit": false,
+   "closed_t": 1795790100
   },
   {
    "id": "btc-15m-1795746600",
@@ -520,12 +522,13 @@
     63201.2,
     64086.9
    ],
-   "status": "open",
-   "r": null,
+   "status": "SL",
+   "r": -1.03,
    "news": null,
    "alerted": false,
-   "tp1_hit": false
+   "tp1_hit": false,
+   "closed_t": 1795790700
   }
  ],
- "updated": 1795783598
+ "updated": 1795815689
 }
