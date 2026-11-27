@@ -434,11 +434,12 @@
     61196.75,
     61498.14
    ],
-   "status": "open",
-   "r": null,
+   "status": "BE",
+   "r": 0.42,
    "news": null,
    "alerted": false,
-   "tp1_hit": false
+   "tp1_hit": true,
+   "closed_t": 1795730700
   },
   {
    "id": "btc-15m-1795722300",
@@ -455,6 +456,70 @@
     61380.73,
     61750.18
    ],
+   "status": "TP2",
+   "r": 1.93,
+   "news": null,
+   "alerted": false,
+   "tp1_hit": true,
+   "closed_t": 1795746600
+  },
+  {
+   "id": "btc-5m-1795745400",
+   "sym": "btc",
+   "name": "BTCUSD",
+   "tf": "5m",
+   "side": "BUY",
+   "t": 1795745400,
+   "close_t": 1795745700,
+   "entry": 61183.55,
+   "sl": 60614.86,
+   "tps": [
+    61752.24,
+    62320.94,
+    62889.63
+   ],
+   "status": "open",
+   "r": null,
+   "news": null,
+   "alerted": false,
+   "tp1_hit": true
+  },
+  {
+   "id": "btc-5m-1795746900",
+   "sym": "btc",
+   "name": "BTCUSD",
+   "tf": "5m",
+   "side": "BUY",
+   "t": 1795746900,
+   "close_t": 1795747200,
+   "entry": 61573.76,
+   "sl": 60768.38,
+   "tps": [
+    62379.14,
+    63184.51,
+    63989.89
+   ],
+   "status": "open",
+   "r": null,
+   "news": null,
+   "alerted": false,
+   "tp1_hit": false
+  },
+  {
+   "id": "btc-15m-1795746600",
+   "sym": "btc",
+   "name": "BTCUSD",
+   "tf": "15m",
+   "side": "BUY",
+   "t": 1795746600,
+   "close_t": 1795747500,
+   "entry": 61429.8,
+   "sl": 60544.1,
+   "tps": [
+    62315.5,
+    63201.2,
+    64086.9
+   ],
    "status": "open",
    "r": null,
    "news": null,
@@ -462,5 +527,5 @@
    "tp1_hit": false
   }
  ],
- "updated": 1795725272
+ "updated": 1795749360
 }
