@@ -548,8 +548,29 @@
    "r": null,
    "news": null,
    "alerted": false,
+   "tp1_hit": true
+  },
+  {
+   "id": "btc-5m-1795863000",
+   "sym": "btc",
+   "name": "BTCUSD",
+   "tf": "5m",
+   "side": "SELL",
+   "t": 1795863000,
+   "close_t": 1795863300,
+   "entry": 59172.47,
+   "sl": 59506.72,
+   "tps": [
+    58838.22,
+    58503.96,
+    58169.71
+   ],
+   "status": "open",
+   "r": null,
+   "news": null,
+   "alerted": false,
    "tp1_hit": false
   }
  ],
- "updated": 1795836843
+ "updated": 1795868311
 }
