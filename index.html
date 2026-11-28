@@ -6,426 +6,341 @@
 <title>Forex AI Analyzer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#131722">
 <style>
 :root{
-  --bg:#F1ECE6;--card:#FFFFFF;--inner:#F1ECE6;--border:#E3DBD1;
-  --text:#3D3D3D;--text2:#4F4F4F;--muted:#6B6B6B;
-  --accent:#1F4B3F;--green:#336557;--sell:#B5523B;--wait:#A0722A;
-  --mono:'JetBrains Mono',ui-monospace,monospace;--head:'Space Grotesk',Inter,sans-serif;
+  --bg:#131722;--panel:#1E222D;--inner:#131722;--line:#2A2E39;--hover:#2A2E39;
+  --text:#D1D4DC;--text2:#B2B5BE;--muted:#787B86;
+  --accent:#2962FF;--accent-h:#1E53E5;
+  --green:#089981;--red:#F23645;--wait:#F0A92E;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg)}
-body{color:var(--text);font-family:Inter,system-ui,sans-serif;padding:28px 20px 40px}
-.container{max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
-.row{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start}
-.card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:22px;display:flex;flex-direction:column;gap:14px;min-width:0}
-.label{font-size:12px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+body{color:var(--text);font:14px/1.45 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+button{font-family:inherit}
 .mono{font-family:var(--mono)}
-h2{font-family:var(--head);font-weight:700;font-size:17px;margin:0}
-.note{margin:0;font-size:11px;color:var(--muted);line-height:1.5}
-.BUY,.pos{color:var(--green)}.SELL,.neg{color:var(--sell)}.WAIT,.UNAVAILABLE{color:var(--wait)}
+.BUY,.pos{color:var(--green)}.SELL,.neg{color:var(--red)}.WAIT,.UNAVAILABLE{color:var(--wait)}
+.note{margin:0;font-size:12px;color:var(--muted);line-height:1.5}
+.sub{font-size:11px;color:var(--muted)}
 
-header{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between}
-.brand{display:flex;align-items:center;gap:12px}
-.logo{width:40px;height:40px;border-radius:12px;background:var(--accent);display:flex;align-items:center;justify-content:center}
-.title{font-family:var(--head);font-weight:700;font-size:20px;letter-spacing:.02em}
-.title span{color:var(--green)}
-.sub{font-size:12px;color:var(--muted)}
-.head-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.sym{display:flex;gap:2px;background:#fff;border:1px solid var(--border);border-radius:12px;padding:3px}
-.sym button{min-height:38px;border:0;border-radius:9px;padding:0 14px;font:700 13px var(--mono);cursor:pointer;background:transparent;color:var(--text2)}
-.sym button[aria-pressed="true"]{background:var(--accent);color:#fff}
-.status{display:flex;align-items:center;gap:8px;background:#E4EEEA;color:var(--accent);border-radius:999px;padding:8px 14px;font-size:12px;font-weight:600}
-.status i{width:8px;height:8px;border-radius:50%;background:var(--green)}
-.status.error{background:#F6E4DF;color:#8E3B28}.status.error i{background:var(--sell)}
-.status.busy i{background:var(--wait)}
-.btn{min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;padding:0 16px;font:600 13px Inter,sans-serif;cursor:pointer}
-.btn-ghost{border:1px solid var(--border);background:var(--card);color:var(--text)}
-.btn-ghost:hover{border-color:var(--green)}
-.btn-primary{border:0;background:var(--accent);color:#fff;font-weight:700;font-size:14px}
-.btn-primary:hover{background:var(--green)}
-.btn-danger{border:0;background:var(--sell);color:#fff;font-weight:700}
-.btn:disabled{opacity:.6;cursor:not-allowed}
+/* top bar */
+.topbar{position:sticky;top:0;z-index:20;background:rgba(19,23,34,.94);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:1440px;margin:0 auto;padding:8px 16px;display:flex;align-items:center;gap:20px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;color:#fff;white-space:nowrap}
+.brand em{font-style:normal;color:#5B8CFF}
+.logo{width:30px;height:30px;border-radius:8px;background:var(--accent);display:grid;place-items:center;flex:none}
+.sym{display:flex;gap:4px}
+.sym button{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;min-height:42px;border:1px solid transparent;border-radius:6px;padding:2px 14px;background:transparent;cursor:pointer;color:var(--muted)}
+.sym button b{font-size:13px;color:var(--text2)}
+.sym button small{font-size:11px;line-height:1.2}
+.sym button:hover{background:var(--hover)}
+.sym button[aria-pressed="true"]{background:var(--panel);border-color:var(--line)}
+.sym button[aria-pressed="true"] b{color:#fff}
+.head-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.status{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--text2);padding:0 12px;min-height:32px;border:1px solid var(--line);border-radius:999px;white-space:nowrap}
+.status i{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+.status.busy i{background:var(--wait);animation:none}
+.status.closed i{background:var(--muted);animation:none}
+.status.error{color:#FF8A93;border-color:rgba(242,54,69,.45)}.status.error i{background:var(--red);animation:none}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(8,153,129,.6)}70%{box-shadow:0 0 0 6px rgba(8,153,129,0)}100%{box-shadow:0 0 0 0 rgba(8,153,129,0)}}
+.icon-btn{width:36px;height:36px;display:grid;place-items:center;border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--text2);cursor:pointer}
+.icon-btn:hover{background:var(--hover);color:#fff}
 
-.price-card{flex:1 1 320px}
-.price{font-family:var(--mono);font-weight:700;font-size:44px;line-height:1;transition:color .4s}
-.price.up{color:var(--green)}.price.down{color:var(--sell)}
-.meta-row{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:14px;font-size:12px;color:var(--muted)}
-.meta-row b{color:var(--text);font-family:var(--mono)}
+/* page layout: chart + right panel, like a trading terminal */
+.wrap{max-width:1440px;margin:0 auto;padding:12px 16px 28px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:12px;align-items:stretch}
+.side{display:flex;flex-direction:column;gap:12px;min-width:0}
+.side>.card:last-child{flex:1 1 auto}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px;min-width:0}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+h2{margin:0;font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.07em}
+.tag{font-size:11px;font-weight:600;color:var(--text2);background:var(--inner);border:1px solid var(--line);border-radius:4px;padding:2px 8px}
+.tag.hi{color:#FFB74D;border-color:rgba(255,152,0,.4);background:rgba(255,152,0,.08)}
 
-.signal-card{flex:2 1 480px;background:linear-gradient(180deg,#EAF1EE 0%,#FFFFFF 70%);border-color:#C9DAD3}
-.signal-card.SELL{background:linear-gradient(180deg,#F6E8E3 0%,#FFFFFF 70%);border-color:#E6C7BD}
-.signal-card.WAIT{background:linear-gradient(180deg,#F5EEE2 0%,#FFFFFF 70%);border-color:#E5D6BD}
-.signal-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
-.big-signal{display:flex;align-items:center;gap:12px;font-family:var(--head);font-weight:700;font-size:48px;line-height:1}
-.reason{margin:0;font-size:14px;color:var(--text2);line-height:1.5;max-width:440px}
-.agree{display:flex;flex-direction:column;gap:6px;min-width:150px}
-.agree .n{font:700 22px var(--mono)}
-.bars{display:flex;gap:4px}.bars span{flex:1;height:6px;border-radius:3px;background:#DDD3C6}
-.bars span.on{background:var(--green)}
-.signal-card.SELL .bars span.on{background:var(--sell)}
-.tf-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-.tf{background:var(--inner);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:6px;align-items:center}
-.tf span{font-size:11px;color:var(--muted)}
-.tf strong{font:700 18px var(--head)}
-
-/* Chart: dark like XM */
-.chart-card{background:#131722;border-color:#2A2E39;color:#D1D4DC}
-.chart-card .label{color:#8A93A6}
-.chart-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
-.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.pills{display:flex;gap:2px;background:#1E222D;border-radius:10px;padding:3px;flex-wrap:wrap}
-.pills button,.zoom button{min-height:36px;min-width:40px;border:0;border-radius:8px;padding:0 9px;font:600 12px Inter,sans-serif;cursor:pointer;background:transparent;color:#B2B5BE}
-.pills button:hover,.zoom button:hover{background:#2A2E39;color:#fff}
-.pills button[aria-pressed="true"],#sig-toggle[aria-pressed="true"],#htf-toggle[aria-pressed="true"],#notify-toggle[aria-pressed="true"],#active-toggle[aria-pressed="true"]{background:#2962FF;color:#fff}
-.sig-stats{font-size:12px;color:#B2B5BE;line-height:1.5}
-.sig-stats b{color:#fff}
-.zoom{display:flex;gap:2px;background:#1E222D;border-radius:10px;padding:3px}
-.chart-wrap{position:relative;height:480px;background:#131722;border:1px solid #2A2E39;border-radius:12px;overflow:hidden}
+/* chart card */
+.chart-card{padding:0;overflow:hidden;display:flex;flex-direction:column}
+.ticker{display:flex;align-items:center;flex-wrap:wrap;gap:8px 28px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.tk-name{font-size:17px;font-weight:700;color:#fff;line-height:1.2}
+.tk-desc{font-size:12px;color:var(--muted)}
+.tk-price{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.price{font-family:var(--mono);font-size:28px;font-weight:700;color:#fff;line-height:1.1;transition:color .3s}
+.price.up{color:var(--green)}.price.down{color:var(--red)}
+.chg{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--muted)}
+.chg.up{color:var(--green)}.chg.down{color:var(--red)}
+.tk-stats{display:flex;gap:24px;margin:0 0 0 auto}
+.tk-stats div{display:flex;flex-direction:column}
+.tk-stats dt{font-size:11px;color:var(--muted)}
+.tk-stats dd{margin:0;font-family:var(--mono);font-size:13px;color:var(--text)}
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:6px 12px;flex-wrap:wrap;padding:6px 10px;border-bottom:1px solid var(--line)}
+.toolbar-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.seg{display:flex;gap:2px;flex-wrap:wrap}
+.seg button,.tog{min-height:32px;min-width:36px;border:0;border-radius:4px;padding:0 10px;font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:var(--text2)}
+.seg button:hover,.tog:hover{background:var(--hover);color:#fff}
+.seg button[aria-pressed="true"],.tog[aria-pressed="true"]{background:var(--accent);color:#fff}
+.vsep{width:1px;height:20px;background:var(--line)}
+.chart-wrap{position:relative;flex:1 1 auto;min-height:560px;background:#131722}
 #chart{width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
 #chart.dragging{cursor:grabbing}
 #chart.axis{cursor:ns-resize}
-.hint{position:absolute;left:10px;bottom:32px;font-size:11px;color:#6A7186;pointer-events:none}
-.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:#B2B5BE}
-.legend span{display:flex;align-items:center;gap:6px}
-.sw{width:10px;height:10px;border-radius:3px}
-.forecast{display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:#1E222D;border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.5;color:#D1D4DC}
-.forecast b.BUY{color:#089981}.forecast b.SELL{color:#F23645}.forecast b.WAIT{color:#E0A84A}
-.forecast .src{font-size:11px;color:#8A93A6;border:1px solid #363A45;border-radius:999px;padding:2px 8px}
+.chart-foot{padding:9px 16px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:4px}
+.sig-stats{font-size:12px;color:var(--text2)}
+.sig-stats b{color:#fff}
+#message{font-size:12px;color:#FF8A93}
+#message:empty{display:none}
 
-/* Account */
-.acc-card,.pos-card{flex:1 1 440px}
-.form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-.field{display:flex;flex-direction:column;gap:6px;min-width:0}
-.field label{font-size:12px;color:var(--muted)}
-.field input,.field select{min-height:44px;border:1px solid var(--border);border-radius:10px;padding:0 12px;font:600 14px var(--mono);color:var(--text);background:#fff;width:100%}
-.field select{font-family:Inter,sans-serif}
-.field input:focus,.field select:focus{outline:2px solid var(--green);outline-offset:1px}
-.kv{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.kv div{background:var(--inner);border-radius:12px;padding:10px;min-width:0}
-.kv span{display:block;font-size:11px;color:var(--muted)}
-.kv b{display:block;font:700 15px var(--mono);margin-top:4px;overflow-wrap:anywhere}
-.instr{background:#EAF1EE;border:1px solid #C9DAD3;border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.55}
-.instr.SELL{background:#F6E8E3;border-color:#E6C7BD}
-.instr.WAIT{background:#F5EEE2;border-color:#E5D6BD}
-.warn{background:#F6E4DF;border:1px solid #E6C7BD;color:#8E3B28;border-radius:12px;padding:10px 14px;font-size:13px;line-height:1.5}
-.equity{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
-.equity .big{font:700 34px var(--mono);line-height:1.1}
-.pl{font:700 20px var(--mono)}
-details{border:1px solid var(--border);border-radius:12px;padding:10px 14px}
-summary{cursor:pointer;font-weight:600;font-size:13px;min-height:28px;display:flex;align-items:center}
-.history{display:flex;flex-direction:column;gap:6px;max-height:220px;overflow:auto}
-.h-item{display:flex;justify-content:space-between;gap:10px;font-size:12px;background:var(--inner);border-radius:10px;padding:8px 10px}
-.h-item b{font-family:var(--mono)}
-.progress{height:10px;border-radius:5px;background:var(--inner);overflow:hidden}
-.progress i{display:block;height:100%;background:var(--green);width:0;transition:width .4s}
+/* signal */
+.signal-card{border-top:3px solid var(--wait)}
+.signal-card.BUY{border-top-color:var(--green)}.signal-card.SELL{border-top-color:var(--red)}
+.big-signal{display:flex;align-items:center;gap:8px;font-size:34px;font-weight:800;line-height:1;letter-spacing:.02em}
+.agree-n{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.bars{display:flex;gap:4px;margin:14px 0 12px}
+.bars span{flex:1;height:4px;border-radius:2px;background:var(--line)}
+.bars span.on{background:var(--green)}
+.signal-card.SELL .bars span.on{background:var(--red)}
+.tf-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.tf{background:var(--inner);border:1px solid var(--line);border-radius:6px;padding:8px 6px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.tf span{font-size:11px;color:var(--muted)}
+.tf strong{font-size:13px;font-weight:700}
+.mtf{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:12px}
+.mtf .lbl{font-size:11px;color:var(--muted);margin-right:2px}
+.mtf b{font:600 11px var(--mono);padding:3px 6px;border-radius:4px;background:var(--inner);color:var(--text2)}
+.mtf b.up{color:var(--green);background:rgba(8,153,129,.12)}
+.mtf b.dn{color:var(--red);background:rgba(242,54,69,.12)}
+.reason{margin:10px 0 0;font-size:12px;color:var(--muted);line-height:1.5}
+.reason:empty{display:none}
 
-.side-col{flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:20px}
-.main-col{flex:2 1 560px;min-width:0;display:flex;flex-direction:column;gap:20px}
-.ai-head{display:flex;justify-content:space-between;align-items:center}
-.tag{font-size:11px;color:#fff;background:var(--accent);border-radius:999px;padding:4px 10px;font-weight:700}
-.ai-result{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
-.ai-result strong{font:700 26px var(--head)}
-.ai-result span{font-size:13px;color:var(--muted)}
-.ai-text{margin:0;font-size:13px;color:var(--text2);line-height:1.55}
-.ai-text ul{margin:6px 0 0;padding-left:18px}
+/* trade plan + lot */
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:3px 10px;border-radius:4px;letter-spacing:.03em}
+.badge.BUY{background:rgba(8,153,129,.16)}.badge.SELL{background:rgba(242,54,69,.16)}.badge.WAIT{background:rgba(240,169,46,.14)}
+.rows{display:flex;flex-direction:column}
+.rows div{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:13px}
+.rows div:last-child{border-bottom:0}
+.rows span{color:var(--muted)}
+.rows b{font-family:var(--mono);font-weight:600}
+.rows .big b{font-size:15px;color:#fff}
+.tip{font-size:12px;color:var(--text2);background:var(--inner);border-radius:6px;padding:8px 10px;margin-top:10px;line-height:1.5}
+.tip b{color:#fff}
+.warn{font-size:12px;color:#FF8A93;background:rgba(242,54,69,.08);border:1px solid rgba(242,54,69,.3);border-radius:6px;padding:8px 10px;margin-top:8px;line-height:1.5}
+.wait-box{display:flex;flex-direction:column;gap:8px;align-items:flex-start;font-size:13px;color:var(--text2);line-height:1.5}
+details.acc{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+details.acc summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;min-height:28px;font-size:13px;font-weight:600;color:var(--text2)}
+details.acc summary::-webkit-details-marker{display:none}
+details.acc summary::after{content:"";width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg) translateY(-2px);transition:transform .2s}
+details.acc[open] summary::after{transform:rotate(-135deg)}
+.form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.field input{min-height:38px;width:100%;background:var(--inner);border:1px solid var(--line);border-radius:6px;color:var(--text);font:600 13px var(--mono);padding:0 10px}
+.field input:focus{outline:none;border-color:var(--accent)}
+.btn{min-height:38px;display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:6px;padding:0 14px;font-size:13px;font-weight:600;cursor:pointer}
+.btn-primary{background:var(--accent);color:#fff;width:100%}
+.btn-primary:hover{background:var(--accent-h)}
 
-.smc-list{display:flex;flex-direction:column;gap:12px}
-.smc-item{display:flex;gap:12px;align-items:flex-start}
-.smc-item i{margin-top:5px;width:8px;height:8px;border-radius:2px;flex:none}
-.smc-item b{display:block;font-size:13px}
-.smc-item p{margin:2px 0 0;font-size:12px;color:var(--muted);line-height:1.45}
-
-.ind-grid{display:flex;flex-wrap:wrap;gap:12px}
-.ind{flex:1 1 200px;background:var(--inner);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px}
-.ind .k{font-size:12px;color:var(--muted)}
-.ind .v{font:700 24px var(--mono)}
-.ind .h{font-size:12px;color:var(--muted)}
-.meter{position:relative;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--sell) 0 30%,#DDD3C6 30% 70%,var(--green) 70% 100%)}
-.meter i{position:absolute;top:-4px;width:4px;height:14px;border-radius:2px;background:var(--text);left:50%;transition:left .3s}
-.bt{width:100%;border-collapse:collapse;font-size:13px}.bt th,.bt td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:right}.bt th:first-child,.bt td:first-child{text-align:left;color:var(--muted);font-weight:500}.bt td{font-family:var(--mono);font-weight:700}
-.jr-pills{display:flex;gap:4px;background:var(--inner);border-radius:12px;padding:4px;width:max-content;max-width:100%;flex-wrap:wrap}
-.jr-pills button{min-height:40px;border:0;border-radius:9px;padding:0 14px;font:700 13px var(--mono);cursor:pointer;background:transparent;color:var(--text2)}
-.jr-pills button[aria-pressed="true"]{background:var(--accent);color:#fff}
+/* journal */
+.jr-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.stats div{background:var(--inner);border:1px solid var(--line);border-radius:6px;padding:10px 12px;min-width:0}
+.stats span{display:block;font-size:11px;color:var(--muted)}
+.stats b{display:block;font:700 16px var(--mono);margin-top:2px;overflow-wrap:anywhere}
+.last10-box{display:flex;flex-direction:column;gap:8px;background:var(--inner);border:1px solid var(--line);border-left:3px solid var(--green);border-radius:6px;padding:10px 12px;margin-bottom:12px;font-size:13px}
+.last10-box.down{border-left-color:var(--red)}
 .last10{display:flex;gap:4px;flex-wrap:wrap}
-.last10 span{min-width:46px;text-align:center;padding:6px 4px;border-radius:8px;font:700 12px var(--mono);background:var(--inner)}
-.last10 span.w{background:#E4EEEA;color:var(--accent)}.last10 span.l{background:#F6E4DF;color:#8E3B28}
-.mtf{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.mtf b{font:700 12px var(--mono);padding:4px 8px;border-radius:8px;background:var(--inner)}
-.mtf b.up{color:var(--green)}.mtf b.dn{color:var(--sell)}
-.jr{width:100%;border-collapse:collapse;font-size:12px}.jr th,.jr td{padding:6px 8px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}.jr td.n{font-family:var(--mono);text-align:right}
-.jr-wrap{overflow-x:auto;max-height:320px}
-.news-item{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:8px 10px;background:var(--inner);border-radius:10px;margin-bottom:6px}
-.news-item.soon{background:#FFF1DC;border:1px solid #F5C77E}
-.rules{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:14px;line-height:1.5}
+.last10 span{min-width:44px;text-align:center;padding:4px;border-radius:4px;font:700 12px var(--mono);background:var(--panel)}
+.last10 span.w{background:rgba(8,153,129,.16);color:var(--green)}
+.last10 span.l{background:rgba(242,54,69,.16);color:var(--red)}
+.jr-wrap{overflow:auto;max-height:380px;border:1px solid var(--line);border-radius:6px}
+.jr{width:100%;border-collapse:collapse;font-size:12px}
+.jr th{position:sticky;top:0;background:var(--panel);color:var(--muted);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.jr th,.jr td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+.jr tr:last-child td{border-bottom:0}
+.jr tbody tr:hover{background:rgba(42,46,57,.45)}
+.jr td.n{font-family:var(--mono);text-align:right}
 
-#message{font-size:12px;color:var(--muted);text-align:center}
-footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
-@media(max-width:560px){
-  body{padding:16px 12px 32px}.card{padding:16px}.price{font-size:36px}.big-signal{font-size:40px}
-  .chart-wrap{height:400px}.form,.kv{grid-template-columns:repeat(2,minmax(0,1fr))}
+/* news + rules */
+.news-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
+.news-item:last-child{border-bottom:0}
+.news-item b{font-weight:600}
+.news-item>b{font:600 12px var(--mono);color:var(--text2);white-space:nowrap}
+.news-item.soon{border-left:3px solid var(--wait);padding-left:8px}
+.news-item.soon>b{color:var(--wait)}
+.rules{margin:0;padding:0;list-style:none;counter-reset:r;display:flex;flex-direction:column;gap:8px;font-size:13px;line-height:1.5;color:var(--text2)}
+.rules li{counter-increment:r;display:flex;gap:10px}
+.rules li::before{content:counter(r);flex:none;width:20px;height:20px;border-radius:4px;background:var(--inner);border:1px solid var(--line);color:var(--muted);font:600 11px var(--mono);display:grid;place-items:center;margin-top:1px}
+.rules b{color:#fff;font-weight:600}
+
+footer{max-width:1440px;margin:0 auto;padding:0 16px 24px;text-align:center;font-size:12px;color:var(--muted)}
+
+@media(max-width:1100px){
+  .layout{grid-template-columns:minmax(0,1fr)}
+  .side{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));align-items:start}
+}
+@media(max-width:640px){
+  .topbar-in{gap:10px;padding:8px 10px}
+  .brand .name{display:none}
+  .sym button{padding:2px 10px}
+  .sym button small{display:none}
+  .status{padding:0 10px}
+  .wrap{padding:10px 8px 24px}
+  .layout,.side{gap:10px}
+  .side{display:flex;align-items:stretch}
+  .ticker{gap:6px 18px;padding:10px 12px}
+  .price{font-size:24px}
+  .tk-stats{margin:0;gap:18px;width:100%}
+  .chart-wrap{min-height:430px}
+  .card{padding:14px}
+  .card.chart-card{padding:0}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:380px){
+  .topbar-in{gap:6px;padding:8px}
+  .sym button{padding:2px 8px}
+  .status{padding:0 8px}
+  .icon-btn{width:34px}
 }
 </style>
 </head>
 <body>
-<div class="container">
-
-<header>
-  <div class="brand">
-    <div class="logo">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brand">
+      <div class="logo">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>
+      </div>
+      <span class="name">Forex <em>AI</em> Analyzer</span>
     </div>
-    <div>
-      <div class="title">Forex <span>AI</span> Analyzer</div>
-      <div class="sub" id="sub">Алт · XAUUSD · SMC + техник шинжилгээ</div>
-    </div>
-  </div>
-  <div class="head-right">
     <div class="sym" role="group" aria-label="Хэрэгсэл" id="sym-switch">
-      <button type="button" data-sym="xau" aria-pressed="true">XAUUSD</button>
-      <button type="button" data-sym="btc" aria-pressed="false">BTCUSD</button>
+      <button type="button" data-sym="xau" aria-pressed="true"><b>XAUUSD</b><small>Алт</small></button>
+      <button type="button" data-sym="btc" aria-pressed="false"><b>BTCUSD</b><small>Bitcoin</small></button>
     </div>
-    <div class="status busy" id="status"><i></i><span id="status-text">CONNECTING</span></div>
-    <button class="btn btn-ghost" id="refresh-btn" type="button">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>Шинэчлэх
-    </button>
+    <div class="head-right">
+      <div class="status busy" id="status"><i></i><span id="status-text">Ачаалж байна</span></div>
+      <button class="icon-btn" id="refresh-btn" type="button" aria-label="Шинэчлэх" title="Шинэчлэх">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+      </button>
+    </div>
   </div>
 </header>
 
-<div class="row">
-  <section class="card price-card">
-    <div class="label" id="price-label">Алтны үнэ · USD/oz</div>
-    <div class="price" id="price">Loading...</div>
-    <div class="meta-row">
-      <span>Графикийн доод <b id="range-low">--</b></span>
-      <span>Графикийн дээд <b id="range-high">--</b></span>
+<div class="wrap">
+<main class="layout">
+  <section class="card chart-card" aria-label="График">
+    <div class="ticker">
+      <div>
+        <div class="tk-name" id="tk-name">XAUUSD</div>
+        <div class="tk-desc" id="tk-desc">Алт / АНУ доллар</div>
+      </div>
+      <div class="tk-price">
+        <span class="price" id="price">—</span>
+        <span class="chg" id="price-chg"></span>
+      </div>
+      <dl class="tk-stats">
+        <div><dt>Өдрийн дээд</dt><dd id="day-high">—</dd></div>
+        <div><dt>Өдрийн доод</dt><dd id="day-low">—</dd></div>
+        <div><dt>Цаг</dt><dd id="price-time">—</dd></div>
+      </dl>
     </div>
-    <div class="meta-row" style="border-top:0;padding-top:0">
-      <span>Үнийн цаг <b id="price-time">--</b></span>
-    </div>
-    <p class="note" id="src-note">XAUS-ын үнэ нь XM-ийн арилжааны яг үнэ биш (spread-ийн зөрүүтэй).</p>
-  </section>
-
-  <section class="card signal-card WAIT" id="signal-card">
-    <div class="signal-top">
-      <div style="display:flex;flex-direction:column;gap:10px">
-        <div class="label">Нийт дохио</div>
-        <div class="big-signal WAIT" id="overall">
-          <span id="overall-text">WAIT</span>
-          <svg id="overall-icon" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/></svg>
+    <div class="toolbar">
+      <div class="seg" role="group" aria-label="Timeframe" id="tf-pills">
+        <button type="button" data-tf="1m" aria-pressed="false">1m</button>
+        <button type="button" data-tf="5m" aria-pressed="true">5m</button>
+        <button type="button" data-tf="15m" aria-pressed="false">15m</button>
+        <button type="button" data-tf="30m" aria-pressed="false">30m</button>
+        <button type="button" data-tf="1h" aria-pressed="false">1H</button>
+        <button type="button" data-tf="4h" aria-pressed="false">4H</button>
+        <button type="button" data-tf="1d" aria-pressed="false">1D</button>
+      </div>
+      <div class="toolbar-right">
+        <div class="seg" role="group" aria-label="Стратеги" id="strat-pills">
+          <button type="button" data-strat="trend" aria-pressed="true" title="EMA/MACD/RSI + H1 чиглэл">Trend</button>
+          <button type="button" data-strat="london" aria-pressed="false" title="Азийн range-ийн Лондоны breakout (зөвхөн алт)">London</button>
+          <button type="button" data-strat="lit" aria-pressed="false" title="Liquidity sweep → CHoCH баталгаа">LIT</button>
         </div>
-        <p class="reason" id="reason">Анализ татаж байна...</p>
-      </div>
-      <div class="agree">
-        <div class="sub">Тохирол</div>
-        <div class="n" id="agree-n">– / 3</div>
-        <div class="bars" id="agree-bars"><span></span><span></span><span></span></div>
+        <span class="vsep" aria-hidden="true"></span>
+        <button type="button" class="tog" id="sig-toggle" aria-pressed="true" title="BUY/SELL сигналыг график дээр харуулах">BUY/SELL</button>
       </div>
     </div>
-    <div class="mtf" id="mtf" aria-label="Timeframe бүрийн чиглэл"><span class="sub">Чиглэл (EMA20/50):</span></div>
-    <div class="tf-grid">
-      <div class="tf"><span>5 MIN</span><strong id="tf1" class="WAIT">--</strong></div>
-      <div class="tf"><span>15 MIN</span><strong id="tf5" class="WAIT">--</strong></div>
-      <div class="tf"><span>1 HOUR</span><strong id="tf15" class="WAIT">--</strong></div>
+    <div class="chart-wrap">
+      <canvas id="chart" aria-label="Лааны график"></canvas>
+    </div>
+    <div class="chart-foot">
+      <div class="sig-stats" id="sig-stats"></div>
+      <div id="message" role="status"></div>
     </div>
   </section>
-</div>
 
-<section class="card chart-card">
-  <div class="chart-head">
-    <div>
-      <div class="label">Smart Money Concepts</div>
-      <h2 style="margin-top:4px;color:#fff" id="chart-title">XAUUSD график</h2>
-    </div>
-    <div class="tools">
-      <div class="pills" role="group" aria-label="Timeframe" id="tf-pills">
-        <button type="button" data-tf="1m" aria-pressed="false">M1</button>
-        <button type="button" data-tf="5m" aria-pressed="true">M5</button>
-        <button type="button" data-tf="15m" aria-pressed="false">M15</button>
-        <button type="button" data-tf="30m" aria-pressed="false">M30</button>
-        <button type="button" data-tf="1h" aria-pressed="false">H1</button>
-        <button type="button" data-tf="4h" aria-pressed="false">H4</button>
-        <button type="button" data-tf="1d" aria-pressed="false">D1</button>
+  <div class="side">
+    <section class="card signal-card WAIT" id="signal-card">
+      <div class="card-head"><h2>Нийт дохио</h2><span class="agree-n" id="agree-n">– / 3</span></div>
+      <div class="big-signal WAIT" id="overall">
+        <svg id="overall-icon" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/></svg>
+        <span id="overall-text">WAIT</span>
       </div>
-      <div class="zoom">
-        <button type="button" id="zoom-in" aria-label="Томруулах">+</button>
-        <button type="button" id="zoom-out" aria-label="Жижигрүүлэх">−</button>
-        <button type="button" id="zoom-reset" aria-label="Анхны байдал">⟲</button>
+      <div class="bars" id="agree-bars"><span></span><span></span><span></span></div>
+      <div class="tf-grid">
+        <div class="tf"><span>5m</span><strong id="tf1" class="WAIT">--</strong></div>
+        <div class="tf"><span>15m</span><strong id="tf5" class="WAIT">--</strong></div>
+        <div class="tf"><span>1H</span><strong id="tf15" class="WAIT">--</strong></div>
       </div>
-      <div class="pills" role="group" aria-label="SMC тэмдэглэгээ" id="smc-pills">
-        <button type="button" data-smc="ob" aria-pressed="true" title="Order Block харуулах/нуух">OB</button>
-        <button type="button" data-smc="fvg" aria-pressed="true" title="Fair Value Gap харуулах/нуух">FVG</button>
-        <button type="button" data-smc="bos" aria-pressed="true" title="CHoCH / BOS харуулах/нуух">CHoCH</button>
-        <button type="button" data-smc="sess" aria-pressed="true" title="Лондон, Нью-Йоркийн сешнийг өнгөөр харуулах">Сешн</button>
-        <button type="button" data-smc="news" aria-pressed="true" title="USD томоохон мэдээний цагийг харуулах">Мэдээ</button>
-        <button type="button" data-smc="vol" aria-pressed="true" title="Volume баар, 20 лааны дундаж, огцом өссөн volume">Volume</button>
-        <button type="button" data-smc="vp" aria-pressed="true" title="Volume Profile: аль үнэ дээр хамгийн их арилжаа хийгдсэн (POC, VAH, VAL)">Vol Profile</button>
-      </div>
-      <div class="pills" role="group" aria-label="Стратеги" id="strat-pills">
-        <button type="button" data-strat="trend" aria-pressed="true" title="EMA/MACD/RSI + H1 чиглэл">Trend</button>
-        <button type="button" data-strat="london" aria-pressed="false" title="Азийн range-ийн Лондоны breakout (зөвхөн алт)">London</button>
-        <button type="button" data-strat="lit" aria-pressed="false" title="LIT: liquidity sweep (stop цохилт) → CHoCH баталгаа → entry">LIT</button>
-      </div>
-      <div class="zoom"><button type="button" id="sig-toggle" aria-pressed="true" style="padding:0 12px">BUY/SELL сигнал</button><button type="button" id="active-toggle" aria-pressed="true" style="padding:0 12px" title="Бүх шинэ сигналыг харуулна, M1-ийг асаана">⚡ Идэвхтэй</button><button type="button" id="notify-toggle" aria-pressed="false" style="padding:0 12px" title="Шинэ сигнал гарахад мэдэгдэл, дуу">🔔 Мэдэгдэл</button><button type="button" id="htf-toggle" aria-pressed="true" style="padding:0 12px" title="M1–M30 сигналыг зөвхөн H1-ийн чиглэлээр гаргана">H1 шүүлтүүр</button></div>
-    </div>
-  </div>
-  <div class="chart-wrap">
-    <canvas id="chart" aria-label="XAUUSD лааны график"></canvas>
-    <div class="hint" id="hint">Чирж хөдөлгөх · Дугуй / 2 хуруугаар томруулах · Үнийн тэнхлэгийг дээш доош чирж сунгах</div>
-  </div>
-  <div class="forecast" id="forecast"><b class="WAIT">WAIT</b><span>Дохио хүлээж байна...</span></div>
-  <div class="legend">
-    <span><i class="sw" style="background:#089981"></i>Өсөх лаа</span>
-    <span><i class="sw" style="background:#F23645"></i>Буурах лаа</span>
-    <span><i class="sw" style="border:1px solid #089981;background:rgba(8,153,129,.2)"></i>Order Block</span>
-    <span><i class="sw" style="border:1px solid #5B8DEF;background:rgba(91,141,239,.2)"></i>FVG</span>
-    <span><i style="width:14px;border-top:2px dashed #B39DDB"></i>CHoCH/BOS</span>
-    <span><i style="width:14px;border-top:2px dashed #D1D4DC"></i>Зорилт / SL</span>
-    <span id="legend-lit" style="display:none"><i class="sw" style="border-top:2px dashed #E0A84A;height:0;width:14px"></i>Liquidity sweep (цохигдсон swing)</span>
-    <span id="legend-range" style="display:none"><i class="sw" style="border:1px solid #E0A84A;background:rgba(224,168,74,.12)"></i>Азийн range (00–07 UTC)</span>
-    <span><i class="sw" style="background:rgba(41,98,255,.25)"></i>Лондон</span>
-    <span><i class="sw" style="background:rgba(156,39,176,.25)"></i>Нью-Йорк</span>
-    <span><i style="width:14px;border-top:2px dashed #FF9800"></i>USD мэдээ</span>
-    <span><b style="color:#089981">▲ BUY</b> / <b style="color:#F23645">▼ SELL</b> сигнал · <b style="color:#089981">✓</b> TP2 хүрсэн · <b style="color:#F23645">✗</b> SL хүрсэн</span>
-  </div>
-  <div class="sig-stats" id="sig-stats"></div>
-</section>
+      <div class="mtf" id="mtf" aria-label="Timeframe бүрийн чиг хандлага"></div>
+      <p class="reason" id="reason"></p>
+    </section>
 
-<div class="row">
-  <section class="card acc-card">
-    <h2>Данс ба лот тооцоолуур</h2>
-    <div class="form">
-      <div class="field"><label for="in-balance">Баланс ($)</label><input id="in-balance" type="number" min="0" step="0.01" inputmode="decimal" placeholder="жишээ 500"></div>
-      <div class="field"><label for="in-risk">Эрсдэл / арилжаа (%)</label><input id="in-risk" type="number" min="0.1" max="10" step="0.1" inputmode="decimal" value="1"></div>
-      <div class="field"><label for="in-contract" id="contract-label">1 лот = (oz)</label><input id="in-contract" type="number" min="0.0001" step="any" inputmode="decimal"></div>
+    <section class="card plan-card">
+      <div class="card-head"><h2>Арилжааны төлөвлөгөө</h2></div>
+      <div id="plan-out"></div>
+      <details class="acc" id="acc-box">
+        <summary>Данс ба лот</summary>
+        <div class="form">
+          <div class="field"><label for="in-balance">Баланс ($)</label><input id="in-balance" type="number" min="0" step="0.01" inputmode="decimal" placeholder="500"></div>
+          <div class="field"><label for="in-risk">Эрсдэл (%)</label><input id="in-risk" type="number" min="0.1" max="10" step="0.1" inputmode="decimal" value="1"></div>
+          <div class="field"><label for="in-contract" id="contract-label">1 лот (oz)</label><input id="in-contract" type="number" min="0.0001" step="any" inputmode="decimal"></div>
+        </div>
+        <button class="btn btn-primary" id="save-acc" type="button">Хадгалах</button>
+      </details>
+    </section>
+  </div>
+
+  <section class="card journal-card">
+    <div class="jr-top">
+      <h2>Бодит журнал · forward test</h2>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="seg" role="group" aria-label="Журналын зах" id="jr-pills">
+          <button type="button" data-jr="all" aria-pressed="true">Бүгд</button>
+          <button type="button" data-jr="btc" aria-pressed="false">BTCUSD</button>
+          <button type="button" data-jr="xau" aria-pressed="false">XAUUSD</button>
+        </div>
+        <span class="tag" id="jr-tag">LIVE</span>
+      </div>
     </div>
-    <button class="btn btn-ghost" id="save-acc" type="button">Балансаа хадгалах</button>
-    <div id="calc-out"></div>
-    <p class="note">Лотын тооцоо: эрсдэлийн $ ÷ (SL хүртэлх зай × гэрээний хэмжээ). Ихэвчлэн XAUUSD Standard = 100 oz, Micro = 1 oz, BTCUSD = 1 BTC. XM дээрх өөрийн дансны «Contract specifications»-оос яг хэмжээг шалгаж оруулаарай.</p>
+    <div id="jr-out"><p class="note">Ачаалж байна...</p></div>
   </section>
 
-  <section class="card pos-card">
-    <h2>Баланс ба нээлттэй арилжаа</h2>
-    <div class="equity">
-      <div><div class="sub">Equity (одоогийн үнэ цэнэ)</div><div class="big" id="equity">--</div></div>
-      <div style="text-align:right"><div class="sub">Баланс</div><div class="pl" id="balance-view">--</div></div>
-    </div>
-    <div id="pos-out"><p class="note">Нээлттэй арилжаа алга.</p></div>
-    <details>
-      <summary>XM дээр нээсэн арилжаагаа гараар оруулах</summary>
-      <div class="form" style="margin-top:10px">
-        <div class="field"><label for="m-side">Чиглэл</label><select id="m-side"><option>BUY</option><option>SELL</option></select></div>
-        <div class="field"><label for="m-entry">Нээсэн үнэ</label><input id="m-entry" type="number" step="0.01" inputmode="decimal"></div>
-        <div class="field"><label for="m-lot">Лот</label><input id="m-lot" type="number" step="0.01" min="0.01" inputmode="decimal"></div>
-        <div class="field"><label for="m-sl">Stop loss</label><input id="m-sl" type="number" step="0.01" inputmode="decimal"></div>
-        <div class="field"><label for="m-tp">Take profit</label><input id="m-tp" type="number" step="0.01" inputmode="decimal"></div>
-        <div class="field" style="justify-content:flex-end"><button class="btn btn-primary" id="m-open" type="button">Нэмэх</button></div>
-      </div>
-    </details>
-    <div>
-      <div class="sub" style="margin-bottom:6px">Түүх</div>
-      <div class="history" id="history"><p class="note">Хаагдсан арилжаа алга.</p></div>
-    </div>
-    <p class="note">Энэ бол таны XM данстай шууд холбогдоогүй дадлагын/хяналтын данс. P&amp;L нь XAUS-ын үнээр тооцогдох тул XM-ээс spread-ийн хэмжээгээр бага зэрэг зөрнө.</p>
-  </section>
-</div>
-
-<div class="row">
-  <div class="main-col">
+  <div class="side">
     <section class="card">
-      <div class="ai-head"><h2>Сарын зорилго</h2></div>
-      <div class="form" style="grid-template-columns:repeat(2,minmax(0,1fr))">
-        <div class="field"><label for="in-goal">Энэ сард олох зорилго ($)</label><input id="in-goal" type="number" min="0" step="1" inputmode="decimal" placeholder="жишээ 50"></div>
-        <div class="field" style="justify-content:flex-end"><button class="btn btn-ghost" id="save-goal" type="button">Зорилго хадгалах</button></div>
-      </div>
-      <div id="goal-out"><p class="note">Эхлээд баланс болон зорилгоо оруулна уу.</p></div>
-    </section>
-
-    <section class="card">
-      <div class="ai-head"><h2>Бодит журнал · forward test</h2><span class="tag" id="jr-tag">LIVE</span></div>
-      <p class="note" style="font-size:13px">BTCUSD, XAUUSD-ийн M5, M15 дээр гарсан сигнал бүрийг 5 минут тутам автоматаар бүртгэж, TP1-д хагасыг хааж, TP2 (3R) / SL / breakeven эсвэл 48 цагийн дотор юу болсныг тэмдэглэнэ (spread хассан). Энэ бол өнгөрсөн биш, <b>бодитоор</b> гарсан үр дүн.</p>
-      <div class="jr-pills" role="group" aria-label="Журналын зах" id="jr-pills">
-        <button type="button" data-jr="all" aria-pressed="true">Бүгд</button>
-        <button type="button" data-jr="btc" aria-pressed="false">BTCUSD</button>
-        <button type="button" data-jr="xau" aria-pressed="false">XAUUSD</button>
-      </div>
-      <div id="jr-out"><p class="note">Ачаалж байна...</p></div>
-    </section>
-
-    <section class="card">
-      <div class="ai-head"><h2>Backtest · сигналын түүхэн үр дүн</h2></div>
-      <p class="note" style="font-size:13px">Сонгосон хэрэгсэл, timeframe-ийн сүүлийн ~1500 лаан дээр график дээрх BUY/SELL сигналыг манай дүрмээр туршина: SL нь swing-ийн цаана, TP1 (1R)-д хагасыг хааж SL-ийг entry рүү зөөнө, үлдсэнийг TP2 (3R)-д хаана. SL = −1R, TP1+BE = +0.5R, TP2 = +2R. Арилжаа бүрээс spread хасна. H1 дээр алтны ~3 сар, BTC-ийн ~2 сарын түүх хамгийн найдвартай.</p>
-      <button class="btn btn-primary" id="bt-btn" type="button">Backtest ажиллуулах</button>
-      <div id="bt-out"></div>
-    </section>
-
-    <section class="card">
-      <h2>Манай сайтын арилжааны дүрэм</h2>
-      <ol class="rules">
-        <li>Зөвхөн нийт дохио <b>BUY</b> эсвэл <b>SELL</b>, дор хаяж 2/3 timeframe тохирсон үед орно. WAIT үед хүлээнэ.</li>
-        <li>H1-ийн чиглэлийн <b>эсрэг</b> орохгүй (EMA20/EMA50 H1 дээр).</li>
-        <li><b>M1</b> дээр арилжаа хийхгүй: spread-ийн зардал хэт их. M5, M15, H1 ашиглана.</li>
-        <li>Нэг арилжаанд балансынхаа <b>1–2%</b>-иас илүүг эрсдэлд бүү оруул. Лотыг дээрх тооцоолуураар тогтооно.</li>
-        <li>Stop loss-ийг <b>заавал</b> тавина, алдагдал руу хэзээ ч бүү зөөнө.</li>
-        <li>Take profit нь SL-ээс дор хаяж <b>2 дахин</b> хол (R:R ≥ 1:2) байх ёстой.</li>
-        <li>Өдөрт <b>3 удаа</b> алдсан эсвэл балансын <b>3%</b>-ийг алдсан бол тэр өдөртөө зогсоно.</li>
-        <li>Сарын зорилгод хүрэхийн тулд эрсдэлээ өсгөхгүй. Хоцорвол хугацааг уртасгана.</li>
-      </ol>
-      <p class="note">Эдгээр нь эрсдэлийг хянах дүрэм бөгөөд ашгийн баталгаа биш. Алтны үнэ маш хурдан хөдөлдөг.</p>
-    </section>
-  </div>
-
-  <aside class="side-col">
-    <section class="card">
-      <div class="ai-head"><h2>AI дүгнэлт</h2><span class="tag">AI</span></div>
-      <div class="ai-result"><strong id="ai-action" class="WAIT">--</strong><span id="ai-meta">Шинжилгээ ажиллуулаагүй байна</span></div>
-      <div class="kv">
-        <div><span>Entry</span><b id="ai-entry">--</b></div>
-        <div><span>Stop loss</span><b id="ai-sl" class="neg">--</b></div>
-        <div><span>Take profit</span><b id="ai-tp" class="pos">--</b></div>
-      </div>
-      <div class="ai-text" id="ai-text">Товчийг дарж 5M, 15M, H1-ийн өгөгдөл дээр AI дүгнэлт гаргуулна. AI-ийн түвшин нийт дохиотой таарвал график, лотын тооцоонд ашиглагдана.</div>
-      <button class="btn btn-primary" id="ai-btn" type="button">AI шинжилгээ ажиллуулах</button>
-    </section>
-
-    <section class="card">
-      <div class="ai-head"><h2>USD томоохон мэдээ</h2><span class="tag" style="background:#FF9800">HIGH</span></div>
+      <div class="card-head"><h2>USD мэдээ</h2><span class="tag hi">HIGH</span></div>
       <div id="news-out"><p class="note">Ачаалж байна...</p></div>
-      <p class="note">Мэдээнээс 30 минутын өмнө, дараа арилжаа нээхгүй. Эх сурвалж: Forex Factory.</p>
     </section>
 
     <section class="card">
-      <h2>SMC илрүүлэлт</h2>
-      <div class="smc-list" id="smc-explanations">
-        <div class="smc-item"><i style="background:#DDD3C6"></i><div><b>SMC analysis</b><p>Лааны мэдээлэл хүлээж байна...</p></div></div>
-      </div>
-      <p class="note" style="border-top:1px solid var(--border);padding-top:10px">Дүрэмд суурилсан ойролцоо илрүүлэлт. Арилжаанд ашиглахаас өмнө backtest хийнэ үү.</p>
+      <div class="card-head"><h2>Арилжааны дүрэм</h2></div>
+      <ol class="rules">
+        <li><span>Нийт дохио <b>BUY</b> эсвэл <b>SELL</b>, дор хаяж 2/3 timeframe тохирсон үед л орно.</span></li>
+        <li><span>H1-ийн чиглэлийн <b>эсрэг</b> орохгүй.</span></li>
+        <li><span>USD томоохон мэдээний <b>±30 минутад</b> арилжаа нээхгүй.</span></li>
+        <li><span>Нэг арилжаанд балансын <b>1–2%</b>-иас илүүг эрсдэлд оруулахгүй.</span></li>
+        <li><span>Stop loss-ийг <b>заавал</b> тавина, алдагдал руу хэзээ ч зөөхгүй.</span></li>
+        <li><span><b>TP1</b>-д хагасыг хааж SL-ийг entry рүү зөөнө, үлдсэнийг <b>TP2</b>-д хаана.</span></li>
+        <li><span>Өдөрт <b>3</b> удаа эсвэл балансын <b>3%</b>-ийг алдвал тэр өдөртөө зогсоно.</span></li>
+        <li><span><b>1m</b> дээр арилжаа хийхгүй: spread хэт их.</span></li>
+      </ol>
     </section>
-  </aside>
-</div>
-
-<section class="card">
-  <div class="label">Техник индикатор · 5M</div>
-  <div class="ind-grid">
-    <div class="ind">
-      <div style="display:flex;justify-content:space-between"><span class="k">RSI 14</span><span class="h" id="rsi-zone">--</span></div>
-      <div class="v" id="rsi">--</div>
-      <div class="meter"><i id="rsi-mark"></i></div>
-    </div>
-    <div class="ind"><span class="k">EMA 20</span><div class="v" id="ema20">--</div><span class="h" id="ema-note">--</span></div>
-    <div class="ind"><span class="k">EMA 50</span><div class="v" id="ema50">--</div><span class="h">Дунд хугацааны чиг</span></div>
-    <div class="ind"><span class="k">MACD</span><div class="v" id="macd">--</div><span class="h" id="macd-signal">Signal: --</span></div>
   </div>
-</section>
-
-<div id="message">Мэдээлэл хүлээж байна...</div>
-
-<footer>
-  Forex AI Analyzer · SMC + Technical Analysis<br>
-  Санхүүгийн зөвлөгөө биш · XAUS-ын үнэ нь XM-ийн арилжааны яг үнэ биш
-</footer>
+</main>
 </div>
+
+<footer>Forex AI Analyzer · Санхүүгийн зөвлөгөө биш</footer>
 
 <script>
 "use strict";
@@ -437,11 +352,14 @@ const FUTURE=16;          // empty bars on the right for the forecast
 const TICK_MS=3000;       // live price poll
 const ANIM_MS=900;        // smooth candle movement
 
-const SYM={xau:{name:"XAUUSD",label:"Алтны үнэ · USD/oz",sub:"Алт · XAUUSD · SMC + техник шинжилгээ",unit:"oz",src:"XAUS",def:100,cost:0.35},
-  btc:{name:"BTCUSD",label:"Bitcoin үнэ · USD",sub:"Bitcoin · BTCUSD · SMC + техник шинжилгээ",unit:"BTC",src:"Coinbase",def:1,cost:25}};
+const SYM={xau:{name:"XAUUSD",desc:"Алт / АНУ доллар",unit:"oz",src:"XAUS",def:100,cost:0.35},
+  btc:{name:"BTCUSD",desc:"Bitcoin / АНУ доллар",unit:"BTC",src:"Coinbase",def:1,cost:25}};
 const savedSym=(()=>{try{return localStorage.getItem("fxa_symbol");}catch(_){return null;}})();
-const S={symbol:SYM[savedSym]?savedSym:"xau",posPrice:null,tf:"5m",candles:[],smc:null,price:null,priceAsOf:null,overall:"WAIT",sigs:[],m5:[],ai:null,plan:null,
-  anim:null,lastShown:null,sigEvents:[],showSig:true,news:[],mtf:{},smcShow:(()=>{try{return Object.assign({ob:true,fvg:true,bos:true,sess:true,news:true,vol:true,vp:true},JSON.parse(localStorage.getItem("fxa_smc")||"{}"));}catch(_){return {ob:true,fvg:true,bos:true,sess:true,news:true,vol:true,vp:true};}})(),active:(()=>{try{return localStorage.getItem("fxa_active")!=="0";}catch(_){return true;}})(),strategy:(()=>{try{return (v=>["london","lit"].includes(v)?v:"trend")(localStorage.getItem("fxa_strategy"));}catch(_){return "trend";}})(),ranges:[],htfOn:true,h1:[],htf:null,h1At:0,planBlock:null};
+const S={symbol:SYM[savedSym]?savedSym:"xau",tf:"5m",candles:[],smc:null,price:null,priceAsOf:null,overall:"WAIT",sigs:[],m5:[],plan:null,
+  anim:null,lastShown:null,sigEvents:[],showSig:true,news:[],mtf:{},day:{},
+  smcShow:{ob:true,fvg:true,bos:true,sess:true,news:true,vol:true,vp:true},     // chart overlays, always on
+  active:true,strategy:(()=>{try{return (v=>["london","lit"].includes(v)?v:"trend")(localStorage.getItem("fxa_strategy"));}catch(_){return "trend";}})(),
+  ranges:[],htfOn:true,h1:[],htf:null,h1At:0,planBlock:null};
 const view={count:90,offset:0,yAuto:true,yZoom:1,yShift:0};
 const hover={on:false,x:0,y:0};
 let layout=null;
@@ -719,16 +637,14 @@ function btStats(ev,cost=SYM[S.symbol].cost){
 }
 function renderSigStats(){
   const ev=S.sigEvents||[],el=$("sig-stats");
-  if(S.strategy==="london"&&S.symbol!=="xau"){el.textContent="London breakout зөвхөн алтанд зориулагдсан. BTC 24 цаг арилждаг тул энэ стратеги backtest-ээр алдагдалтай гарсан. Trend стратегийг ашиглана уу.";return;}
-  if(S.strategy==="london"&&TF_SEC[S.tf]>3600){el.textContent="London breakout-ыг M5, M15, M30 эсвэл H1 дээр харна уу (H1 хамгийн сайн).";return;}
-  if(S.tf==="1m"&&!S.active){el.textContent="M1 дээр сигнал гаргахгүй: backtest-ээр spread-ийн зардал M1-ийн сигналуудыг алдагдалтай болгож байсан. M5 болон түүнээс дээш timeframe ашиглана уу.";return;}
-  if(!ev.length){el.textContent="Энэ timeframe-ийн лаанууд дээр сигнал гараагүй байна"+(S.htfOn&&HTF_TFS.includes(S.tf)?" (H1 шүүлтүүр асаалттай).":".");return;}
-  const st=btStats(ev);
-  const last=ev[ev.length-1];
-  const warn1m=S.tf==="1m"?`<b style="color:#E0A84A">M1 анхааруулга:</b> spread их тул backtest-ээр BTC M1 алдагдалтай гарсан. Зөвхөн M5/M15-ийн чиглэлтэй таарсан үед, бага лотоор. `:"";
-  el.innerHTML=warn1m+`Энэ график дээрх ${st.n} дууссан сигналаас <b>${st.wins}</b> ✓ ашигтай (TP2 +2R эсвэл TP1-ийн дараа BE +0.5R), <b>${st.n-st.wins}</b> ✗ SL (−1R), spread-тай`+
-    (st.n?` · нийт <b>${st.total>=0?"+":""}${st.total}R</b>`:"")+`. Сүүлийн сигнал: <b style="color:${last.side==="BUY"?"#089981":"#F23645"}">${last.side}</b> @ ${fmt(last.entry)} · ${last.result==="open"?"идэвхтэй":last.result==="TP1"?"TP1 авсан, үлдсэн нь нээлттэй":last.result}. `+
-    (S.strategy==="lit"?`LIT: swing-ийн stop-уудыг цохисон (sweep) лааны дараа 8 лаан дотор pullback-ийн оройг close-оор эвдвэл (CHoCH) орно. SL — sweep хийсэн оройн цаана; TP1 (1R)-д хагасыг хааж SL-ийг entry рүү зөөнө; үлдсэнийг 3R-д хаана.`:S.strategy==="london"?`London: 16:00 UTC хүртэл TP2/SL-д хүрээгүй бол тэр үеийн үнээр хаасан гэж тооцно (✓/✗ нь ашиг/алдагдал).`:`Арга: SL — сүүлийн 10 лааны swing-ийн цаана; TP1 (1R)-д хагасыг хааж SL-ийг entry рүү зөөнө; үлдсэнийг TP2 (3R)-д хаана.`);
+  if(S.strategy==="london"&&S.symbol!=="xau"){el.textContent="London стратеги зөвхөн XAUUSD дээр ажиллана.";return;}
+  if(S.strategy==="london"&&TF_SEC[S.tf]>3600){el.textContent="London стратегийг 5m–1H дээр харна уу.";return;}
+  if(!ev.length){el.textContent="Энэ timeframe дээр сигнал гараагүй байна.";return;}
+  const st=btStats(ev),last=ev[ev.length-1];
+  const state=last.result==="open"?"идэвхтэй":last.result==="TP1"?"TP1 авсан":last.result;
+  el.innerHTML=(S.tf==="1m"?`<b class="WAIT">1m:</b> spread өндөр тул эрсдэлтэй · `:"")+
+    `Энэ график дээр <b>${st.n}</b> сигнал · <span class="pos">${st.wins} ✓</span> · <span class="neg">${st.n-st.wins} ✗</span> · нийт <b class="${st.total>=0?"pos":"neg"}">${st.total>=0?"+":""}${st.total}R</b>`+
+    ` · Сүүлийнх: <b class="${last.side}">${last.side}</b> @ ${fmt(last.entry)} (${state})`;
 }
 
 /* ---------- Trade plan (where price is expected to go) ---------- */
@@ -744,30 +660,37 @@ function buildPlan(){
   const dir=sig==="BUY"?1:-1;
   const hd=S.htfOn?htfDirAt(Date.now()/1000,S.htf):0;
   if(hd!==0&&hd!==dir){S.planBlock=`${sig} дохио гарсан ч H1-ийн чиглэл ${hd>0?"өсөх":"буурах"} байна. Манай дүрмээр эсрэг чиглэлд орохгүй.`;return null;}
-  const ai=S.ai;
-  if(ai&&ai.action===sig&&[ai.entry_price,ai.stop_loss,ai.take_profit].every(v=>v!=null)){
-    const e=+ai.entry_price,sl=+ai.stop_loss,tp=+ai.take_profit;
-    if(dir*(tp-e)>0&&dir*(e-sl)>0)return {dir,side:sig,entry:e,sl,tp,tp1:e+dir*Math.abs(e-sl),src:"AI"};
-  }
   const closed=pts.slice(0,-1);
   const a=atr(closed)||1;
   const sl=structureStop(closed,closed.length-1,dir,a,price),risk=Math.abs(price-sl);
   return {dir,side:sig,entry:price,sl,tp1:price+dir*risk,tp:price+dir*risk*3,src:"Swing SL · TP1 1R · TP2 3R"};
 }
 
-function renderForecast(){
-  const p=S.plan,el=$("forecast");
-  if(!p&&S.planBlock){el.innerHTML=`<b class="WAIT">WAIT</b><span>${esc(S.planBlock)}</span>`;return;}
+function renderPlan(){
+  const p=S.plan,out=$("plan-out");
   if(!p){
-    el.innerHTML=`<b class="WAIT">WAIT</b><span>Нийт дохио BUY/SELL биш тул манай дүрмээр одоо арилжаа нээхгүй. Дараагийн дохиог хүлээнэ үү.</span>`;
+    out.innerHTML=`<div class="wait-box"><span class="badge WAIT">WAIT</span><span>${S.planBlock?esc(S.planBlock):"Нийт дохио BUY эсвэл SELL болоход entry, stop loss, take profit энд гарна."}</span></div>`;
     return;
   }
-  const move=Math.abs(p.tp-p.entry),risk=Math.abs(p.entry-p.sl);
-  const verb=p.dir>0?"өсөх":"буурах";
-  el.innerHTML=`<b class="${p.side}">${p.side}</b>
-    <span>Зорилт <b class="mono">${fmt(p.tp)}</b> хүртэл ${verb} боломжтой (${fmt(move)}$). Stop loss <b class="mono">${fmt(p.sl)}</b> (сүүлийн swing-ийн цаана, ${fmt(risk)}$).
-    <b>TP1 ${fmt(p.tp1)}</b>-д хагасыг хааж SL-ийг entry рүү зөө, үлдсэнийг <b>TP2 ${fmt(p.tp)}</b>-д хаа.</span>
-    <span class="src">${esc(p.src)} · таамаг, баталгаа биш</span>`;
+  const risk=Math.abs(p.entry-p.sl),rr=risk?Math.abs(p.tp-p.entry)/risk:0;
+  let html=`<div class="card-head" style="margin-bottom:4px"><span class="badge ${p.side}">${p.side==="BUY"?"▲":"▼"} ${p.side} · ${SYM[S.symbol].name}</span><span class="sub">R:R 1:${fmt(rr,1)}</span></div>
+  <div class="rows">
+    <div class="big"><span>Entry</span><b>${fmt(p.entry)}</b></div>
+    <div><span>Stop loss</span><b class="neg">${fmt(p.sl)}</b></div>
+    <div><span>TP1 · ½ хаах</span><b class="pos">${fmt(p.tp1)}</b></div>
+    <div><span>TP2</span><b class="pos">${fmt(p.tp)}</b></div>`;
+  if(ACC.balance>0){
+    const L=lotFor(p),half=Math.max(0.01,Math.floor(L.lot/2*100)/100);
+    html+=`<div><span>Лот</span><b>${fmt(L.lot)}</b></div>
+    <div><span>SL хүрвэл</span><b class="neg">${money(-L.realRisk)}</b></div>
+    <div><span>Хоёр TP хүрвэл</span><b class="pos">+${money(L.profit)}</b></div>
+  </div>
+  <div class="tip">TP1 <b>${fmt(p.tp1)}</b>-д хүрэхэд <b>${fmt(half)} лотыг</b> хааж, SL-ийг <b>${fmt(p.entry)}</b> руу зөө.</div>`;
+    if(L.tooSmall)html+=`<div class="warn">${fmt(ACC.riskPct,1)}% эрсдэл 0.01 лотоос бага гарч байна. 0.01 лотоор бодит эрсдэл ${money(L.realRisk)} (${fmt(L.realRisk/ACC.balance*100,1)}%) болно.</div>`;
+  }else{
+    html+=`</div><div class="tip">TP1-д хагасыг хааж SL-ийг entry рүү зөө. Лотыг тооцохын тулд доор балансаа оруулна уу.</div>`;
+  }
+  out.innerHTML=html;
 }
 
 /* ---------- Volume helpers ---------- */
@@ -831,16 +754,13 @@ function draw(){
   if(!vis.length){ctx.fillStyle=C.axis;ctx.fillText("Энэ хэсэгт лаа алга",14,28);return;}
 
   let min=Math.min(...vis.map(c=>c.l)),max=Math.max(...vis.map(c=>c.h));
-  $("range-low").textContent=fmt(min);$("range-high").textContent=fmt(max);
   const live=S.lastShown;
   const futureVisible=endSlot>n;
   const extra=[];
   if(Number.isFinite(live))extra.push(live);
-  const pos=ACC.pos&&posSym(ACC.pos)===S.symbol?ACC.pos:null;
-  if(S.plan&&futureVisible&&!pos)extra.push(S.plan.tp,S.plan.sl);
+  if(S.plan&&futureVisible)extra.push(S.plan.tp,S.plan.sl);
   const lastSig=S.showSig&&S.sigEvents.length?S.sigEvents[S.sigEvents.length-1]:null;
   if(lastSig&&lastSig.i<i1)extra.push(lastSig.sl,lastSig.tps[2]);
-  if(pos){extra.push(pos.entry);if(pos.sl)extra.push(pos.sl);if(pos.tp)extra.push(pos.tp);}
   extra.forEach(v=>{if(Number.isFinite(v)){min=Math.min(min,v);max=Math.max(max,v);}});
   const pad=(max-min)*.08||1;min-=pad;max+=pad;
   if(S.smcShow.vol&&vis.some(c=>c.v>0))min-=(max-min)*.25;   // keep candles above the volume pane
@@ -867,7 +787,7 @@ function draw(){
       const hU=new Date(p[i].t*1000).getUTCHours();
       const lon=hU>=7&&hU<16,ny=hU>=12&&hU<21;
       if(!lon&&!ny)continue;
-      ctx.fillStyle=lon&&ny?"rgba(98,70,215,.09)":lon?"rgba(41,98,255,.07)":"rgba(156,39,176,.07)";
+      ctx.fillStyle=lon&&ny?"rgba(98,70,215,.06)":lon?"rgba(41,98,255,.045)":"rgba(156,39,176,.045)";
       ctx.fillRect(x(i)-barW/2,top,barW+.5,plotH);
     }
   }
@@ -878,7 +798,7 @@ function draw(){
       const slot=(ev.time-p[0].t)/secTF;
       if(slot<startSlot||slot>endSlot)return;
       const xx=Math.round(x(slot))+.5;
-      ctx.strokeStyle="rgba(255,152,0,.8)";ctx.setLineDash([3,3]);
+      ctx.strokeStyle="rgba(255,152,0,.5)";ctx.setLineDash([3,3]);
       ctx.beginPath();ctx.moveTo(xx,top);ctx.lineTo(xx,top+plotH);ctx.stroke();ctx.setLineDash([]);
       ctx.fillStyle="#FF9800";ctx.fillText("⚠ "+ev.title.slice(0,18),xx+4,top+32);
     });
@@ -917,15 +837,15 @@ function draw(){
     const yy=y(z.high),hh=Math.max(2,y(z.low)-yy);
     const isOB=z.kind.includes("OB"),bull=z.kind.includes("Bullish");
     const col=isOB?(bull?C.bull:C.bear):C.fvg;
-    ctx.fillStyle=isOB?(bull?"rgba(8,153,129,.12)":"rgba(242,54,69,.12)"):"rgba(91,141,239,.12)";
+    ctx.fillStyle=isOB?(bull?"rgba(8,153,129,.08)":"rgba(242,54,69,.08)"):"rgba(91,141,239,.08)";
     ctx.fillRect(xx,yy,xe-xx,hh);
-    ctx.strokeStyle=col;ctx.globalAlpha=.6;ctx.strokeRect(xx,yy,xe-xx,hh);ctx.globalAlpha=1;
+    ctx.strokeStyle=col;ctx.globalAlpha=.35;ctx.strokeRect(xx,yy,xe-xx,hh);ctx.globalAlpha=1;
     ctx.fillStyle=col;ctx.fillText(isOB?"OB":"FVG",Math.max(left+2,xx+3),yy-3);
   });
   (S.smcShow.bos?smc.structure:[]).forEach(s=>{
     const yy=y(s.price);
-    ctx.setLineDash([3,3]);ctx.strokeStyle=C.struct;ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(left+plotW,yy);ctx.stroke();ctx.setLineDash([]);
-    ctx.fillStyle=C.struct;ctx.fillText(s.label,left+40,yy-5);
+    ctx.setLineDash([3,3]);ctx.strokeStyle="rgba(179,157,219,.55)";ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(left+plotW,yy);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle=C.struct;ctx.fillText(s.label.includes("Bullish")?"BOS ↑":"BOS ↓",left+40,yy-5);
   });
 
   // Asian ranges (London strategy)
@@ -942,20 +862,20 @@ function draw(){
   if(S.smcShow.vp&&vmax>0){
     const vp=volumeProfile(vis,min,max,40);
     if(vp){
-      const maxW=plotW*.22,x0=left+plotW,rowH=plotH/vp.rows.length;
+      const maxW=plotW*.18,x0=left+plotW,rowH=plotH/vp.rows.length;
       vp.rows.forEach((r,k)=>{
         if(!r.v)return;
         const ww=r.v/vp.maxV*maxW,inVA=k>=vp.vaLo&&k<=vp.vaHi;
         const yy=y(r.hi);
-        ctx.fillStyle=k===vp.poc?"rgba(224,168,74,.55)":inVA?"rgba(91,141,239,.28)":"rgba(178,181,190,.14)";
+        ctx.fillStyle=k===vp.poc?"rgba(224,168,74,.42)":inVA?"rgba(91,141,239,.17)":"rgba(178,181,190,.09)";
         ctx.fillRect(x0-ww,yy+0.5,ww,Math.max(1,rowH-1));
       });
       const line=(v,col,lab,dash)=>{const yy=Math.round(y(v))+.5;ctx.strokeStyle=col;ctx.lineWidth=1;ctx.setLineDash(dash);
         ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(left+plotW,yy);ctx.stroke();ctx.setLineDash([]);
-        ctx.fillStyle=col;ctx.font="600 10px Inter, Arial";ctx.textAlign="right";ctx.fillText(`${lab} ${fmt(v)}`,left+plotW-4,yy-3);};
-      line(vp.pocPrice,"rgba(224,168,74,.95)","POC",[]);
-      line(vp.vah,"rgba(91,141,239,.8)","VAH",[4,3]);
-      line(vp.val,"rgba(91,141,239,.8)","VAL",[4,3]);
+        ctx.fillStyle=col;ctx.font="600 9px Inter, Arial";ctx.textAlign="right";ctx.fillText(`${lab} ${fmt(v)}`,left+plotW-4,yy-3);};
+      line(vp.pocPrice,"rgba(224,168,74,.75)","POC",[]);
+      line(vp.vah,"rgba(91,141,239,.45)","VAH",[4,3]);
+      line(vp.val,"rgba(91,141,239,.45)","VAL",[4,3]);
       ctx.textAlign="left";
       S.vp=vp;
     }
@@ -1029,7 +949,7 @@ function draw(){
 
   // forecast projection: arrow to target, profit (green) and risk (red) zones
   const plan=S.plan;
-  if(plan&&futureVisible&&!pos){
+  if(plan&&futureVisible){
     const x0=x(n-1)+barW*.8,x1=x(n-1+FUTURE-1);
     const ye=y(plan.entry),yt=y(plan.tp),ys=y(plan.sl);
     const good=plan.dir>0?"rgba(8,153,129,":"rgba(242,54,69,";
@@ -1049,19 +969,6 @@ function draw(){
       ctx.fillText(`TP1 ${fmt(plan.tp1)} · ½`,x0+4,y1+(plan.dir>0?-4:12));}
     ctx.fillStyle="#F23645";ctx.fillText(`SL ${fmt(plan.sl)}`,x0+4,plan.dir>0?ys+14:ys-6);
     ctx.fillStyle="#fff";ctx.fillText(`${plan.side} → ${fmt(plan.tp)}`,x0+4,ye+(plan.dir>0?14:-6));
-  }
-
-  // open position lines
-  if(pos){
-    const lines=[[pos.entry,C.entry,`${pos.side} ${pos.lot} @ ${fmt(pos.entry)}`],[pos.sl,C.bear,`SL ${fmt(pos.sl)}`],[pos.tp,C.bull,`TP2 ${fmt(pos.tp)}`]];
-    if(Number.isFinite(pos.tp1)&&!pos.partial)lines.push([pos.tp1,C.bull,`TP1 ${fmt(pos.tp1)} · ½`]);
-    ctx.font="600 10px Inter, Arial";
-    lines.forEach(([v,col,label])=>{
-      if(!Number.isFinite(v))return;
-      const yy=y(v);
-      ctx.setLineDash([8,4]);ctx.strokeStyle=col;ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(left+plotW,yy);ctx.stroke();ctx.setLineDash([]);
-      ctx.fillStyle=col;ctx.fillText(label,left+plotW-ctx.measureText(label).width-6,yy-4);
-    });
   }
 
   // live price line
@@ -1158,7 +1065,6 @@ function zoomAt(factor,clientX){
   cv.addEventListener("pointerdown",e=>{
     cv.setPointerCapture(e.pointerId);
     pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    $("hint").style.display="none";
     if(e.pointerType!=="mouse"){const l=local(e);hover.on=true;hover.x=l.x;hover.y=l.y;}
     if(pts.size===1&&onAxis(e)){                       // drag the price scale to stretch it
       if(view.yAuto){view.yAuto=false;view.yZoom=1;view.yShift=0;}
@@ -1200,23 +1106,20 @@ function zoomAt(factor,clientX){
     else{view.count=90;view.offset=0;}
     requestDraw();
   });
-  $("zoom-in").addEventListener("click",()=>zoomAt(1/1.3));
-  $("zoom-out").addEventListener("click",()=>zoomAt(1.3));
-  $("zoom-reset").addEventListener("click",()=>{Object.assign(view,{count:90,offset:0,yAuto:true,yZoom:1,yShift:0});requestDraw();});
 })();
 
 /* ---------- Live price: smooth candle movement ---------- */
 function startAnim(to,ms=ANIM_MS){
   const stalled=S.anim&&performance.now()-(S.animTick||0)>600;   // animation frames not arriving
   if(document.hidden||stalled){                 // hidden/paused pane: update directly
-    const d=to-(S.lastShown??to);S.anim=null;S.lastShown=to;updateLastCandle(to);showPrice(to,d);renderPosition();draw();
+    const d=to-(S.lastShown??to);S.anim=null;S.lastShown=to;updateLastCandle(to);showPrice(to,d);draw();
     return;
   }
   const from=Number.isFinite(S.lastShown)?S.lastShown:to;
   const running=!!S.anim;
   const a=S.anim={from,to,start:performance.now(),ms};
   if(!running){S.animTick=performance.now();requestAnimationFrame(animate);}
-  setTimeout(()=>{if(S.anim===a&&performance.now()-(S.animTick||0)>ms+200){S.anim=null;S.lastShown=to;updateLastCandle(to);showPrice(to,to-from);renderPosition();draw();}},ms+400);
+  setTimeout(()=>{if(S.anim===a&&performance.now()-(S.animTick||0)>ms+200){S.anim=null;S.lastShown=to;updateLastCandle(to);showPrice(to,to-from);draw();}},ms+400);
 }
 function animate(now){
   const a=S.anim;if(!a)return;
@@ -1227,7 +1130,6 @@ function animate(now){
   S.lastShown=v;
   updateLastCandle(v);
   showPrice(v,a.to-a.from);
-  renderPosition();
   draw();
   if(t<1)requestAnimationFrame(animate);else S.anim=null;
 }
@@ -1259,10 +1161,24 @@ function goldMarketOpen(d=new Date()){
   if(wd===0&&h<22)return false;           // Sunday before 22:00 UTC
   return true;
 }
+let flashT=null;
 function showPrice(v,dir){
   const el=$("price");
   el.textContent=fmt(v);
-  el.className="price"+(dir>0?" up":dir<0?" down":"");
+  if(dir){el.className="price "+(dir>0?"up":"down");clearTimeout(flashT);flashT=setTimeout(()=>{el.className="price";},800);}
+  renderDay(v);
+}
+/* today's change, high and low (from the daily candle, extended by live ticks) */
+function renderDay(v=S.lastShown??S.price){
+  const d=S.day,ch=$("price-chg");
+  if(Number.isFinite(v)&&Number.isFinite(d.open)){
+    d.high=Math.max(d.high,v);d.low=Math.min(d.low,v);
+    const chg=v-d.open,pct=chg/d.open*100;
+    ch.textContent=`${chg>=0?"+":""}${fmt(chg)} (${chg>=0?"+":""}${fmt(pct)}%)`;
+    ch.className="chg "+(chg>=0?"up":"down");
+  }else{ch.textContent="";ch.className="chg";}
+  $("day-high").textContent=Number.isFinite(d.high)?fmt(d.high):"—";
+  $("day-low").textContent=Number.isFinite(d.low)?fmt(d.low):"—";
 }
 
 /* Real-time BTC ticks straight from Coinbase (tick-by-tick, like a trading terminal) */
@@ -1303,12 +1219,10 @@ function wsStart(){
     const now=performance.now();
     if(now-WS.last<120)return;           // at most ~8 updates a second
     WS.last=now;
-    if(m.time)$("price-time").textContent=new Date(m.time).toLocaleTimeString();
+    $("price-time").textContent=new Date(m.time||Date.now()).toLocaleTimeString();
     rollCandle(p);
     startAnim(p,200);
-    const pos=ACC.pos;
-    if(pos&&posSym(pos)===sym)checkStops(p);
-    if(S.candles.length)setStatus("",sym==="xau"?"LIVE · real-time (PAXG)":"LIVE · real-time");
+    if(S.candles.length)setStatus("","LIVE");
   };
   sock.onclose=()=>{
     WS.alive=false;
@@ -1332,22 +1246,16 @@ async function tick(){
     if(!WS.sock&&goldMarketOpen())wsStart();
     if(WS.alive&&tickN%5!==0)return;          // live ticks run; refresh the XAUS level every ~15 s
   }
-  if(S.symbol==="btc"&&WS.alive){            // live feed is running; only keep the other symbol's position fresh
-    const pos=ACC.pos;
-    if(pos&&posSym(pos)!==S.symbol){
-      try{const r2=await fetch(`${API}/price?symbol=${posSym(pos)}`);if(r2.ok){const d2=await r2.json();const p2=Number(d2.price);if(Number.isFinite(p2)){S.posPrice=p2;checkStops(p2);renderPosition();}}}catch(_){}
-    }
-    return;
-  }
+  if(S.symbol==="btc"&&WS.alive)return;      // live feed is running
   try{
     const r=await fetch(api("/price"));
     if(!r.ok)return;
     const d=await r.json();
-    const p=Number(d.price);
+    let p=Number(d.price);
     if(!Number.isFinite(p))return;
     if(S.symbol==="xau"&&Number.isFinite(WS.raw)){
-      // keep the live PAXG ticks on the XAUS level (smoothed so the chart does not jump)
-      // only learn the offset when XAUS publishes a new price, and slowly, so PAXG keeps the moves
+      // keep the live PAXG ticks on the XAUS level: learn the offset only when XAUS
+      // publishes a new price, and slowly, so PAXG keeps the moves
       if(p!==S.lastXaus||!Number.isFinite(S.basis)){
         const b=p-WS.raw;
         S.basis=Number.isFinite(S.basis)?S.basis*0.85+b*0.15:b;
@@ -1357,15 +1265,9 @@ async function tick(){
       if(WS.got){WS.alive=true;p=WS.raw+S.basis;}   // live feed is ready: continue from its level
     }
     S.price=p;S.priceAsOf=d.price_as_of;
-    $("price-time").textContent=d.price_as_of?new Date(d.price_as_of).toLocaleTimeString():"--";
+    if(!WS.alive)$("price-time").textContent=d.price_as_of?new Date(d.price_as_of).toLocaleTimeString():"—";
     rollCandle(p);
     startAnim(p);
-    const pos=ACC.pos;
-    if(pos&&posSym(pos)===S.symbol)checkStops(p);
-    else if(pos){
-      const r2=await fetch(`${API}/price?symbol=${posSym(pos)}`);
-      if(r2.ok){const d2=await r2.json();const p2=Number(d2.price);if(Number.isFinite(p2)){S.posPrice=p2;checkStops(p2);renderPosition();}}
-    }
   }catch(_){/* keep last value */}
 }
 
@@ -1387,14 +1289,17 @@ async function loadChart(){
     S.smc=analyzeSMC(S.candles);
     recomputeSignals();
     if(Number.isFinite(S.lastShown))updateLastCandle(S.lastShown);
-    renderExplanations(S.smc);
-    $("message").textContent=`Chart · ${tf} · ${S.candles.length} лаа · ${new Date().toLocaleTimeString()}`;
+    $("message").textContent="";
     draw();
-  }catch(err){$("message").textContent="Chart алдаа: "+err.message;}
+  }catch(err){$("message").textContent="График ачаалсангүй: "+err.message;}
 }
 
+function liveStatus(){
+  if(S.symbol==="xau"&&!goldMarketOpen())setStatus("closed","Зах хаалттай");
+  else setStatus("","LIVE");
+}
 async function loadData(){
-  setStatus("busy","UPDATING");
+  if(!S.candles.length)setStatus("busy","Ачаалж байна");
   try{
     const sym=S.symbol;
     const reqs=[fetch(api("/price")),fetch(api("/analyze"))];
@@ -1409,7 +1314,7 @@ async function loadData(){
     if(cr&&cr.ok){const cd=await cr.json();S.m5=clean(cd.points||[]);}
 
     S.price=Number(priceData.price);
-    $("price-time").textContent=priceData.price_as_of?new Date(priceData.price_as_of).toLocaleTimeString():"--";
+    if(!WS.alive)$("price-time").textContent=priceData.price_as_of?new Date(priceData.price_as_of).toLocaleTimeString():"—";
 
     S.overall=data.overall_signal||"WAIT";
     const tf=data.timeframes||{};
@@ -1418,72 +1323,28 @@ async function loadData(){
     $("reason").textContent=data.reason||"";
     setSignal("tf1",S.sigs[0]);setSignal("tf5",S.sigs[1]);setSignal("tf15",S.sigs[2]);
 
-    const ind=tf["5m"]?.indicators||{};
-    const rsi=Number(ind.RSI);
-    $("rsi").textContent=ind.RSI??"--";
-    if(Number.isFinite(rsi)){
-      $("rsi-mark").style.left=`calc(${clamp(rsi,0,100)}% - 2px)`;
-      $("rsi-zone").textContent=rsi>=70?"Overbought":rsi<=30?"Oversold":"Төвийн бүс";
-    }
-    $("ema20").textContent=ind.EMA20!=null?fmt(ind.EMA20):"--";
-    $("ema50").textContent=ind.EMA50!=null?fmt(ind.EMA50):"--";
-    $("ema-note").textContent=(ind.EMA20!=null&&ind.EMA50!=null)?(ind.EMA20>ind.EMA50?"EMA50-аас дээр ↑":"EMA50-аас доор ↓"):"--";
-    const macd=Number(ind.MACD);
-    $("macd").textContent=ind.MACD!=null?(macd>0?"+":"")+ind.MACD:"--";
-    $("macd").className="v "+(macd>0?"BUY":macd<0?"SELL":"");
-    $("macd-signal").textContent="Signal: "+(ind.MACD_signal??"--");
-
-    setStatus("",S.symbol==="btc"&&WS.alive?"LIVE · real-time":"LIVE · "+new Date().toLocaleTimeString());
+    liveStatus();
     await loadChart();
     loadHTF();
     if(!Number.isFinite(S.lastShown)&&Number.isFinite(S.price)){S.lastShown=S.price;showPrice(S.price,0);updateLastCandle(S.price);}
     refreshPlan();
   }catch(err){
-    setStatus("error","ERROR");
-    $("message").textContent="Алдаа: "+err.message+(err.message.includes("Backend")?"":" (Render сервер сэрэхэд 30–60 сек болж магадгүй)");
+    setStatus("error","Алдаа");
+    $("message").textContent="Алдаа: "+err.message+(err.message.includes("Backend")?"":" · Render сервер сэрэхэд 30–60 сек болж магадгүй");
   }
 }
 
 function recomputeSignals(){
   S.ranges=[];S.litMarks=[];
-  if(S.tf==="1m"&&!S.active)S.sigEvents=[];
-  else if(S.strategy==="london"){
+  if(S.strategy==="london"){
     if(S.symbol==="xau"){const L=londonSignals(S.candles,S.tf);S.sigEvents=L.ev;S.ranges=L.ranges;}
     else S.sigEvents=[];
   }
   else if(S.strategy==="lit"){const L=litSignals(S.candles,S.tf,S.htfOn?S.htf:null,S.active);S.sigEvents=L.ev;S.litMarks=L.marks;}
   else S.sigEvents=computeSignals(S.candles,S.tf,S.htfOn?S.htf:null,S.active);
   renderSigStats();
-  notifyNewSignal();
 }
 
-/* Browser notification + sound when a fresh signal appears on the open chart */
-const NOTE={on:(()=>{try{return localStorage.getItem("fxa_notify")==="1";}catch(_){return false;}})(),seen:null};
-function beep(){
-  try{
-    const ac=new (window.AudioContext||window.webkitAudioContext)();
-    [0,0.18].forEach(t=>{const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=880;o.connect(g);g.connect(ac.destination);
-      g.gain.setValueAtTime(0.15,ac.currentTime+t);g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+t+0.15);o.start(ac.currentTime+t);o.stop(ac.currentTime+t+0.16);});
-  }catch(_){}
-}
-function notifyNewSignal(){
-  const ev=S.sigEvents,n=S.candles.length;
-  if(!ev.length||!n)return;
-  const e=ev[ev.length-1],key=`${S.symbol}-${S.tf}-${S.candles[e.i].t}`;
-  if(NOTE.seen===null){NOTE.seen=key;return;}          // do not alert for signals that existed when the page opened
-  if(key===NOTE.seen)return;
-  NOTE.seen=key;
-  if(!NOTE.on||e.i<n-3)return;                          // only a signal on a just-closed candle
-  const title=`${SYM[S.symbol].name} ${S.tf.toUpperCase()} ${e.side}`;
-  const body=`Entry ${fmt(e.entry)} · SL ${fmt(e.sl)} · TP1 ${fmt(e.tps[0])} (½) · TP2 ${fmt(e.tps[2])}`;
-  beep();
-  try{if("Notification" in window&&Notification.permission==="granted")new Notification(title,{body,tag:key});}catch(_){}
-  $("message").textContent=`🔔 Шинэ сигнал: ${title} · ${body}`;
-}
-function setNotifyUI(){
-  const b=$("notify-toggle");b.setAttribute("aria-pressed",String(NOTE.on));
-  b.textContent=NOTE.on?"🔔 Мэдэгдэл асаалттай":"🔔 Мэдэгдэл";
-}
 async function loadHTF(force=false){
   if(!force&&Date.now()-S.h1At<300000&&S.htf)return;
   const sym=S.symbol;
@@ -1496,44 +1357,6 @@ async function loadHTF(force=false){
     S.htf=buildHTF(S.h1);S.h1At=Date.now();
     recomputeSignals();refreshPlan();
   }catch(_){}
-}
-
-async function runBacktest(){
-  const btn=$("bt-btn"),out=$("bt-out");
-  const sym=S.symbol,tf=S.tf;
-  btn.disabled=true;btn.textContent="Тооцоолж байна...";
-  out.innerHTML=`<p class="note">${SYM[sym].name} · ${tf} · ~1500 лаа татаж байна...</p>`;
-  try{
-    const [cr,hr]=await Promise.all([fetch(api("/candles",{interval:tf,limit:1500})),fetch(api("/candles",{interval:"1h",limit:500}))]);
-    if(!cr.ok)throw new Error("Candle API "+cr.status);
-    const p=clean((await cr.json()).points||[]);
-    const H=hr.ok?buildHTF(clean((await hr.json()).points||[]).slice(0,-1)):null;
-    if(p.length<80)throw new Error("Хангалттай лаа алга");
-    const cost=SYM[sym].cost;
-    const london=S.strategy==="london",litS=S.strategy==="lit";
-    if(london&&sym!=="xau")throw new Error("London breakout зөвхөн XAUUSD дээр");
-    const gen=(h)=>litS?litSignals(p,tf,h,S.active).ev:computeSignals(p,tf,h,S.active);
-    const withF=london?btStats(londonSignals(p,tf).ev,cost):btStats(gen(H),cost),
-          noF=london?withF:btStats(gen(null),cost);
-    const days=(p[p.length-1].t-p[0].t)/86400;
-    const risk=ACC.riskPct||1;
-    const col=(st,k)=>{
-      const v={n:st.n,rate:fmt(st.rate,0)+"%",total:(st.total>=0?"+":"")+st.total+"R",avg:(st.avg>=0?"+":"")+fmt(st.avg,2)+"R",dd:st.dd+"R",pct:(st.total>=0?"+":"")+fmt(st.total*risk,1)+"%"}[k];
-      const cls=k==="total"||k==="pct"||k==="avg"?(st.total>=0?"pos":"neg"):k==="dd"?"neg":"";
-      return `<td class="${cls}">${v}</td>`;
-    };
-    const rows=[["Дууссан сигнал","n"],["Ашигтай арилжаа","rate"],["Нийт үр дүн","total"],["Дундаж / арилжаа","avg"],["Хамгийн их уналт","dd"],[`${fmt(risk,1)}% эрсдэлээр`,"pct"]];
-    const useH=!london&&HTF_TFS.includes(tf);
-    let html=`<p class="note" style="font-size:12px">${london?"London breakout":(litS?"LIT":"Trend")+(S.active?" · идэвхтэй":"")} · ${SYM[sym].name} · ${tf} · ${p.length} лаа ≈ ${fmt(days,1)} өдөр · spread ≈ ${cost}$ арилжаа бүрт тооцсон</p>
-      <table class="bt"><thead><tr><th></th>${useH?"<th>H1 шүүлтүүртэй</th>":""}<th>${london?"London breakout":"Шүүлтүүргүй"}</th></tr></thead><tbody>`+
-      rows.map(([lab,k])=>`<tr><td>${lab}</td>${useH?col(withF,k):""}${col(noF,k)}</tr>`).join("")+`</tbody></table>`;
-    const best=useH?withF:noF;
-    if(best.n<20)html+=`<div class="warn">Ердөө ${best.n} сигнал. Энэ тоо дүгнэлт хийхэд хэт бага тул илүү урт хугацаанд ажиглаарай.</div>`;
-    else if(best.total<0)html+=`<div class="warn">Энэ хугацаанд сигналууд алдагдалтай байсан. Энэ timeframe дээр бодит мөнгөөр бүү ашигла.</div>`;
-    else html+=`<div class="instr">Энэ хугацаанд ашигтай гарсан ч өнгөрсөн үр дүн ирээдүйг баталгаажуулахгүй. Spread-ийг ойролцоогоор тооцсон, swap/шимтгэлийг тооцоогүй.</div>`;
-    out.innerHTML=html;
-  }catch(err){out.innerHTML=`<div class="warn">Backtest алдаа: ${esc(err.message)}</div>`;}
-  finally{btn.disabled=false;btn.textContent="Backtest ажиллуулах";}
 }
 
 /* ---------- News (Forex Factory, High impact USD) ---------- */
@@ -1560,25 +1383,25 @@ function renderNews(){
   }).join("");
 }
 
-/* ---------- Multi-timeframe trend panel ---------- */
+/* ---------- Multi-timeframe trend + today's range ---------- */
 const MTF_TFS=["5m","15m","1h","4h","1d"];
 async function loadMTF(){
   const sym=S.symbol;
   const res=await Promise.all(MTF_TFS.map(async tf=>{
     try{const r=await fetch(api("/candles",{interval:tf}));if(!r.ok)return [tf,0];
-      const p=clean((await r.json()).points||[]).slice(0,-1);if(p.length<60)return [tf,0];
+      const all=clean((await r.json()).points||[]);
+      if(tf==="1d"&&all.length&&sym===S.symbol){const d=all[all.length-1];S.day={open:d.o,high:d.h,low:d.l,t:d.t};}
+      const p=all.slice(0,-1);if(p.length<60)return [tf,0];
       const cl=p.map(c=>c.c),a=emaArr(cl,20),b=emaArr(cl,50);return [tf,a.at(-1)>b.at(-1)?1:-1];}
     catch(_){return [tf,0];}
   }));
   if(sym!==S.symbol)return;
-  S.mtf=Object.fromEntries(res);renderMTF();
+  S.mtf=Object.fromEntries(res);renderMTF();renderDay();
 }
 function renderMTF(){
-  const el=$("mtf");
-  const ups=MTF_TFS.filter(t=>S.mtf[t]===1).length,dns=MTF_TFS.filter(t=>S.mtf[t]===-1).length;
-  el.innerHTML=`<span class="sub">Чиглэл (EMA20/50):</span>`+MTF_TFS.map(t=>{
-    const d=S.mtf[t];return `<b class="${d>0?"up":d<0?"dn":""}">${t.toUpperCase()} ${d>0?"↑":d<0?"↓":"·"}</b>`;}).join("")+
-    `<span class="sub">${ups>=4?"Хүчтэй өсөх":dns>=4?"Хүчтэй буурах":"Холимог"}</span>`;
+  const lab={"5m":"5m","15m":"15m","1h":"1H","4h":"4H","1d":"1D"};
+  $("mtf").innerHTML=`<span class="lbl">Чиг хандлага</span>`+MTF_TFS.map(t=>{
+    const d=S.mtf[t];return `<b class="${d>0?"up":d<0?"dn":""}" title="EMA20 / EMA50">${lab[t]} ${d>0?"↑":d<0?"↓":"·"}</b>`;}).join("");
 }
 
 /* ---------- Live journal (forward test) from the data branch ---------- */
@@ -1601,35 +1424,26 @@ function renderJournal(j){
   const total=done.reduce((a,s)=>a+s.r,0),wins=done.filter(s=>s.r>0).length;
   const since=JR.started?new Date(JR.started*1000).toLocaleDateString():"";
   const riskUsd=ACC.balance>0?ACC.balance*(ACC.riskPct||1)/100:null;
-  const usd=r=>riskUsd?` (${r>=0?"+":"-"}$${fmt(Math.abs(r*riskUsd))})`:"";
-  const by=k=>{const d=done.filter(s=>s.sym+"-"+s.tf===k);return d.length?`${d.reduce((a,s)=>a+s.r,0).toFixed(1)}R (${d.length})`:"—";};
+  const usd=r=>riskUsd?` (${sgnMoney(r*riskUsd)})`:"";
   const st={TP2:'<b class="pos">✓ TP2</b>',TP:'<b class="pos">✓ TP2</b>',BE:'<b class="pos">½ TP1+BE</b>',SL:'<b class="neg">✗ SL</b>',EXPIRED:'<b>⌛ хугацаа</b>',open:'<b class="WAIT">● нээлттэй</b>'};
   const name={all:"Бүх зах",btc:"BTCUSD",xau:"XAUUSD"}[JR_FILTER];
-
-  // last 10 closed signals
+  $("jr-tag").textContent=JR.updated?new Date(JR.updated*1000).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}):"LIVE";
+  if(!list.length){$("jr-out").innerHTML=`<p class="note">${name}-д одоогоор бүртгэгдсэн сигнал алга.</p>`;return;}
   const last10=done.slice(0,10),l10=last10.reduce((a,s)=>a+s.r,0),l10w=last10.filter(s=>s.r>0).length;
-  let html=`<div class="instr ${l10>=0?"":"SELL"}" style="display:flex;flex-direction:column;gap:8px">
-    <div><b>${name} · сүүлийн ${last10.length} сигнал:</b> ${l10w} ашигтай, ${last10.length-l10w} алдагдалтай ·
-      нийт <b class="${l10>=0?"pos":"neg"}">${l10>=0?"+":""}${l10.toFixed(1)}R${usd(l10)}</b></div>
-    <div class="last10">${last10.slice().reverse().map(s=>`<span class="${s.r>0?"w":"l"}" title="${esc(s.name)} ${esc(s.tf)} ${esc(s.side)} · ${esc(s.status)}">${s.r>0?"+":""}${s.r.toFixed(1)}</span>`).join("")||'<span class="note">Хаагдсан сигнал алга</span>'}</div>
-    ${riskUsd?`<div class="note">Доллар нь таны баланс ${money(ACC.balance)}, ${fmt(ACC.riskPct||1,1)}% эрсдэлээр (1R = ${money(riskUsd)}) тооцсон.</div>`:`<div class="note">Балансаа «Данс ба лот тооцоолуур» хэсэгт оруулбал $-оор харуулна.</div>`}
-  </div>
-  <div class="kv">
+  $("jr-out").innerHTML=`<div class="stats">
     <div><span>Эхэлсэн</span><b>${since||"—"}</b></div>
-    <div><span>Хаагдсан сигнал</span><b>${done.length}</b></div>
-    <div><span>Нийт үр дүн</span><b class="${total>=0?"pos":"neg"}">${total>=0?"+":""}${total.toFixed(1)}R</b></div>
+    <div><span>Хаагдсан</span><b>${done.length}</b></div>
     <div><span>Ашигтай</span><b>${done.length?Math.round(wins/done.length*100)+"%":"—"}</b></div>
-    ${JR_FILTER!=="xau"?`<div><span>BTC M5 / M15</span><b style="font-size:12px">${by("btc-5m")} · ${by("btc-15m")}</b></div>`:""}
-    ${JR_FILTER!=="btc"?`<div><span>Алт M5 / M15</span><b style="font-size:12px">${by("xau-5m")} · ${by("xau-15m")}</b></div>`:""}
-  </div>`;
-  if(done.length<30)html+=`<p class="note">Дүгнэлт хийхэд дор хаяж 30–50 хаагдсан сигнал хэрэгтэй.</p>`;
-  html+=`<div class="jr-wrap"><table class="jr"><thead><tr><th>Цаг</th><th>Зах</th><th>Чиглэл</th><th>Entry</th><th>Үр дүн</th><th>R</th>${riskUsd?"<th>$</th>":""}</tr></thead><tbody>`+
+    <div><span>Нийт</span><b class="${total>=0?"pos":"neg"}">${total>=0?"+":""}${total.toFixed(1)}R</b></div>
+  </div>
+  <div class="last10-box${l10>=0?"":" down"}">
+    <div>Сүүлийн ${last10.length} сигнал: <b>${l10w}</b> ашигтай, <b>${last10.length-l10w}</b> алдагдалтай · <b class="${l10>=0?"pos":"neg"}">${l10>=0?"+":""}${l10.toFixed(1)}R${usd(l10)}</b></div>
+    <div class="last10">${last10.slice().reverse().map(s=>`<span class="${s.r>0?"w":"l"}" title="${esc(s.name)} ${esc(s.tf)} ${esc(s.side)} · ${esc(s.status)}">${s.r>0?"+":""}${s.r.toFixed(1)}</span>`).join("")||'<span class="note">Хаагдсан сигнал алга</span>'}</div>
+  </div>
+  <div class="jr-wrap"><table class="jr"><thead><tr><th>Цаг</th><th>Зах</th><th>Чиглэл</th><th>Entry</th><th>Үр дүн</th><th style="text-align:right">R</th>${riskUsd?'<th style="text-align:right">$</th>':""}</tr></thead><tbody>`+
     list.slice(0,40).map(s=>{const d=new Date(s.close_t*1000);
       return `<tr><td>${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}</td><td>${esc(s.name)} ${esc(s.tf.toUpperCase())}${s.news?' <span title="'+esc(s.news)+'">⚠️</span>':""}</td><td class="${esc(s.side)}"><b>${esc(s.side)}</b></td><td class="n">${fmt(s.entry)}</td><td>${st[s.status]||esc(s.status)}</td><td class="n ${s.r>0?"pos":s.r<0?"neg":""}">${s.r==null?"":(s.r>0?"+":"")+s.r.toFixed(2)}</td>${riskUsd?`<td class="n ${s.r>0?"pos":s.r<0?"neg":""}">${s.r==null?"":sgnMoney(s.r*riskUsd)}</td>`:""}</tr>`;}).join("")+
     `</tbody></table></div>`;
-  if(!list.length)html=`<p class="note">${name}-д одоогоор бүртгэгдсэн сигнал алга.</p>`;
-  $("jr-out").innerHTML=html;
-  $("jr-tag").textContent=JR.updated?`шинэчилсэн ${new Date(JR.updated*1000).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}`:"LIVE";
 }
 function setJrUI(){[...$("jr-pills").children].forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.jr===JR_FILTER)));}
 $("jr-pills").addEventListener("click",e=>{
@@ -1641,47 +1455,20 @@ setJrUI();
 
 function refreshPlan(){
   S.plan=buildPlan();
-  renderForecast();
-  renderCalc();
-  renderGoal();
+  renderPlan();
   draw();
 }
 
-function renderExplanations(smc){
-  const rows=[];
-  const colorOf=k=>k.includes("OB")?(k.includes("Bullish")?C.bull:C.bear):k.includes("FVG")?C.fvg:k.includes("BOS")?C.struct:C.liq;
-  smc.obs.slice(-2).reverse().forEach(z=>rows.push([z.kind,`Бүс: ${z.low.toFixed(2)} – ${z.high.toFixed(2)}. Дисплейсмент хөдөлгөөний өмнөх эсрэг лаа.`]));
-  smc.fvgs.slice(-2).reverse().forEach(z=>rows.push([z.kind,`Завсар: ${z.low.toFixed(2)} – ${z.high.toFixed(2)}. Үнэ буцаж шалгаж болох ч entry баталгаа биш.`]));
-  smc.liquidity.slice(-2).reverse().forEach(z=>rows.push([z.kind,`Боломжит liquidity түвшин: ${z.price.toFixed(2)}. Sweep батлагдсан гэсэн үг биш.`]));
-  smc.structure.forEach(z=>rows.push([z.label,`Сүүлийн swing түвшин ${z.price.toFixed(2)} дээр лааны close-оор эвдэрсэн.`]));
-  if(!rows.length)rows.push(["SMC","Одоогийн лаануудад тодорхой тэмдэглэгээ олдсонгүй."]);
-  $("smc-explanations").innerHTML=rows.map(([t,d])=>`<div class="smc-item"><i style="background:${colorOf(t)}"></i><div><b>${esc(t)}</b><p>${esc(d)}</p></div></div>`).join("");
-}
-
-/* ---------- Account, lot size, positions ---------- */
+/* ---------- Account: balance, risk and lot size ---------- */
 const ACC_KEY="fxa_account_v1";
 function loadAcc(){
   try{const a=JSON.parse(localStorage.getItem(ACC_KEY));if(a&&typeof a==="object")return a;}catch(_){}
-  return {balance:null,riskPct:1,type:"standard",goal:null,goalMonth:null,monthStart:null,pos:null,history:[]};
+  return {balance:null,riskPct:1,type:"standard"};
 }
 let ACC=loadAcc();
-ACC.history=Array.isArray(ACC.history)?ACC.history:[];
 function saveAcc(){try{localStorage.setItem(ACC_KEY,JSON.stringify(ACC));}catch(_){}}
 if(!ACC.contracts)ACC.contracts={xau:ACC.type==="micro"?1:100,btc:1};
 const curContract=()=>Number(ACC.contracts[S.symbol])||SYM[S.symbol].def;
-const posSym=pos=>pos.symbol||"xau";
-const posPriceOf=pos=>posSym(pos)===S.symbol?(S.lastShown??S.price):S.posPrice;
-const pnlOf=(pos,price)=>(price-pos.entry)*pos.dir*pos.contract*pos.lot;
-const localDate=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-const todayKey=()=>localDate(new Date());
-const monthKey=()=>todayKey().slice(0,7);
-const keyOf=iso=>iso?localDate(new Date(iso)):"";
-
-function todayStats(){
-  const t=todayKey();
-  const list=ACC.history.filter(h=>keyOf(h.time)===t);
-  return {losses:list.filter(h=>h.pnl<0).length,pnl:list.reduce((s,h)=>s+h.pnl,0)};
-}
 
 function lotFor(plan){
   const bal=ACC.balance,risk=ACC.riskPct||1;
@@ -1698,212 +1485,24 @@ function lotFor(plan){
   return {lot,riskUsd,realRisk,profit,slDist,contract,tooSmall};
 }
 
-function renderCalc(){
-  const out=$("calc-out");
-  if(!(ACC.balance>0)){out.innerHTML=`<div class="instr WAIT">Эхлээд XM дээрх балансаа оруулаад <b>Балансаа хадгалах</b> дарна уу.</div>`;return;}
-  const ts=todayStats();
-  const stop=ts.losses>=3||ts.pnl<=-(ACC.balance*0.03);
-  const plan=S.plan;
-  let html="";
-  if(stop)html+=`<div class="warn"><b>Өнөөдөр зогсоно уу.</b> Өнөөдөр ${ts.losses} удаа алдсан, нийт ${sgnMoney(ts.pnl)}. Манай дүрмээр маргааш хүртэл шинэ арилжаа нээхгүй.</div>`;
-  if(!plan){out.innerHTML=html+`<div class="instr WAIT">${S.planBlock?esc(S.planBlock):"Одоо нийт дохио <b>WAIT</b>. Манай дүрмээр арилжаа нээхгүй, хүлээнэ."}</div>`;return;}
-  const L=lotFor(plan);
-  const rr=Math.abs(plan.tp-plan.entry)/L.slDist;
-  const halfLot=Math.max(0.01,Math.floor(L.lot/2*100)/100);
-  html+=`<div class="instr ${plan.side}">XM дээр: <b>${SYM[S.symbol].name} ${plan.side} ${fmt(L.lot)} лот</b>, Stop loss <b class="mono">${fmt(plan.sl)}</b>, Take profit <b class="mono">${fmt(plan.tp)}</b>.
-    <br>Үнэ <b class="mono">${fmt(plan.tp1??plan.tp)}</b> (TP1)-д хүрэхэд <b>${fmt(halfLot)} лотыг хааж</b>, SL-ээ <b class="mono">${fmt(plan.entry)}</b> (entry) рүү зөө.
-    <br>SL хүрвэл <b class="neg">${money(-L.realRisk)}</b> алдана, хоёр TP хоёулаа хүрвэл <b class="pos">+${money(L.profit)}</b> олно.</div>
-  <div class="kv">
-    <div><span>Entry (одоо)</span><b>${fmt(plan.entry)}</b></div>
-    <div><span>SL зай</span><b>${fmt(L.slDist)}$</b></div>
-    <div><span>R:R</span><b>1:${fmt(rr,1)}</b></div>
-    <div><span>Эрсдэл (${fmt(ACC.riskPct,1)}%)</span><b>${money(L.riskUsd)}</b></div>
-    <div><span>Лот</span><b>${fmt(L.lot)}</b></div>
-    <div><span>Бодит эрсдэл</span><b>${money(L.realRisk)}</b></div>
-  </div>`;
-  if(L.tooSmall)html+=`<div class="warn">Таны балансад ${fmt(ACC.riskPct,1)}% эрсдэл 0.01 лотоос бага гарч байна. 0.01 лотоор орвол бодит эрсдэл ${money(L.realRisk)} (${fmt(L.realRisk/ACC.balance*100,1)}%) болно. Micro данс ашиглах эсвэл энэ арилжааг алгасахыг бодоорой.</div>`;
-  if(rr<2)html+=`<div class="warn">R:R 1:2-оос бага байна. Манай дүрмээр ийм арилжаанд орохгүй.</div>`;
-  html+=`<button class="btn btn-primary" id="open-plan" type="button" ${ACC.pos||stop?"disabled":""}>Энэ төлөвлөгөөг дансандаа нээх</button>`;
-  out.innerHTML=html;
-  const b=$("open-plan");
-  if(b)b.addEventListener("click",()=>openPosition({side:plan.side,entry:S.price??plan.entry,lot:L.lot,sl:plan.sl,tp:plan.tp,tp1:plan.tp1}));
-}
-
-function openPosition({side,entry,lot,sl,tp,tp1}){
-  if(ACC.pos){alert("Нэг удаад нэг арилжаа хянана. Эхлээд нээлттэй арилжаагаа хаана уу.");return;}
-  ACC.pos={symbol:S.symbol,side,dir:side==="BUY"?1:-1,entry,lot,sl,tp,tp1:Number.isFinite(tp1)?tp1:null,contract:curContract(),time:new Date().toISOString()};
-  saveAcc();renderPosition();renderCalc();draw();
-}
-
-function closePosition(price,reason){
-  const pos=ACC.pos;if(!pos)return;
-  const pnl=pnlOf(pos,price);
-  ACC.balance=(ACC.balance||0)+pnl;
-  ACC.history.unshift({symbol:SYM[posSym(pos)].name,side:pos.side,lot:pos.lot,entry:pos.entry,exit:price,pnl,reason,time:new Date().toISOString()});
-  ACC.history=ACC.history.slice(0,200);
-  ACC.pos=null;
-  saveAcc();
-  $("in-balance").value=ACC.balance.toFixed(2);
-  renderPosition();renderHistory();renderCalc();renderGoal();draw();
-}
-
-function checkStops(price){
-  const pos=ACC.pos;if(!pos)return;
-  if(Number.isFinite(pos.tp1)&&!pos.partial&&(pos.dir>0?price>=pos.tp1:price<=pos.tp1)){
-    // take half at TP1 and move the stop to entry
-    const half=Math.floor(pos.lot/2*100)/100;
-    if(half>=0.01){
-      const pnl=(pos.tp1-pos.entry)*pos.dir*pos.contract*half;
-      ACC.balance=(ACC.balance||0)+pnl;
-      ACC.history.unshift({symbol:SYM[posSym(pos)].name,side:pos.side,lot:half,entry:pos.entry,exit:pos.tp1,pnl,reason:"TP1 ½",time:new Date().toISOString()});
-      pos.lot=Math.round((pos.lot-half)*100)/100;
-    }
-    pos.partial=true;pos.sl=pos.entry;
-    saveAcc();renderHistory();$("pos-out").dataset.empty="1";renderPosition();renderGoal();draw();
-    return;
-  }
-  if(Number.isFinite(pos.sl)&&(pos.dir>0?price<=pos.sl:price>=pos.sl))closePosition(pos.sl,"SL");
-  else if(Number.isFinite(pos.tp)&&(pos.dir>0?price>=pos.tp:price<=pos.tp))closePosition(pos.tp,"TP");
-}
-
-function renderPosition(){
-  const bal=ACC.balance;
-  const pos=ACC.pos;
-  const price=pos?posPriceOf(pos):null;
-  const floating=pos&&Number.isFinite(price)?pnlOf(pos,price):0;
-  $("balance-view").textContent=bal>0?money(bal):"--";
-  const eq=$("equity");
-  eq.textContent=bal>0?money(bal+floating):"--";
-  eq.className="big "+(floating>0?"pos":floating<0?"neg":"");
-  const out=$("pos-out");
-  if(!pos){if(!out.dataset.empty){out.innerHTML=`<p class="note">Нээлттэй арилжаа алга.</p>`;out.dataset.empty="1";}return;}
-  if(out.dataset.empty||!$("pos-pl")){
-    delete out.dataset.empty;
-    out.innerHTML=`<div class="kv">
-      <div><span>${SYM[posSym(pos)].name}</span><b class="${pos.side}">${pos.side} ${fmt(pos.lot)}</b></div>
-      <div><span>Нээсэн үнэ</span><b>${fmt(pos.entry)}</b></div>
-      <div><span>Одоогийн P&amp;L</span><b id="pos-pl">--</b></div>
-      <div><span>Stop loss</span><b class="neg">${Number.isFinite(pos.sl)?fmt(pos.sl):"--"}</b></div>
-      <div><span>Take profit</span><b class="pos">${Number.isFinite(pos.tp)?fmt(pos.tp):"--"}</b></div>
-      <div><span>SL-д хүрвэл</span><b class="neg">${Number.isFinite(pos.sl)?sgnMoney(pnlOf(pos,pos.sl)):"--"}</b></div>
-    </div>
-    <button class="btn btn-danger" id="close-pos" type="button">Одоогийн үнээр хаах</button>`;
-    $("close-pos").addEventListener("click",()=>{const p=posSym(pos)===S.symbol?(S.price??S.lastShown):S.posPrice;if(Number.isFinite(p))closePosition(p,"Гараар");else alert("Үнэ ачаалагдаж байна, дахин оролдоно уу.");});
-  }
-  const pl=$("pos-pl");
-  pl.textContent=Number.isFinite(price)?sgnMoney(floating):"--";
-  pl.className=floating>0?"pos":floating<0?"neg":"";
-}
-
-function renderHistory(){
-  const el=$("history");
-  if(!ACC.history.length){el.innerHTML=`<p class="note">Хаагдсан арилжаа алга.</p>`;return;}
-  el.innerHTML=ACC.history.slice(0,20).map(h=>{
-    const d=new Date(h.time);
-    return `<div class="h-item"><span>${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")} · ${esc(h.symbol||"XAUUSD")} <b class="${esc(h.side)}">${esc(h.side)}</b> ${fmt(h.lot)} · ${fmt(h.entry)} → ${fmt(h.exit)} · ${esc(h.reason)}</span><b class="${h.pnl>=0?"pos":"neg"}">${sgnMoney(h.pnl)}</b></div>`;
-  }).join("");
-}
-
-function tradingDaysLeft(){
-  const d=new Date(),m=d.getMonth();let n=0;
-  for(const x=new Date(d);x.getMonth()===m;x.setDate(x.getDate()+1)){const wd=x.getDay();if(wd!==0&&wd!==6)n++;}
-  return n;
-}
-
-function renderGoal(){
-  const out=$("goal-out");
-  if(!(ACC.balance>0)||!(ACC.goal>0)){out.innerHTML=`<p class="note">Эхлээд баланс болон энэ сарын зорилгоо оруулна уу.</p>`;return;}
-  if(ACC.goalMonth!==monthKey()){ACC.goalMonth=monthKey();ACC.monthStart=ACC.balance;saveAcc();}
-  const mk=monthKey();
-  const earned=ACC.history.filter(h=>keyOf(h.time).slice(0,7)===mk).reduce((s,h)=>s+h.pnl,0);
-  const remaining=Math.max(0,ACC.goal-earned);
-  const pct=clamp(earned/ACC.goal*100,0,100);
-  const days=tradingDaysLeft();
-  const riskUsd=ACC.balance*(ACC.riskPct||1)/100;
-  const expPerTrade=0.5*riskUsd;   // assumption: 50% win rate with R:R 1:2 → +0.5R per trade on average
-  const trades=remaining>0?Math.ceil(remaining/expPerTrade):0;
-  const goalPct=ACC.goal/(ACC.monthStart||ACC.balance)*100;
-  let html=`<div class="equity"><div><div class="sub">Энэ сард олсон</div><div class="pl ${earned>=0?"pos":"neg"}">${sgnMoney(earned)}</div></div>
-    <div style="text-align:right"><div class="sub">Зорилго</div><div class="pl">${money(ACC.goal)} <span class="sub">(${fmt(goalPct,1)}%)</span></div></div></div>
-    <div class="progress"><i style="width:${pct}%"></i></div>
-    <div class="kv">
-      <div><span>Үлдсэн</span><b>${money(remaining)}</b></div>
-      <div><span>Үлдсэн ажлын өдөр</span><b>${days}</b></div>
-      <div><span>Өдөрт дундаж</span><b>${days?money(remaining/days):"--"}</b></div>
-    </div>`;
-  if(remaining>0)html+=`<div class="instr">Одоогийн эрсдэлээр (${money(riskUsd)}/арилжаа) ялалтын хувь 50%, R:R 1:2 гэж тооцвол ойролцоогоор <b>${trades} арилжаа</b> хэрэгтэй. Өдөрт ~${days?Math.ceil(trades/days):trades} арилжаа.</div>`;
-  else html+=`<div class="instr">Зорилгодоо хүрлээ. Энэ сард эрсдэлээ багасгаж, олсноо хамгаалаарай.</div>`;
-  if(goalPct>10)html+=`<div class="warn">Сард балансын ${fmt(goalPct,0)}% олох нь маш өндөр зорилго. Үүний тулд лотоо томруулбал данс хурдан шатах эрсдэлтэй. Зорилгоо багасгах эсвэл хугацааг уртасгахыг зөвлөж байна.</div>`;
-  if(days&&trades/days>3)html+=`<div class="warn">Өдөрт 3-аас олон арилжаа шаардлагатай байна. Манай дүрэм өдөрт 3 алдаанаас хэтрэхийг хориглодог тул зорилго бодитой бус байж магадгүй.</div>`;
-  out.innerHTML=html;
-}
-
 function initAccountUI(){
-  if(ACC.balance>0)$("in-balance").value=Number(ACC.balance).toFixed(2);
+  const bal=$("in-balance");
+  if(ACC.balance>0)bal.value=Number(ACC.balance).toFixed(2);
+  else $("acc-box").open=true;
   $("in-risk").value=ACC.riskPct||1;
   $("in-contract").value=curContract();
-  if(ACC.goal>0)$("in-goal").value=ACC.goal;
-  $("save-acc").addEventListener("click",()=>{
-    const b=num($("in-balance").value),r=num($("in-risk").value);
-    if(!(b>0)){alert("Балансаа зөв оруулна уу.");return;}
-    ACC.balance=b;ACC.riskPct=clamp(r||1,0.1,10);
-    const ct=num($("in-contract").value);if(ct>0)ACC.contracts[S.symbol]=ct;
-    if(ACC.goalMonth!==monthKey()){ACC.goalMonth=monthKey();ACC.monthStart=b;}
-    saveAcc();renderCalc();renderPosition();renderGoal();renderJournal();
-  });
-  ["in-risk","in-contract"].forEach(id=>$(id).addEventListener("change",()=>{
+  const read=()=>{
     ACC.riskPct=clamp(num($("in-risk").value)||1,0.1,10);
     const ct=num($("in-contract").value);if(ct>0)ACC.contracts[S.symbol]=ct;
-    saveAcc();renderCalc();renderGoal();
-  }));
-  $("save-goal").addEventListener("click",()=>{
-    const g=num($("in-goal").value);
-    if(!(g>0)){alert("Зорилгоо $-оор оруулна уу.");return;}
-    ACC.goal=g;if(ACC.goalMonth!==monthKey()){ACC.goalMonth=monthKey();ACC.monthStart=ACC.balance;}
-    saveAcc();renderGoal();
+  };
+  bal.addEventListener("input",()=>{bal.style.borderColor="";});
+  $("save-acc").addEventListener("click",()=>{
+    const b=num(bal.value);
+    if(!(b>0)){bal.style.borderColor="var(--red)";bal.focus();return;}
+    ACC.balance=b;read();saveAcc();renderPlan();renderJournal();
+    const btn=$("save-acc");btn.textContent="Хадгаллаа ✓";setTimeout(()=>{btn.textContent="Хадгалах";},1500);
   });
-  $("m-open").addEventListener("click",()=>{
-    const side=$("m-side").value,entry=num($("m-entry").value),lot=num($("m-lot").value),sl=num($("m-sl").value),tp=num($("m-tp").value);
-    if(!(ACC.balance>0)){alert("Эхлээд балансаа хадгална уу.");return;}
-    if(!(entry>0)||!(lot>0)){alert("Нээсэн үнэ болон лотоо оруулна уу.");return;}
-    const dir=side==="BUY"?1:-1;
-    if(sl!=null&&dir*(entry-sl)<=0){alert(side==="BUY"?"BUY үед SL нээсэн үнээс доор байх ёстой.":"SELL үед SL нээсэн үнээс дээр байх ёстой.");return;}
-    if(tp!=null&&dir*(tp-entry)<=0){alert(side==="BUY"?"BUY үед TP нээсэн үнээс дээр байх ёстой.":"SELL үед TP нээсэн үнээс доор байх ёстой.");return;}
-    openPosition({side,entry,lot,sl:sl??NaN,tp:tp??NaN});
-    $("m-side").closest("details").open=false;
-  });
-  renderPosition();renderHistory();renderCalc();renderGoal();
-}
-
-/* ---------- AI ---------- */
-async function runAI(){
-  const btn=$("ai-btn");
-  btn.disabled=true;btn.textContent="AI шинжилж байна...";
-  $("ai-text").textContent="5M, 15M, H1-ийн өгөгдлийг шинжилж байна. 10–40 секунд болно.";
-  try{
-    const sym=S.symbol;
-    const res=await fetch(api("/ai-analyze"));
-    const data=await res.json().catch(()=>({}));
-    if(!res.ok)throw new Error(data.detail||("AI API "+res.status));
-    if(sym!==S.symbol)throw new Error("Хэрэгсэл солигдсон тул дахин ажиллуулна уу.");
-    const a=data.analysis||{};
-    S.ai=a;
-    setSignal("ai-action",a.action);
-    $("ai-meta").textContent=`итгэл ${a.confidence_percent??"--"}% · эрсдэл ${a.risk_level||"--"}${a.risk_reward?" · R:R "+a.risk_reward:""}`;
-    $("ai-entry").textContent=a.entry_price!=null?fmt(a.entry_price):"--";
-    $("ai-sl").textContent=a.stop_loss!=null?fmt(a.stop_loss):"--";
-    $("ai-tp").textContent=a.take_profit!=null?fmt(a.take_profit):"--";
-    const reasons=(a.reasons||[]).map(r=>`<li>${esc(r)}</li>`).join("");
-    $("ai-text").innerHTML=`${esc(a.summary)}${reasons?`<ul>${reasons}</ul>`:""}`+
-      (a.invalidation?`<p style="margin:8px 0 0"><b>Хүчингүй болох нөхцөл:</b> ${esc(a.invalidation)}</p>`:"")+
-      (a.caution?`<p style="margin:8px 0 0;color:var(--muted)">${esc(a.caution)}</p>`:"")+
-      `<p style="margin:8px 0 0;font-size:11px;color:var(--muted)">${esc(data.disclaimer||"")}</p>`;
-    refreshPlan();
-  }catch(err){
-    $("ai-text").textContent="Алдаа: "+err.message;
-  }finally{
-    btn.disabled=false;btn.textContent="AI шинжилгээ дахин ажиллуулах";
-  }
+  ["in-risk","in-contract"].forEach(id=>$(id).addEventListener("change",()=>{read();saveAcc();renderPlan();renderJournal();}));
 }
 
 /* ---------- Wiring ---------- */
@@ -1911,15 +1510,13 @@ $("tf-pills").addEventListener("click",e=>{
   const b=e.target.closest("button[data-tf]");if(!b)return;
   S.tf=b.dataset.tf;S.candles=[];S.anim=null;
   [...$("tf-pills").children].forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
-  view.count=90;view.offset=0;NOTE.seen=null;draw();loadChart();
+  view.count=90;view.offset=0;draw();loadChart();
 });
 function applySymbolUI(){
   const m=SYM[S.symbol];
-  $("price-label").textContent=m.label;
-  $("sub").textContent=m.sub;
-  $("chart-title").textContent=`${m.name} график`;
-  $("src-note").textContent=`${m.src}-ийн үнэ нь XM-ийн арилжааны яг үнэ биш (spread-ийн зөрүүтэй).`;
-  $("contract-label").textContent=`1 лот = (${m.unit})`;
+  $("tk-name").textContent=m.name;
+  $("tk-desc").textContent=m.desc;
+  $("contract-label").textContent=`1 лот (${m.unit})`;
   $("in-contract").value=curContract();
   document.title=`${m.name} · Forex AI Analyzer`;
   [...$("sym-switch").children].forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.sym===S.symbol)));
@@ -1928,67 +1525,31 @@ $("sym-switch").addEventListener("click",e=>{
   const b=e.target.closest("button[data-sym]");if(!b||b.dataset.sym===S.symbol)return;
   S.symbol=b.dataset.sym;
   try{localStorage.setItem("fxa_symbol",S.symbol);}catch(_){}
-  NOTE.seen=null;
-  Object.assign(S,{candles:[],m5:[],ai:null,plan:null,anim:null,lastShown:null,price:null,sigEvents:[],smc:null,overall:"WAIT",sigs:[],h1:[],htf:null,h1At:0,planBlock:null});
-  $("bt-out").innerHTML="";
+  Object.assign(S,{candles:[],m5:[],plan:null,anim:null,lastShown:null,price:null,sigEvents:[],smc:null,overall:"WAIT",sigs:[],h1:[],htf:null,h1At:0,planBlock:null,day:{}});
   view.count=90;view.offset=0;
-  $("price").textContent="Loading...";
-  setSignal("ai-action",null);$("ai-meta").textContent="Шинжилгээ ажиллуулаагүй байна";
-  ["ai-entry","ai-sl","ai-tp"].forEach(id=>$(id).textContent="--");
-  applySymbolUI();renderForecast();renderCalc();renderPosition();draw();loadData();
+  $("price").textContent="—";$("price").className="price";
+  applySymbolUI();renderDay();renderPlan();draw();loadData();
   S.basis=NaN;WS.raw=NaN;
   if(S.symbol==="btc"||goldMarketOpen())wsStart();else wsStop();
   S.mtf={};renderMTF();loadMTF();
 });
-$("refresh-btn").addEventListener("click",loadData);
-function setStratUI(){
-  [...$("strat-pills").children].forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.strat===S.strategy)));
-  $("legend-range").style.display=S.strategy==="london"?"flex":"none";
-  $("htf-toggle").style.display=S.strategy==="london"?"none":"";
-  $("legend-lit").style.display=S.strategy==="lit"?"flex":"none";
-}
-function setSmcUI(){[...$("smc-pills").children].forEach(b=>b.setAttribute("aria-pressed",String(!!S.smcShow[b.dataset.smc])));}
-$("smc-pills").addEventListener("click",e=>{
-  const b=e.target.closest("button[data-smc]");if(!b)return;
-  S.smcShow[b.dataset.smc]=!S.smcShow[b.dataset.smc];
-  try{localStorage.setItem("fxa_smc",JSON.stringify(S.smcShow));}catch(_){}
-  setSmcUI();draw();
-});
-setSmcUI();
-function setActiveUI(){const b=$("active-toggle");b.setAttribute("aria-pressed",String(S.active));b.textContent=S.active?"⚡ Идэвхтэй":"⚡ Тайван";}
-$("active-toggle").addEventListener("click",()=>{
-  S.active=!S.active;
-  try{localStorage.setItem("fxa_active",S.active?"1":"0");}catch(_){}
-  NOTE.seen=null;setActiveUI();recomputeSignals();draw();$("bt-out").innerHTML="";
-});
-setActiveUI();
+$("refresh-btn").addEventListener("click",()=>{loadData();loadMTF();loadNews();loadJournal();});
+function setStratUI(){[...$("strat-pills").children].forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.strat===S.strategy)));}
 $("strat-pills").addEventListener("click",e=>{
   const b=e.target.closest("button[data-strat]");if(!b)return;
   S.strategy=b.dataset.strat;
   try{localStorage.setItem("fxa_strategy",S.strategy);}catch(_){}
-  NOTE.seen=null;setStratUI();recomputeSignals();draw();$("bt-out").innerHTML="";
+  setStratUI();recomputeSignals();draw();
 });
 setStratUI();
-$("notify-toggle").addEventListener("click",async()=>{
-  if(!NOTE.on&&"Notification" in window&&Notification.permission==="default"){
-    try{await Notification.requestPermission();}catch(_){}
-  }
-  NOTE.on=!NOTE.on;
-  try{localStorage.setItem("fxa_notify",NOTE.on?"1":"0");}catch(_){}
-  setNotifyUI();
-  if(NOTE.on){beep();if(!("Notification" in window)||Notification.permission!=="granted")
-    $("message").textContent="Дуут мэдэгдэл асаалттай. Хөтөч pop-up мэдэгдлийг зөвшөөрөөгүй тул зөвхөн дуу гарна. Сайт хаалттай үед Telegram мэдэгдлийг ашиглана уу.";}
-});
-setNotifyUI();
-$("htf-toggle").addEventListener("click",e=>{S.htfOn=!S.htfOn;e.currentTarget.setAttribute("aria-pressed",String(S.htfOn));recomputeSignals();refreshPlan();});
-$("bt-btn").addEventListener("click",runBacktest);
 $("sig-toggle").addEventListener("click",e=>{S.showSig=!S.showSig;e.currentTarget.setAttribute("aria-pressed",String(S.showSig));draw();});
-$("ai-btn").addEventListener("click",runAI);
 window.addEventListener("resize",requestDraw);
+if(window.ResizeObserver)new ResizeObserver(requestDraw).observe(document.querySelector(".chart-wrap"));
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&Number.isFinite(S.price)){S.anim=null;startAnim(S.price,200);}});
 
 initAccountUI();
 applySymbolUI();
+renderMTF();renderPlan();
 draw();
 if(S.symbol==="btc"||goldMarketOpen())wsStart();
 loadData();
